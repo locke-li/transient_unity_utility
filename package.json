@@ -1,0 +1,14 @@
+{
+  "name": "liveitbe.transient.unity_extension",
+  "description": "Unity extension/utility.",
+  "version": "0.9.0",
+  "unity": "2018.4",
+  "displayName": "Transient Unity Extension",
+  "keywords": [
+    "ui"
+  ],
+  "repository": {
+    "url": "https://github.com/locke-li/transient_unity_extension.git",
+    "type": "git"
+  }
+}
