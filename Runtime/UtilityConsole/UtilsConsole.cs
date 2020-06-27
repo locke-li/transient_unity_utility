@@ -15,8 +15,7 @@ using System.Collections.Generic;
 using UnityEditor;
 #endif
 
-namespace Transient
-{
+namespace Transient.Development {
     public partial class UtilsConsole : MonoBehaviour {
         private class Log {
             public bool enabled { get { return tr.gameObject.activeSelf; } set { tr.gameObject.SetActive(value); } }

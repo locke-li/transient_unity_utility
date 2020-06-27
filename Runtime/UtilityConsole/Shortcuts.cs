@@ -8,8 +8,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace Transient
-{
+namespace Transient.Development {
     public partial class UtilsConsole : MonoBehaviour {
         public static Color SystemColor { get; private set; } = new Color(0.95f, 01f, 0.6f);
         public static Color ToggleEnableColor { get; private set; } = new Color(0.7f, 1f, 0.7f);
