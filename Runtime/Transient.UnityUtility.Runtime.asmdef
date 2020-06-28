@@ -1,13 +1,14 @@
 {
     "name": "Transient.UnityUtility.Runtime",
-    "references": [],
+    "references": [
+        "Unity.TextMeshPro"
+    ],
+    "optionalUnityReferences": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [],
-    "versionDefines": [],
-    "noEngineReferences": false
+    "defineConstraints": []
 }
