@@ -28,7 +28,7 @@ namespace Transient {
         private static List<Timer> _timers = new List<Timer>(32);
         private static List<Timer> _reusable = new List<Timer>(32, 4);
 
-        private static Timer Use(ActionList<float> invoker = null) {
+        private static Timer Use(ActionList<float> invoker) {
             Timer ret = _reusable.Count > 0 ? _reusable.Pop() : new Timer();
             ret.RegisterTo(invoker);
             return ret;
@@ -50,6 +50,7 @@ namespace Transient {
 
         public bool Active { get; private set; }
         private ActionList<float> _invoker = null;
+        private readonly Action<float> StepDelegate;
         private Action OnTrigger;
         private Interval[] mIntervals;
         private int mInterCount;
@@ -59,15 +60,17 @@ namespace Transient {
 
         private Timer() {
             mIntervals = new Interval[8];
+            StepDelegate = Step;
             _timers.Add(this);
         }
 
-        public static Timer Execute(Action TimerAction) {
+        public static Timer Execute(Action TimerAction, ActionList<float> invoker = null) {
             if(TimerAction == null) {
                 Log.Warning("executing null action with Timer!");
                 return null;
             }
-            Timer ret = Use();
+            invoker = invoker ?? MainLoop.Instance.OnUpdate;
+            Timer ret = Use(invoker);
             ret.OnTrigger = TimerAction;
             ret.Active = true;
             ret.mInterCount = -1;
@@ -94,7 +97,7 @@ namespace Transient {
             _invoker = invoker;
             if(_invoker == null)
                 return;
-            _invoker += (Step, this);
+            _invoker += (StepDelegate, this);
         }
 
         private void Step(float deltaTime_) {
