@@ -1,0 +1,16 @@
+{
+    "name": "Transient.UnityUtility.Test",
+    "references": [
+        "Transient.UnityUtility.Runtime"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
+}
