@@ -90,7 +90,7 @@ namespace Transient.Development {
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Init() {
-            GameObject go = Resources.Load<GameObject>(nameof(UtilsConsole));
+            var go = Resources.Load<GameObject>(nameof(UtilsConsole));
             if(go == null)
                 return;
             go = Instantiate(go);
