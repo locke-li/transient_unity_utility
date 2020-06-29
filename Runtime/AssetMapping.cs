@@ -28,6 +28,7 @@ namespace Transient.DataAccess {
         public static void Init() {
             Default = new AssetMapping(16, 512, 512);
             View = new AssetMapping(8, 32, 64);
+            AssetAdapter.Redirect(null, null);
         }
 
         public T TakePersistent<T>(string c, string i) where T : UnityEngine.Object => UnityEngine.Object.Instantiate((T)AssetAdapter.Take(c, i, typeof(T)));
@@ -141,14 +142,14 @@ namespace Transient.DataAccess {
     }
 
     public static class AssetAdapter {
-        public const string PackedDir = "packed";
-        public const string StagingDir = "resources_staging";
-        public static string DeployPath { get; set; } = $"{Application.persistentDataPath}/{PackedDir}/";
-        public static string PackedPath { get; set; } = $"{Application.streamingAssetsPath}/{PackedDir}/";
+        public static string PackedDir { get; private set; } = "packed";
+        public static string StagingDir { get; private set; } = "resources_staging";
+        public static string DeployPath { get; private set; }
+        public static string PackedPath { get; private set; }
 
         #if UNITY_EDITOR
-        public static string PackedPathFromAssets { get; set; } = $"Assets/StreamingAssets/{PackedDir}/";
-        public static string StagingPathFromAssets { get; set; } = $"Assets/{StagingDir}/";
+        public static string PackedPathFromAssets { get; private set; }
+        public static string StagingPathFromAssets { get; private set; }
         private static readonly System.Collections.Generic.Dictionary<Type, string> TypeToExtension = new System.Collections.Generic.Dictionary<Type, string>() {
             { typeof(GameObject), "prefab" },
             { typeof(Material), "mat" },
@@ -162,7 +163,18 @@ namespace Transient.DataAccess {
             public Func<string, object, object> Inst;
         }
         private static readonly Dictionary<string, TypeCoalescing> TypeCoalescingByCategory = new Dictionary<string, TypeCoalescing>(16, StringComparer.Ordinal);
-        
+
+        public static void Redirect(string stagingDir, string packedDir) {
+            PackedDir = packedDir??PackedDir;
+            StagingDir = stagingDir??StagingDir;
+            DeployPath = $"{Application.persistentDataPath}/{PackedDir}/";
+            PackedPath = $"{Application.streamingAssetsPath}/{PackedDir}/";
+            #if UNITY_EDITOR
+            PackedPathFromAssets = $"Assets/StreamingAssets/{PackedDir}/";
+            StagingPathFromAssets = $"Assets/{StagingDir}/";
+            #endif
+        }
+
         public static void CategoryTypeCoalescing(string category_, Type type_, Func<string, object, object> mapping_, Func<string, object, object> inst_) {
             TypeCoalescingByCategory.Add(category_, new TypeCoalescing {
                 Mapping = mapping_,
@@ -184,8 +196,6 @@ namespace Transient.DataAccess {
             var ret = SearchPacked(path, type_)??Resources.Load(path, type_)??ExtendedSearch?.Invoke(path, type_);
             return ret;
         }
-
-
 
         private static object SearchPacked(string path_, Type type_) {
             #if UNITY_EDITOR

@@ -372,13 +372,16 @@ namespace Transient.SimpleContainer {
                 --Reserve;
                 return data[Count++];
             }
+            //Reserve = 0
             if (Count == data.Length) Array.Resize(ref data, Count + ext);
             return data[Count++] = CreateOne();
         }
 
         public void Add(E e) {
-            if (Count == data.Length) Array.Resize(ref data, Count + ext);
+            if (Count + Reserve + 1 >= data.Length) Array.Resize(ref data, Count + Reserve + 1 + ext);
+            //move first reserve to last
             data[Count + Reserve + 1] = data[Count];
+            //add new to last
             data[Count++] = e;
         }
 
@@ -387,6 +390,17 @@ namespace Transient.SimpleContainer {
         public E RemoveAt(int i) {
             E ret = data[i];
             Array.Copy(data, i + 1, data, i, Count - i - 1);
+            data[Count + Reserve] = ret;
+            --Count;
+            ++Reserve;
+            return ret;
+        }
+
+        public void OutOfOrderRemove(E e) => OutOfOrderRemoveAt(Array.IndexOf(data, e, 0, Count));
+
+        public E OutOfOrderRemoveAt(int i) {
+            E ret = data[i];
+            data[i] = data[Count - 1];
             data[Count + Reserve] = ret;
             --Count;
             ++Reserve;
