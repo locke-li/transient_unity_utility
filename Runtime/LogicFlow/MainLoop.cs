@@ -11,12 +11,19 @@ namespace Transient
     public sealed class MainLoop : MonoBehaviour
     {
         public static MainLoop Instance { get; private set; }
+        public static GeneratorCoroutine Coroutine { get; private set; }
 
         public static void Init()
         {
             var go = new GameObject("MainLoop");
             DontDestroyOnLoad(go);
             go.AddComponent<MainLoop>();
+        }
+
+        public static void InitCoroutine()
+        {
+            Log.Assert(Instance != null, "MainLoop is not initialized yet!");
+            Coroutine = new GeneratorCoroutine(Instance.OnUpdate);
         }
 
         private void Awake()

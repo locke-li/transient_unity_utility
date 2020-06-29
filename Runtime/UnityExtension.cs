@@ -19,7 +19,7 @@ namespace UnityEngine {
             GameObject go = GameObject.Find(path_);
             Log.Assert(
                 go != null, "GameObject {0} not found!",
-                go, null, null,
+                path_, null, null,
                 member_, file_, line_
                 );
             T ret = go.GetComponent<T>();

@@ -356,7 +356,7 @@ namespace Transient.UI {
         Vector2 elementOffset;
         int targetCount;
         int entryCount;
-        public bool loop { get; set; }//TODO: loop data
+        public bool Loop { get; set; }//TODO: loop data
         private StorageList<Entry<T>> entry;
         Func<RectTransform, T> PrepareT;
         Func<int, T, EntryModifier> FillT;
@@ -364,7 +364,8 @@ namespace Transient.UI {
         RectTransform template;
         int ps, pe, lineCountViewport, indexOffset;
         float elementSize, elementSizeInverse, viewportSize;
-        Vector2 contentOffset, lineOffset;
+        Vector2 contentOffset;
+        Vector2 lineOffset;
         Vector2 flexibleSize;
         Func<int, int, Vector2, Vector2, Vector2> Reposition;
         float xScale, yScale;
@@ -397,6 +398,8 @@ namespace Transient.UI {
 
         public FixedScrollRectDataSource<T> Resize(int elementPerLine_, float visibleSize_ = -1f, float elementFlexibleDirSize_ = 0, float elementFixedDirSize_ = 0) {
             elementPerLine = elementPerLine_;
+            pivotOffset = Vector2.zero;
+            contentOffset = Vector2.zero;
             if (visibleSize_ >= 0)
                 ((RectTransform)_scroll.transform).sizeDelta = flexibleSize * visibleSize_;
             if (vertical) {
