@@ -97,7 +97,8 @@ namespace Transient.DataAccess {
         }
 
         public void Recycle(object resObj_) {
-            Log.Assert(_activePool.TryGetValue(resObj_, out var resId), $"recycling un-registered object {resObj_}");
+            var registeredActiveObj = _activePool.TryGetValue(resObj_, out var resId);
+            Log.Assert(registeredActiveObj, $"recycling un-registered object {resObj_}");
             _activePool.Remove(resObj_);
             List<object> recyclables;
             if(!_recyclePool.ContainsKey(resId)) {
