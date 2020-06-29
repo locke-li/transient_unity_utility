@@ -400,9 +400,9 @@ namespace Transient.SimpleContainer {
 
         public E OutOfOrderRemoveAt(int i) {
             E ret = data[i];
-            data[i] = data[Count - 1];
-            data[Count + Reserve] = ret;
             --Count;
+            data[i] = data[Count];
+            data[Count] = ret;
             ++Reserve;
             return ret;
         }
