@@ -21,6 +21,7 @@ namespace Transient.ControlFlow {
             _states.Add(StateIdEnd, EndState);
             _states.Add(StateIdAny, AnyState);
             CurrentState = StartState;
+            StartState.OnEnter();
         }
 
         public bool IsInState(int id_) => CurrentState.Id == id_;
@@ -54,7 +55,7 @@ namespace Transient.ControlFlow {
             return state;
         }
 
-        public Transition AddTransition(State source_, State target_, TransitionMode mode_ = TransitionMode.PassThrough) {
+        public Transition AddTransition(State source_, State target_, TransitionMode mode_ = TransitionMode.Manual) {
             var trans = new Transition(source_, target_, mode_);
             source_.AddTransition(trans);
             return trans;
@@ -99,7 +100,7 @@ namespace Transient.ControlFlow {
 
         public void OnEnter() {
             Reset();
-            _OnEnter();
+            _OnEnter?.Invoke();
         }
 
         public void OnTick(float dt_) {
@@ -115,7 +116,7 @@ namespace Transient.ControlFlow {
         }
 
         public void OnExit() {
-            _OnExit();
+            _OnExit?.Invoke();
         }
     }
 
@@ -130,7 +131,8 @@ namespace Transient.ControlFlow {
         public State Target { get; private set; }
 
         private Func<bool, bool> _Condition;
-        private readonly Func<bool, bool> _DefaultAfterActionDoneCondition = c => c;
+        private static readonly Func<bool, bool> _DefaultNoCondition = c => true;
+        private static readonly Func<bool, bool> _DefaultAfterActionDoneCondition = c => c;
         private readonly Func<bool, bool> _DefaultPassThroughCondition;
         private readonly TransitionMode _mode;
         private readonly bool _passThrough;
@@ -144,11 +146,18 @@ namespace Transient.ControlFlow {
             Source = source_;
             Target = target_;
             _DefaultPassThroughCondition = c => _passThrough;
-            DefaultCondition();
+            _Condition = DefaultCondition();
         }
 
-        private Func<bool, bool> DefaultCondition() 
-            => _mode == TransitionMode.AfterActionDone ? _DefaultAfterActionDoneCondition : _DefaultPassThroughCondition;
+        private Func<bool, bool> DefaultCondition() {
+            if (_mode == TransitionMode.AfterActionDone) {
+                return _DefaultAfterActionDoneCondition;
+            }
+            if (_mode == TransitionMode.PassThrough) {
+                return _Condition = _DefaultPassThroughCondition;
+            }
+            return _Condition = _DefaultNoCondition;
+        }
 
         public void TransitCondition(Func<bool, bool> Condition_) => _Condition = Condition_ ?? DefaultCondition();
 
