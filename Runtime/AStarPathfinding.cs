@@ -7,14 +7,14 @@ using UnityEngine;
 namespace Transient.Pathfinding {
     public interface IGraphData {
         int Size { get; }
-        int Coord2Index(short x, short y);
+        Vector2 Position(int index_);
         byte Cost(int index_);
         void PrintNode(int index_, StringBuilder text_);
     }
 
-    public interface IGraph<D> where D : IGraphData {
-        D data { get; set; }
-        void AddNeighbour(int current_, AStarPathfinding<D> astar_);
+    public interface IGraph {
+        IGraphData data { get; }
+        void AddNeighbour(int current_, AStarPathfinding astar_);
         uint HeuristicCost(int a_, int b_);
     }
 }
@@ -22,8 +22,6 @@ namespace Transient.Pathfinding {
 #region grid based
 
 namespace Transient.Pathfinding {
-    using IGridGraph = IGraph<GridData>;
-    using AStarGrid = AStarPathfinding<GridData>;
 
     public struct Grid {
         //virtual position when origin of the grid field is in top-left corner
@@ -42,10 +40,6 @@ namespace Transient.Pathfinding {
         public ushort originX;
         public ushort originY;
         public float gridSize;
-
-        public int Coord2Index(short x, short y) {
-            return (x + originX) + (y + originY) * width;
-        }
 
         public void Fill(ushort w_, ushort h_, byte[] v_, ushort originX_ = 0, ushort originY_ = 0) {
             field = new Grid[w_ * h_];
@@ -66,6 +60,15 @@ namespace Transient.Pathfinding {
             }
         }
 
+        public int Coord2Index(short x, short y) {
+            return (x + originX) + (y + originY) * width;
+        }
+
+        public Vector2 Position(int index_) {
+            var grid = field[index_];
+            return new Vector2((grid.x + 0.5f) * gridSize, -(grid.y + 0.5f) * gridSize);
+        }
+
         public byte Cost(int index_) => field[index_].v;
 
         public void PrintNode(int index_, StringBuilder text_) {
@@ -75,97 +78,112 @@ namespace Transient.Pathfinding {
         }
     }
 
-    public class RectGrid4Dir : IGridGraph {
-        public GridData data { get; set; }
+    public class RectGrid4Dir : IGraph {
+        private readonly GridData _data;
+        public IGraphData data => _data;
         private readonly ushort widthExpandLimit;
         private readonly ushort heightExpandLimit;
 
         public RectGrid4Dir(GridData data_) {
-            data = data_;
-            widthExpandLimit = (ushort)(data.width - 1);
-            heightExpandLimit = (ushort)(data.height - 1);
+            _data = data_;
+            widthExpandLimit = (ushort)(_data.width - 1);
+            heightExpandLimit = (ushort)(_data.height - 1);
         }
 
-        public void AddNeighbour(int current_, AStarGrid astar_) {
-            int x = data.field[current_].x;
-            int y = data.field[current_].y;
+        public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_) {
+            astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
+        }
+
+        public void AddNeighbour(int current_, AStarPathfinding astar_) {
+            int x = _data.field[current_].x;
+            int y = _data.field[current_].y;
             if (x > 0) astar_.TryAdd(current_ - 1, 1);
-            if (y > 0) astar_.TryAdd(current_ - data.width, 1);
+            if (y > 0) astar_.TryAdd(current_ - _data.width, 1);
             if (x < widthExpandLimit) astar_.TryAdd(current_ + 1, 1);
-            if (y < heightExpandLimit) astar_.TryAdd(current_ + data.width, 1);
+            if (y < heightExpandLimit) astar_.TryAdd(current_ + _data.width, 1);
         }
 
         public uint HeuristicCost(int a_, int b_) {
-            var a = data.field[a_];
-            var b = data.field[b_];
+            var a = _data.field[a_];
+            var b = _data.field[b_];
             return (uint)(Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y));
         }
     }
 
-    public class RectGrid8Dir : IGridGraph {
-        public GridData data { get; set; }
+    public class RectGrid8Dir : IGraph {
+        private readonly GridData _data;
+        public IGraphData data => _data;
         private readonly int widthExpandLimit;
         private readonly int heightExpandLimit;
 
         public RectGrid8Dir(GridData data_) {
-            data = data_;
-            widthExpandLimit = data.width - 1;
-            heightExpandLimit = data.height - 1;
+            _data = data_;
+            widthExpandLimit = _data.width - 1;
+            heightExpandLimit = _data.height - 1;
         }
 
-        public void AddNeighbour(int current_, AStarGrid astar_) {
-            int x = data.field[current_].x;
-            int y = data.field[current_].y;
+        public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_) {
+            astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
+        }
+
+        public void AddNeighbour(int current_, AStarPathfinding astar_) {
+            int x = _data.field[current_].x;
+            int y = _data.field[current_].y;
             if (x > 0) {
                 astar_.TryAdd(current_ - 1, 1);//-x
-                if (y > 0) astar_.TryAdd(current_ - 1 - data.width, 1);//-x-y
-                if (y < heightExpandLimit) astar_.TryAdd(current_ - 1 + data.width, 1);//-x+y
+                if (y > 0) astar_.TryAdd(current_ - 1 - _data.width, 1);//-x-y
+                if (y < heightExpandLimit) astar_.TryAdd(current_ - 1 + _data.width, 1);//-x+y
             }
-            if (y > 0) astar_.TryAdd(current_ - data.width, 1);//-y
+            if (y > 0) astar_.TryAdd(current_ - _data.width, 1);//-y
             if (x < widthExpandLimit) {
                 astar_.TryAdd(current_ + 1, 1);//+x
-                if (y > 0) astar_.TryAdd(current_ + 1 - data.width, 1);//+x-y
-                if (y < heightExpandLimit) astar_.TryAdd(current_ + 1 + data.width, 1);//+x+y
+                if (y > 0) astar_.TryAdd(current_ + 1 - _data.width, 1);//+x-y
+                if (y < heightExpandLimit) astar_.TryAdd(current_ + 1 + _data.width, 1);//+x+y
             }
-            if (y < heightExpandLimit) astar_.TryAdd(current_ + data.width, 1);//+y
+            if (y < heightExpandLimit) astar_.TryAdd(current_ + _data.width, 1);//+y
         }
 
         public uint HeuristicCost(int a_, int b_) {
-            var a = data.field[a_];
-            var b = data.field[b_];
+            var a = _data.field[a_];
+            var b = _data.field[b_];
             return (uint)(Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y));
         }
     }
 
-    public class AxialHexGrid : IGridGraph {
-        public GridData data { get; set; }
+    public class AxialHexGrid : IGraph {
+        private readonly GridData _data;
+        public IGraphData data => _data;
         private readonly int widthExpandLimit;
         private readonly int heightExpandLimit;
 
         public AxialHexGrid(GridData data_) {
-            data = data_;
-            widthExpandLimit = data.width - 1;
-            heightExpandLimit = data.height - 1;
+            _data = data_;
+            widthExpandLimit = _data.width - 1;
+            heightExpandLimit = _data.height - 1;
         }
 
-        public void AddNeighbour(int current_, AStarGrid astar_) {
-            int x = data.field[current_].x;
-            int y = data.field[current_].y;
+        public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_) {
+            astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
+        }
+
+        public void AddNeighbour(int current_, AStarPathfinding astar_) {
+            int x = _data.field[current_].x;
+            int y = _data.field[current_].y;
             if (x > 0) {
                 astar_.TryAdd(current_ - 1, 1);//-x
-                if (y > 0) astar_.TryAdd(current_ - 1 - data.width, 1);//-x-y
+                if (y > 0) astar_.TryAdd(current_ - 1 - _data.width, 1);//-x-y
             }
-            if (y > 0) astar_.TryAdd(current_ - data.width, 1);//-y
+            if (y > 0) astar_.TryAdd(current_ - _data.width, 1);//-y
             if (x < widthExpandLimit) {
                 astar_.TryAdd(current_ + 1, 1);//+x
-                if (y < heightExpandLimit) astar_.TryAdd(current_ + 1 + data.width, 1);//+x+y
+                if (y < heightExpandLimit) astar_.TryAdd(current_ + 1 + _data.width, 1);//+x+y
             }
-            if (y < heightExpandLimit) astar_.TryAdd(current_ + data.width, 1);//+y
+            if (y < heightExpandLimit) astar_.TryAdd(current_ + _data.width, 1);//+y
         }
 
         public uint HeuristicCost(int a_, int b_) {
-            var a = data.field[a_];
-            var b = data.field[b_];
+            var a = _data.field[a_];
+            var b = _data.field[b_];
             return (uint)(Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y));
         }
     }
@@ -176,39 +194,72 @@ namespace Transient.Pathfinding {
     #region waypoint based
 
 namespace Transient.Pathfinding {
-    using IWaypointGraph = IGraph<WaypointData>;
-    using AStarWaypoint = AStarPathfinding<WaypointData>;
-
     public struct Waypoint {
+        public Vector2 position;
         public byte weight;
+        public List<int> link;
     }
 
-    public struct WaypointData : IGraphData {
+    public class WaypointData : IGraphData {
         public Waypoint[] waypoint;
         public int Size => waypoint.Length;
 
-        public int Coord2Index(short x, short y) {
-            throw new NotImplementedException();
+        public int Position2Index(Vector2 position) {
+            var min = float.MaxValue;
+            int ret = 0;
+            for (int o = 0; o < waypoint.Length; ++o) {
+                var dist = (waypoint[o].position - position).sqrMagnitude;
+                if (dist < min) {
+                    ret = o;
+                    min = dist;
+                }
+            }
+            return ret;
+        }
+
+        public void MakeBidirectional() {
+            for (int r = 0; r < waypoint.Length; ++r) {
+                foreach (var link in waypoint[r].link) {
+                    var other = waypoint[link];
+                    if (!other.link.Contains(r)) {
+                        other.link.Add(r);
+                    }
+                }
+            }
+        }
+
+        public Vector2 Position(int index_) {
+            ref var node = ref waypoint[index_];
+            return node.position;
         }
 
         public byte Cost(int index_) => waypoint[index_].weight;
 
-        public void PrintNode(int next_, StringBuilder text_) {
-            throw new NotImplementedException();
+        public void PrintNode(int index_, StringBuilder text_) {
+            text_.Append(index_);
         }
     }
 
-    public class BidirectionalGraph : IWaypointGraph {
-        public WaypointData data { get; set; }
+    public class WaypointGraph : IGraph {
+        private readonly WaypointData _data;
+        public IGraphData data => _data;
 
-        public void AddNeighbour(int current_, AStarWaypoint astar_) {
-            throw new NotImplementedException();
+        public WaypointGraph(WaypointData data_) {
+            _data = data_;
+        }
+
+        public void AddNeighbour(int current_, AStarPathfinding astar_) {
+            ref var node = ref _data.waypoint[current_];
+            foreach (var link in node.link) {
+                astar_.TryAdd(link, 1);
+            }
         }
 
         public uint HeuristicCost(int a_, int b_) {
-            var a = data.waypoint[a_];
-            var b = data.waypoint[b_];
-            throw new NotImplementedException();
+            var a = _data.waypoint[a_];
+            var b = _data.waypoint[b_];
+            var line = a.position - b.position;
+            return (uint)Mathf.Round(line.sqrMagnitude * 1000000);
         }
     }
 }
@@ -216,7 +267,7 @@ namespace Transient.Pathfinding {
     #endregion waypoint based
 
 namespace Transient.Pathfinding {
-    public class AStarPathfinding<D> where D : IGraphData {
+    public class AStarPathfinding {
 
         struct IntermediateState {
             public byte state;
@@ -227,7 +278,7 @@ namespace Transient.Pathfinding {
 
         private IntermediateState[] _state;//1: in open list, 2: in closed list
         private readonly List<int> _open;
-        private IGraph<D> _graph;
+        private IGraph _graph;
         private int _start;
         private int _goal;
         private int _current;
@@ -237,7 +288,7 @@ namespace Transient.Pathfinding {
             _open = new List<int>(capacity_ >> 1);
         }
 
-        private void Setup(IGraph<D> graph_) {
+        private void Setup(IGraph graph_) {
             _graph = graph_;
             if(_state.Length < _graph.data.Size) {
                 _state = new IntermediateState[_graph.data.Size];
@@ -248,41 +299,41 @@ namespace Transient.Pathfinding {
             _open.Clear();
         }
 
-        public void FillPath<N>(PathMovement<D, N> movement_) {
+        public void FillPath(PathMovement movement_) {
             movement_.Reset(_graph.data, FillPath(movement_.path));
         }
 
-        public int FillPath(List<int> buffer_) {
+        public bool FillPath(List<int> buffer_) {
             buffer_.Clear();
             int next = _goal;
             int loop = 0;
             while(next != _start && loop < _graph.data.Size) {
                 ++loop;
                 buffer_.Add(next);
+                //TODO handle unreachable
                 next = _state[next].from;
             }
-            return buffer_.Count;
+            return true;
         }
 
-        public void PrintPath() {
+        public string FormattedPath() {
             var text = new StringBuilder("path:");
             int next = _goal;
             int loop = 0;
             while(next != _start && loop < _graph.data.Size) {
                 ++loop;
-
-                text.Append("-");
                 _graph.data.PrintNode(next, text);
+                text.Append("-");
                 next = _state[next].from;
             }
             _graph.data.PrintNode(_start, text);
-            Log.Debug(text.ToString());
+            return text.ToString();
         }
 
-        public void FindPath(IGraph<D> graph_, short startX_, short startY_, short goalX_, short goalY_) {
+        public void FindPath(IGraph graph_, int start_, int goal_) {
             Setup(graph_);
-            _start = graph_.data.Coord2Index(startX_, startY_);
-            _goal = graph_.data.Coord2Index(goalX_, goalY_);
+            _start = start_;
+            _goal = goal_;
             _open.Add(_start);
             _state[_start].value = 0;
             _state[_start].cost = _graph.HeuristicCost(_start, _goal);
@@ -300,9 +351,8 @@ namespace Transient.Pathfinding {
                         min = _state[next].cost;
                     }
                 }
-                //Logger.Debug($"select {_current}");
+                //Log.Debug($"select {_current}");
                 if(_current == _goal) {
-                    PrintPath();
                     return;
                 }
                 _open.OutOfOrderRemoveAt(currentIndex);
@@ -327,52 +377,51 @@ namespace Transient.Pathfinding {
             _state[next_].from = _current;
             _state[next_].value = tentative;
             _state[next_].cost = tentative + _graph.HeuristicCost(next_, _goal);
-            //Logger.Debug($"add node {next_} value={tentative} cost={_state[next_].cost}");
+            //Log.Debug($"add node {next_} value={tentative} cost={_state[next_].cost}");
         }
     }
 
-    public class PathMovement<D, N> {
-        public D dataRef;
+    public class PathMovement {
+        public IGraphData dataRef;
         public List<int> path;
         public int pathTarget;
-        public N fieldTarget;
-        public Vector2 gridPos;
+        public Vector2 nodePos;
         public Vector2 dir;
+        public bool Reachable { get; private set; }
         public bool Reached { get { return pathTarget < 0; } }
 
-        public PathMovement()
-        {
+        public PathMovement() {
             path = new List<int>(16);
         }
 
-        public void Reset(D data_, int target_)
-        {
+        public void Reset(IGraphData data_, bool reachable_) {
             dataRef = data_;
-            pathTarget = target_ - 1;
-            AtGrid(pathTarget);
+            pathTarget = path.Count - 1;
+            Reachable = reachable_;
+            NextSegment(pathTarget);
         }
 
-        private void AtGrid(int t_)
-        {
+        private void NextSegment(int t_) {
             if (t_ < 0) return;
-            fieldTarget = dataRef.field[path[t_]];
-            gridPos = new Vector3((fieldTarget.x + 0.5f) * dataRef.gridSize, -(fieldTarget.y + 0.5f) * dataRef.gridSize);
+            nodePos = dataRef.Position(path[t_]);
         }
 
-        public Vector2 Move(float dist_, Vector2 pos_)
-        {
-            dir = gridPos - pos_;
-            Vector2 ret;
-            if (dir.sqrMagnitude < dist_ * dist_)
-            {
-                ret = gridPos;
-                AtGrid(--pathTarget);
+        public Vector2 Move(float dist_, Vector2 pos_) {
+            Vector2 position = pos_;
+            move_to_next:
+            dir = nodePos - position;
+            var dist = dir.magnitude;
+            if (dist < dist_) {
+                //passed next node
+                position = nodePos;
+                if (--pathTarget < 0) {
+                    //reached
+                    return position;
+                }
+                nodePos = dataRef.Position(path[pathTarget]);
+                goto move_to_next;
             }
-            else
-            {
-                ret = pos_ + dir.normalized * dist_;
-            }
-            return ret;
+            return position + dir * dist_ / dist;
         }
     }
 }
