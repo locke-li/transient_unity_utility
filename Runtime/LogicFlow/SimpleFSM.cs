@@ -14,9 +14,9 @@ namespace Transient.ControlFlow {
             const int StateIdEnd = -2;
             const int StateIdAny = -3;
             _states = new Dictionary<int, State>(16);
-            StartState = new State(StateIdStart, this);
-            EndState = new State(StateIdEnd, this);
-            AnyState = new State(StateIdAny, this);
+            StartState = new State(StateIdStart, this, StateTransitMode.Automatic);
+            EndState = new State(StateIdEnd, this, StateTransitMode.Manual);
+            AnyState = new State(StateIdAny, this, StateTransitMode.Manual);
             _states.Add(StateIdStart, StartState);
             _states.Add(StateIdEnd, EndState);
             _states.Add(StateIdAny, AnyState);
@@ -49,17 +49,22 @@ namespace Transient.ControlFlow {
             }
         }
 
-        public State AddState() {
-            var state = new State(_states.Count, this);
+        public State AddState(StateTransitMode mode_ = StateTransitMode.Automatic) {
+            var state = new State(_states.Count, this, mode_);
             _states.Add(state.Id, state);
             return state;
         }
 
-        public Transition AddTransition(State source_, State target_, TransitionMode mode_ = TransitionMode.Manual) {
+        public Transition AddTransition(State source_, State target_, TransitMode mode_ = TransitMode.ActionResult) {
             var trans = new Transition(source_, target_, mode_);
             source_.AddTransition(trans);
             return trans;
         }
+    }
+
+    public enum StateTransitMode {
+        Automatic,
+        Manual,
     }
 
     public class State {
@@ -67,6 +72,7 @@ namespace Transient.ControlFlow {
 
         private readonly SimpleFSM _fsm;
         private readonly List<Transition> _transitions;
+        public StateTransitMode _mode;
         private bool _isDone;
         private Func<float, bool> _OnTick;
         private Action _OnEnter;
@@ -77,10 +83,11 @@ namespace Transient.ControlFlow {
         private State() {
         }
 
-        public State(int id_, SimpleFSM fsm_) {
+        public State(int id_, SimpleFSM fsm_, StateTransitMode mode_) {
             Id = id_;
             _fsm = fsm_;
-            _transitions = new List<Transition>(8);
+            _transitions = new List<Transition>(2);
+            _mode = mode_;
         }
 
         public void AddTransition(Transition trans) => _transitions.Add(trans);
@@ -107,6 +114,10 @@ namespace Transient.ControlFlow {
             if (!_isDone) {
                 _isDone = _OnTick(dt_);
             }
+            if (_mode == StateTransitMode.Manual || _fsm.CurrentState != this) {
+                //never auto transit || external transition happend
+                return;
+            }
             foreach (var trans in _transitions) {
                 if (trans.CanTransit(_isDone)) {
                     _fsm.DoTransition(trans);
@@ -120,10 +131,9 @@ namespace Transient.ControlFlow {
         }
     }
 
-    public enum TransitionMode {
+    public enum TransitMode {
         PassThrough = 0,
-        AfterActionDone,
-        Manual
+        ActionResult,
     }
 
     public class Transition {
@@ -131,32 +141,26 @@ namespace Transient.ControlFlow {
         public State Target { get; private set; }
 
         private Func<bool, bool> _Condition;
-        private static readonly Func<bool, bool> _DefaultNoCondition = c => true;
-        private static readonly Func<bool, bool> _DefaultAfterActionDoneCondition = c => c;
-        private readonly Func<bool, bool> _DefaultPassThroughCondition;
-        private readonly TransitionMode _mode;
-        private readonly bool _passThrough;
+        private static readonly Func<bool, bool> _DefaultActionResultCondition = c => c;
+        private static readonly Func<bool, bool> _DefaultPassThroughCondition = c => true;
+        private readonly TransitMode _mode;
 
         private Transition() {
         }
 
-        public Transition(State source_, State target_, TransitionMode mode_) {
+        public Transition(State source_, State target_, TransitMode mode_) {
             _mode = mode_;
-            _passThrough = _mode == TransitionMode.PassThrough;
             Source = source_;
             Target = target_;
-            _DefaultPassThroughCondition = c => _passThrough;
             _Condition = DefaultCondition();
         }
 
         private Func<bool, bool> DefaultCondition() {
-            if (_mode == TransitionMode.AfterActionDone) {
-                return _DefaultAfterActionDoneCondition;
+            if (_mode == TransitMode.ActionResult) {
+                return _DefaultActionResultCondition;
             }
-            if (_mode == TransitionMode.PassThrough) {
-                return _Condition = _DefaultPassThroughCondition;
-            }
-            return _Condition = _DefaultNoCondition;
+            //TransitionMode.PassThrough
+            return _DefaultPassThroughCondition;
         }
 
         public void TransitCondition(Func<bool, bool> Condition_) => _Condition = Condition_ ?? DefaultCondition();
