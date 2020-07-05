@@ -243,6 +243,7 @@ namespace Transient.Pathfinding {
     public class WaypointGraph : IGraph {
         private readonly WaypointData _data;
         public IGraphData data => _data;
+        public uint HeuristicScale { get; set; } = 100;
 
         public WaypointGraph(WaypointData data_) {
             _data = data_;
@@ -258,7 +259,7 @@ namespace Transient.Pathfinding {
             var a = _data.waypoint[a_];
             var b = _data.waypoint[b_];
             var line = a.position - b.position;
-            return (uint)Mathf.Round(line.sqrMagnitude * 1000000);
+            return (uint)Mathf.Round(line.sqrMagnitude * HeuristicScale);
         }
     }
 }
@@ -273,6 +274,7 @@ namespace Transient.Pathfinding {
             public int from;
             public uint value;
             public uint cost;
+            public uint heuristic;
         }
 
         private IntermediateState[] _state;//1: in open list, 2: in closed list
@@ -298,17 +300,19 @@ namespace Transient.Pathfinding {
             _open.Clear();
         }
 
-        public void FillPath(PathMovement movement_) {
-            movement_.Reset(_graph.data, FillPath(movement_.path));
+        public void FillPath(PathMovement movement_, int goal_) {
+            movement_.Reset(_graph.data, FillPath(goal_, movement_.path));
         }
+
+        public void FillPath(PathMovement movement_) => FillPath(movement_, _goal);
 
         public bool FillPath(int goal_, List<int> buffer_) {
             buffer_.Clear();
             int next = goal_;
             int loop = -1;
             while(next != _start && ++loop < _graph.data.Size) {
-                //handle unreachable, checking 0 == 0
-                if (_state[next].from == next) {
+                //handle unreachable
+                if (_state[next].visited == 0) {
                     return false;
                 }
                 buffer_.Add(next);
@@ -318,19 +322,20 @@ namespace Transient.Pathfinding {
         }
 
         public bool FillPath(List<int> buffer_) => FillPath(_goal, buffer_);
-        public bool FillPathNearest(List<int> buffer_) => FillPath(FindNearest(), buffer_);
+        public bool FillPathNearest(List<int> buffer_) => FillPath(FindNearest(_goal), buffer_);
+        public bool FillPathNearest(int goal_, List<int> buffer_) => FillPath(FindNearest(goal_), buffer_);
 
         public string FormattedPath(int goal_, StringBuilder text_ = null) {
             var text = text_??new StringBuilder("path:");
             int next = goal_;
             int loop = -1;
             while(next != _start && ++loop < _graph.data.Size) {
-                //handle unreachable, checking 0 == 0
-                if (_state[next].from == next) {
-                    text.Append("x-");
-                    return text_ == null ? FormattedPath(FindNearest(), text) : text.ToString();
-                }
                 _graph.data.PrintNode(next, text);
+                //handle unreachable
+                if (_state[next].visited == 0) {
+                    text.Append("-x-");
+                    return text_ == null ? FormattedPath(FindNearest(goal_), text) : text.ToString();
+                }
                 text.Append("-");
                 next = _state[next].from;
             }
@@ -343,17 +348,19 @@ namespace Transient.Pathfinding {
         //only works when:
         //1. unreachable
         //2. state.value represents wave generation = uniform node cost/travel cost
-        public int FindNearest() {
+        private int FindNearest(int goal_) {
             int nearest = _start;
             var min = uint.MaxValue;
             uint max = 0;
             for (int i = 0; i < _graph.data.Size; ++i) {
-                var cost = _state[i].cost;
+                //supplement heuristic cost if not calculated in pathfinding
+                var cost = _state[i].cost + (_goal < 0 ? _graph.HeuristicCost(i, goal_) : 0);
                 var value = _state[i].value;
                 if (value > max) {
                     min = uint.MaxValue;
                     max = value;
                 }
+                //Debug.Log($"{i} {cost} {value}");
                 if (value >= max && cost < min && cost > 0) {
                     nearest = i;
                     min = cost;
@@ -364,13 +371,15 @@ namespace Transient.Pathfinding {
             return nearest;
         }
 
-        public void FindPath(IGraph graph_, int start_, int goal_) {
+        private uint HeuristicCost(int a_, int b_) => _goal < 0 ? 0 : _graph.HeuristicCost(a_, b_);
+
+        public bool FindPath(IGraph graph_, int start_, int goal_) {
             Setup(graph_);
             _start = start_;
             _goal = goal_;
             _open.Add(_start);
             _state[_start].value = 0;
-            _state[_start].cost = _graph.HeuristicCost(_start, _goal);
+            _state[_start].cost = HeuristicCost(_start, _goal);
             _current = 0;
             uint min;
             int currentIndex = 0;
@@ -387,7 +396,8 @@ namespace Transient.Pathfinding {
                 }
                 //Log.Debug($"select {_current}");
                 if(_current == _goal) {
-                    return;
+                    _state[_current].visited = 1;
+                    return true;
                 }
                 _open.OutOfOrderRemoveAt(currentIndex);
                 _state[_current].visited = 1;
@@ -395,6 +405,7 @@ namespace Transient.Pathfinding {
                     TryAdd(link, cost);
                 }
             }
+            return false;
         }
 
         private void TryAdd(int next_, uint travelCost_) {
@@ -407,7 +418,7 @@ namespace Transient.Pathfinding {
             }
             _state[next_].from = _current;
             _state[next_].value = tentative;
-            _state[next_].cost = tentative + _graph.HeuristicCost(next_, _goal);
+            _state[next_].cost = tentative + HeuristicCost(next_, _goal);
             //Log.Debug($"add node {next_} value={tentative} cost={_state[next_].cost}");
         }
     }

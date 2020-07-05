@@ -74,6 +74,12 @@ namespace Tests {
             CheckPath(astar.FormattedPath(), "path:8-7-6-2-3-4-5");
             astar.FindPath(graph, 5, 31);
             CheckPath(astar.FormattedPath(), "path:31-x-9-7-6-2-3-4-5");
+
+            astar.FindPath(graph, 0, -1);
+            CheckPath(astar.FormattedPath(9), "path:9-7-6-2-0");
+            CheckPath(astar.FormattedPath(6), "path:6-2-0");
+            CheckPath(astar.FormattedPath(4), "path:4-3-2-0");
+            CheckPath(astar.FormattedPath(11), "path:11-x-9-7-6-2-0");
         }
     }
 }
