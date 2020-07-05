@@ -5,6 +5,11 @@ using Transient.SimpleContainer;
 
 namespace Tests {
     class PathfindingTest {
+        private void CheckPath(string path, string pathToCompare) {
+            Debug.Log(path);
+            Debug.Assert(path == pathToCompare, pathToCompare);
+        }
+
         [Test]
         public void GridPathfinding() {
             ushort width = 5;
@@ -27,16 +32,16 @@ namespace Tests {
             var astar = new AStarPathfinding();
             Debug.Log(nameof(rect4));
             rect4.FindPath(astar, 1, 0, 2, 4);
-            astar.FormattedPath();
+            CheckPath(astar.FormattedPath(), "");
             Debug.Log(nameof(rect4_offset));
             rect4_offset.FindPath(astar, -1, -2, 0, 2);
-            astar.FormattedPath();
+            CheckPath(astar.FormattedPath(), "");
             Debug.Log(nameof(rect8));
             rect8.FindPath(astar, 1, 0, 2, 4);
-            astar.FormattedPath();
+            CheckPath(astar.FormattedPath(), "");
             Debug.Log(nameof(axialHex));
             axialHex.FindPath(astar, 1, 0, 2, 4);
-            astar.FormattedPath();
+            CheckPath(astar.FormattedPath(), "");
         }
 
         [Test]
@@ -46,6 +51,7 @@ namespace Tests {
             for (int i = 0; i < waypoint.Length; ++i) {
                 waypoint[i] = new Waypoint() {
                     link = new List<int>(4),
+                    position = new Vector2(0, i),
                 };
             }
             waypoint[0].link.Add(1);
@@ -63,9 +69,11 @@ namespace Tests {
             var graph = new WaypointGraph(waypointData);
             var astar = new AStarPathfinding();
             astar.FindPath(graph, 0, 9);
-            Debug.Assert(astar.FormattedPath() == "path:9-7-6-2-0");
+            CheckPath(astar.FormattedPath(), "path:9-7-6-2-0");
             astar.FindPath(graph, 5, 8);
-            Debug.Assert(astar.FormattedPath() == "path:8-7-6-2-3-4-5");
+            CheckPath(astar.FormattedPath(), "path:8-7-6-2-3-4-5");
+            astar.FindPath(graph, 5, 31);
+            CheckPath(astar.FormattedPath(), "path:31-x-9-7-6-2-3-4-5");
         }
     }
 }

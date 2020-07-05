@@ -14,7 +14,7 @@ namespace Transient.Pathfinding {
 
     public interface IGraph {
         IGraphData data { get; }
-        void AddNeighbour(int current_, AStarPathfinding astar_);
+        System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_);
         uint HeuristicCost(int a_, int b_);
     }
 }
@@ -94,13 +94,13 @@ namespace Transient.Pathfinding {
             astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
         }
 
-        public void AddNeighbour(int current_, AStarPathfinding astar_) {
-            int x = _data.field[current_].x;
-            int y = _data.field[current_].y;
-            if (x > 0) astar_.TryAdd(current_ - 1, 1);
-            if (y > 0) astar_.TryAdd(current_ - _data.width, 1);
-            if (x < widthExpandLimit) astar_.TryAdd(current_ + 1, 1);
-            if (y < heightExpandLimit) astar_.TryAdd(current_ + _data.width, 1);
+        public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
+            int x = _data.field[index_].x;
+            int y = _data.field[index_].y;
+            if (x > 0) yield return (index_ - 1, 1);
+            if (y > 0) yield return (index_ - _data.width, 1);
+            if (x < widthExpandLimit) yield return (index_ + 1, 1);
+            if (y < heightExpandLimit) yield return (index_ + _data.width, 1);
         }
 
         public uint HeuristicCost(int a_, int b_) {
@@ -126,21 +126,21 @@ namespace Transient.Pathfinding {
             astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
         }
 
-        public void AddNeighbour(int current_, AStarPathfinding astar_) {
-            int x = _data.field[current_].x;
-            int y = _data.field[current_].y;
+        public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
+            int x = _data.field[index_].x;
+            int y = _data.field[index_].y;
             if (x > 0) {
-                astar_.TryAdd(current_ - 1, 1);//-x
-                if (y > 0) astar_.TryAdd(current_ - 1 - _data.width, 1);//-x-y
-                if (y < heightExpandLimit) astar_.TryAdd(current_ - 1 + _data.width, 1);//-x+y
+                yield return (index_ - 1, 1);//-x
+                if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
+                if (y < heightExpandLimit) yield return (index_ - 1 + _data.width, 1);//-x+y
             }
-            if (y > 0) astar_.TryAdd(current_ - _data.width, 1);//-y
+            if (y > 0) yield return (index_ - _data.width, 1);//-y
             if (x < widthExpandLimit) {
-                astar_.TryAdd(current_ + 1, 1);//+x
-                if (y > 0) astar_.TryAdd(current_ + 1 - _data.width, 1);//+x-y
-                if (y < heightExpandLimit) astar_.TryAdd(current_ + 1 + _data.width, 1);//+x+y
+                yield return (index_ + 1, 1);//+x
+                if (y > 0) yield return (index_ + 1 - _data.width, 1);//+x-y
+                if (y < heightExpandLimit) yield return (index_ + 1 + _data.width, 1);//+x+y
             }
-            if (y < heightExpandLimit) astar_.TryAdd(current_ + _data.width, 1);//+y
+            if (y < heightExpandLimit) yield return (index_ + _data.width, 1);//+y
         }
 
         public uint HeuristicCost(int a_, int b_) {
@@ -166,19 +166,19 @@ namespace Transient.Pathfinding {
             astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
         }
 
-        public void AddNeighbour(int current_, AStarPathfinding astar_) {
-            int x = _data.field[current_].x;
-            int y = _data.field[current_].y;
+        public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
+            int x = _data.field[index_].x;
+            int y = _data.field[index_].y;
             if (x > 0) {
-                astar_.TryAdd(current_ - 1, 1);//-x
-                if (y > 0) astar_.TryAdd(current_ - 1 - _data.width, 1);//-x-y
+                yield return (index_ - 1, 1);//-x
+                if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
             }
-            if (y > 0) astar_.TryAdd(current_ - _data.width, 1);//-y
+            if (y > 0) yield return (index_ - _data.width, 1);//-y
             if (x < widthExpandLimit) {
-                astar_.TryAdd(current_ + 1, 1);//+x
-                if (y < heightExpandLimit) astar_.TryAdd(current_ + 1 + _data.width, 1);//+x+y
+                yield return (index_ + 1, 1);//+x
+                if (y < heightExpandLimit) yield return (index_ + 1 + _data.width, 1);//+x+y
             }
-            if (y < heightExpandLimit) astar_.TryAdd(current_ + _data.width, 1);//+y
+            if (y < heightExpandLimit) yield return (index_ + _data.width, 1);//+y
         }
 
         public uint HeuristicCost(int a_, int b_) {
@@ -248,10 +248,9 @@ namespace Transient.Pathfinding {
             _data = data_;
         }
 
-        public void AddNeighbour(int current_, AStarPathfinding astar_) {
-            ref var node = ref _data.waypoint[current_];
-            foreach (var link in node.link) {
-                astar_.TryAdd(link, 1);
+        public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
+            foreach (var link in _data.waypoint[index_].link) {
+                yield return (link, 1);
             }
         }
 
@@ -270,7 +269,7 @@ namespace Transient.Pathfinding {
     public class AStarPathfinding {
 
         struct IntermediateState {
-            public byte state;
+            public byte visited;
             public int from;
             public uint value;
             public uint cost;
@@ -303,31 +302,66 @@ namespace Transient.Pathfinding {
             movement_.Reset(_graph.data, FillPath(movement_.path));
         }
 
-        public bool FillPath(List<int> buffer_) {
+        public bool FillPath(int goal_, List<int> buffer_) {
             buffer_.Clear();
-            int next = _goal;
-            int loop = 0;
-            while(next != _start && loop < _graph.data.Size) {
-                ++loop;
+            int next = goal_;
+            int loop = -1;
+            while(next != _start && ++loop < _graph.data.Size) {
+                //handle unreachable, checking 0 == 0
+                if (_state[next].from == next) {
+                    return false;
+                }
                 buffer_.Add(next);
-                //TODO handle unreachable
                 next = _state[next].from;
             }
             return true;
         }
 
-        public string FormattedPath() {
-            var text = new StringBuilder("path:");
-            int next = _goal;
-            int loop = 0;
-            while(next != _start && loop < _graph.data.Size) {
-                ++loop;
+        public bool FillPath(List<int> buffer_) => FillPath(_goal, buffer_);
+        public bool FillPathNearest(List<int> buffer_) => FillPath(FindNearest(), buffer_);
+
+        public string FormattedPath(int goal_, StringBuilder text_ = null) {
+            var text = text_??new StringBuilder("path:");
+            int next = goal_;
+            int loop = -1;
+            while(next != _start && ++loop < _graph.data.Size) {
+                //handle unreachable, checking 0 == 0
+                if (_state[next].from == next) {
+                    text.Append("x-");
+                    return text_ == null ? FormattedPath(FindNearest(), text) : text.ToString();
+                }
                 _graph.data.PrintNode(next, text);
                 text.Append("-");
                 next = _state[next].from;
             }
             _graph.data.PrintNode(_start, text);
             return text.ToString();
+        }
+
+        public string FormattedPath() => FormattedPath(_goal);
+
+        //only works when:
+        //1. unreachable
+        //2. state.value represents wave generation = uniform node cost/travel cost
+        public int FindNearest() {
+            int nearest = _start;
+            var min = uint.MaxValue;
+            uint max = 0;
+            for (int i = 0; i < _graph.data.Size; ++i) {
+                var cost = _state[i].cost;
+                var value = _state[i].value;
+                if (value > max) {
+                    min = uint.MaxValue;
+                    max = value;
+                }
+                if (value >= max && cost < min && cost > 0) {
+                    nearest = i;
+                    min = cost;
+                    max = value;
+                }
+            }
+            //Debug.Log($"{nearest} {_state[nearest].value}|{_state[nearest].cost}, {_goal} {_state[_goal].value}|{_state[_goal].cost}");
+            return nearest;
         }
 
         public void FindPath(IGraph graph_, int start_, int goal_) {
@@ -356,23 +390,20 @@ namespace Transient.Pathfinding {
                     return;
                 }
                 _open.OutOfOrderRemoveAt(currentIndex);
-                ++_state[_current].state;
-                _graph.AddNeighbour(_current, this);
+                _state[_current].visited = 1;
+                foreach (var (link, cost) in _graph.EnumerateLink(_current)) {
+                    TryAdd(link, cost);
+                }
             }
         }
 
-        public void TryAdd(int next_, uint travelCost_) {
+        private void TryAdd(int next_, uint travelCost_) {
             uint tentative = _state[_current].value + _graph.data.Cost(next_) + travelCost_;
-            switch (_state[next_].state) {
-                case 0:
-                    _open.Add(next_);
-                    ++_state[next_].state;
-                    break;
-                case 1:
-                    if(tentative > _state[next_].value) return;
-                    break;
-                default:
-                    return;
+            if (_state[next_].visited == 0) {
+                _open.Add(next_);
+            }
+            else if(tentative > _state[next_].value) {
+                return;
             }
             _state[next_].from = _current;
             _state[next_].value = tentative;
