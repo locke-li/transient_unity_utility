@@ -97,6 +97,7 @@ namespace Transient.Pathfinding {
         public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
             int x = _data.field[index_].x;
             int y = _data.field[index_].y;
+            //4 directions
             if (x > 0) yield return (index_ - 1, 1);
             if (y > 0) yield return (index_ - _data.width, 1);
             if (x < widthExpandLimit) yield return (index_ + 1, 1);
@@ -129,6 +130,7 @@ namespace Transient.Pathfinding {
         public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
             int x = _data.field[index_].x;
             int y = _data.field[index_].y;
+            //8 directions
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
                 if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
@@ -169,6 +171,7 @@ namespace Transient.Pathfinding {
         public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
             int x = _data.field[index_].x;
             int y = _data.field[index_].y;
+            //6 directions
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
                 if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
@@ -274,7 +277,6 @@ namespace Transient.Pathfinding {
             public int from;
             public uint value;
             public uint cost;
-            public uint heuristic;
         }
 
         private IntermediateState[] _state;//1: in open list, 2: in closed list

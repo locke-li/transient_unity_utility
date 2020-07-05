@@ -32,16 +32,16 @@ namespace Tests {
             var astar = new AStarPathfinding();
             Debug.Log(nameof(rect4));
             rect4.FindPath(astar, 1, 0, 2, 4);
-            CheckPath(astar.FormattedPath(), "");
+            CheckPath(astar.FormattedPath(), "path:2,4-2,3-1,3-0,3-0,2-0,1-0,0-1,0");
             Debug.Log(nameof(rect4_offset));
             rect4_offset.FindPath(astar, -1, -2, 0, 2);
-            CheckPath(astar.FormattedPath(), "");
+            CheckPath(astar.FormattedPath(), "path:2,4-2,3-1,3-0,3-0,2-0,1-0,0-1,0");
             Debug.Log(nameof(rect8));
             rect8.FindPath(astar, 1, 0, 2, 4);
-            CheckPath(astar.FormattedPath(), "");
+            CheckPath(astar.FormattedPath(), "path:2,4-1,3-0,2-0,1-1,0");
             Debug.Log(nameof(axialHex));
             axialHex.FindPath(astar, 1, 0, 2, 4);
-            CheckPath(astar.FormattedPath(), "");
+            CheckPath(astar.FormattedPath(), "path:2,4-1,3-0,2-0,1-1,1-0,0-1,0");
         }
 
         [Test]
