@@ -28,7 +28,6 @@ namespace Transient {
         private static int _screenWidth = 0;
         private static int _screenHeight = 0;
         private static float _screenHeightInverse;
-        private static DragReceiver _drag;
         public static MessagePopup PopupMessage { get; set; }
         public static MessageFade FadeMessage { get; set; }
         public static ClickVisual ClickVisual { get; set; }
@@ -39,10 +38,13 @@ namespace Transient {
         private static Vector2 _campos;
         private static float _camz = -5f;
 
+        private static DragReceiver _drag;
+        public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
+
         private static float _zoom;
         private static ZoomSetting _zoomSetting;
         private static float _zoomTarget;
-        private static ActionList<float> OnZoom { get; } = new ActionList<float>(8, nameof(OnZoom));
+        public static ActionList<float> OnZoom { get; } = new ActionList<float>(8, nameof(OnZoom));
 
         public static void Init(Camera main_, Camera ui_, Canvas canvas_) {
             MainCamera = main_;
@@ -50,7 +52,7 @@ namespace Transient {
             MainCanvas = canvas_;
             _perspectiveProjectionFactor = (float)Math.Tan(MainCamera.fieldOfView * Mathf.Deg2Rad * 0.5f);
             CheckScreenSize();
-            InitViewport(MainCanvas.transform);
+            InitViewport();
             CanvasContent = MainCanvas.transform.AddChildRect("content");
         }
 
@@ -66,9 +68,15 @@ namespace Transient {
             MainCamera.transform.position = new Vector3(_campos.x, _campos.y, _camz + pos.z);
         }
 
-        private static void InitViewport(Transform canvas_) {
-            _drag = AssetMapping.Default.TakePersistent<GameObject>(null, "view_drag").GetChecked<DragReceiver>();
-            _drag.transform.SetParent(canvas_, false);
+        private static void InitViewport() {
+            _campos = MainCamera.transform.position;
+            _camz = MainCamera.transform.position.z;
+            _zoom = MainCamera.orthographicSize;
+        }
+
+        public static void InitDrag(DragReceiver drag_) {
+            _drag = drag_;
+            //_drag.transform.SetParent(MainCanvas.transform, false);
             _drag.WhenDragBegin = d => {
                 _manualFocus = true;
                 _campos = MainCamera.transform.position;
@@ -79,14 +87,12 @@ namespace Transient {
                     _campos.y + offset.y * UnitPerPixel,
                     _camz
                 );
+                OnDrag.Invoke(offset, pos);
             };
             _drag.WhenDragEnd = d => {
                 _manualFocus = false;
                 _campos = MainCamera.transform.position;
             };
-            _campos = MainCamera.transform.position;
-            _camz = MainCamera.transform.position.z;
-            _zoom = MainCamera.orthographicSize;
         }
 
         public static void ViewportControl(bool t) {
@@ -99,15 +105,6 @@ namespace Transient {
                 MainCamera.farClipPlane = setting_.max + 1;
             }
             ZoomTo(setting_.rest);
-        }
-
-        public static void ZoomSync(Action<float> sync_, object token_) {
-            OnZoom.Add(sync_, token_);
-            sync_(_zoom);
-        }
-
-        public static void ZoomUnsync(object token_) {
-            OnZoom.Remove(token_);
         }
 
         private static void ZoomValue(float v_) {
@@ -170,15 +167,16 @@ namespace Transient {
             }
             //TODO touch zoom
             if(_zoomTarget != _zoom) {
-                if(_zoomTarget > _zoom) {
-                    _zoom += _zoomSetting.springStep;
-                    if(_zoomTarget < _zoom)
-                        _zoom = _zoomTarget;
+                if (_zoomSetting.spring) {
+                    if (_zoomTarget > _zoom) {
+                        _zoom = Mathf.Min(_zoomTarget, _zoom + _zoomSetting.springStep);
+                    }
+                    else {
+                        _zoom = Mathf.Max(_zoomTarget, _zoom - _zoomSetting.springStep);
+                    }
                 }
                 else {
-                    _zoom -= _zoomSetting.springStep;
-                    if(_zoomTarget > _zoom)
-                        _zoom = _zoomTarget;
+                    _zoom = _zoomTarget;
                 }
                 ZoomValue(_zoom);
             }
