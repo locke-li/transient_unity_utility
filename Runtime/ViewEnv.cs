@@ -14,6 +14,20 @@ namespace Transient {
         public float springTolerance;//TODO: make a smooth implementation
     }
 
+    public class PositionLimit { 
+        public float MinX { get; set; }
+        public float MaxX { get; set; }
+        public float MinY { get; set; }
+        public float MaxY { get; set; }
+
+        public (float x, float y) Limit(float x, float y) {
+            return (
+                Mathf.Min(Mathf.Max(x, MinX), MaxX),
+                Mathf.Min(Mathf.Max(y, MinY), MaxY)
+            );
+        }
+    }
+
     public sealed class ViewEnv : MonoBehaviour {
         public static Camera MainCamera { get; private set; }
         public static Camera UICamera { get; private set; }
