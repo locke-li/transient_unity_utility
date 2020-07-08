@@ -35,8 +35,7 @@ namespace Transient {
         public static Vector2 FocusOffset { get; set; }
         private static bool _manualFocus = false;
         private static float FocusStep { get; set; } = 2f;
-        private static Vector2 _campos;
-        private static float _camz = -5f;
+        private static ICoordinateSystem CameraSystem;
 
         private static DragReceiver _drag;
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
@@ -48,11 +47,13 @@ namespace Transient {
 
         public static void Init(Camera main_, Camera ui_, Canvas canvas_) {
             MainCamera = main_;
+            //TODO support for overlay canvas
             UICamera = ui_;
             MainCanvas = canvas_;
             _perspectiveProjectionFactor = (float)Math.Tan(MainCamera.fieldOfView * Mathf.Deg2Rad * 0.5f);
             CheckScreenSize();
             InitViewport();
+            ResetCoordinateSystem();
             CanvasContent = MainCanvas.transform.AddChildRect("content");
         }
 
@@ -63,15 +64,44 @@ namespace Transient {
 
         public static void ClearMessage() => FadeMessage?.Clear();
 
-        public static void MoveTo(Vector3 pos) {
-            _campos = pos;
-            MainCamera.transform.position = new Vector3(_campos.x, _campos.y, _camz + pos.z);
+        public static void MoveTo(Vector2 pos) {
+            CameraSystem.X = pos.x;
+            CameraSystem.Y = pos.y;
+            MainCamera.transform.position = CameraSystem.WorldPosition;
         }
 
         private static void InitViewport() {
-            _campos = MainCamera.transform.position;
-            _camz = MainCamera.transform.position.z;
+            //TODO what about perspective camera?
             _zoom = MainCamera.orthographicSize;
+            UnitPerPixel = _zoom * 2 * _screenHeightInverse;
+        }
+
+        public static void InitCoodinateSystem(Vector3 axisX, Vector3 axisY, Vector3 axisZ) {
+            if (!(CameraSystem is FlexibleCoordinateSystem)) {
+                CameraSystem = new FlexibleCoordinateSystem() {
+                    AxisX = axisX.normalized,
+                    AxisY = axisY.normalized,
+                    AxisZ = axisZ.normalized,
+                };
+            }
+            else {
+                CameraSystem.AxisX = axisX.normalized;
+                CameraSystem.AxisY = axisY.normalized;
+                CameraSystem.AxisZ = axisZ.normalized;
+            }
+            CameraSystem.WorldPosition = MainCamera.transform.position;
+        }
+
+        public static void ResetCoordinateSystem() {
+            if (!(CameraSystem is WorldCoordinateSystem)) {
+                CameraSystem = new WorldCoordinateSystem() {
+                    //these values won't actually be used
+                    AxisX = Vector3.right,
+                    AxisY = Vector3.up,
+                    AxisZ = Vector3.forward,
+                };
+            }
+            CameraSystem.WorldPosition = MainCamera.transform.position;
         }
 
         public static void InitDrag(DragReceiver drag_) {
@@ -79,19 +109,18 @@ namespace Transient {
             //_drag.transform.SetParent(MainCanvas.transform, false);
             _drag.WhenDragBegin = d => {
                 _manualFocus = true;
-                _campos = MainCamera.transform.position;
+                CameraSystem.WorldPosition = MainCamera.transform.position;
             };
             _drag.WhenDrag = (d, offset, pos) => {
-                MainCamera.transform.position = new Vector3(
-                    _campos.x + offset.x * UnitPerPixel,
-                    _campos.y + offset.y * UnitPerPixel,
-                    _camz
-                );
-                OnDrag.Invoke(offset, pos);
+                MainCamera.transform.position = CameraSystem.SystemToWorld(
+                    CameraSystem.X + offset.x * UnitPerPixel,
+                    CameraSystem.Y + offset.y * UnitPerPixel,
+                    CameraSystem.Z);
+                OnDrag.Invoke(offset, CameraSystem.PositionXY);
             };
             _drag.WhenDragEnd = d => {
                 _manualFocus = false;
-                _campos = MainCamera.transform.position;
+                CameraSystem.WorldPosition = MainCamera.transform.position;
             };
         }
 
@@ -111,9 +140,10 @@ namespace Transient {
             if (MainCamera.orthographic)
                 MainCamera.orthographicSize = v_;
             else {
-                _camz = -v_ * _perspectiveProjectionFactor;
-                var p = MainCamera.transform.position;
-                MainCamera.transform.position = new Vector3(p.x, p.y, _camz);
+                MainCamera.transform.position = CameraSystem.SystemToWorld(
+                    CameraSystem.X,
+                    CameraSystem.Y,
+                    -v_ * _perspectiveProjectionFactor);
             }
             _zoom = v_;
             UnitPerPixel = v_ * 2 * _screenHeightInverse;
@@ -151,11 +181,11 @@ namespace Transient {
         private void Update() {
             FadeMessage?.Fade();
             if(Focus != null && !_manualFocus) {
-                Vector2 focus = (Vector2)Focus.position + FocusOffset;
-                Vector2 dir = focus - _campos;
-                if(dir.sqrMagnitude < 0.025f) _campos = focus;
-                else _campos += dir * FocusStep * Time.deltaTime;
-                MainCamera.transform.position = new Vector3(_campos.x, _campos.y, _camz);
+                var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
+                var dir = focus - CameraSystem.PositionXY;
+                if(dir.sqrMagnitude < 0.025f) CameraSystem.PositionXY = focus;
+                else CameraSystem.PositionXY += dir * FocusStep * Time.deltaTime;
+                MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             Vector2 mp = Input.mousePosition;
             if(mp.x < 0 || mp.y < 0 || mp.x > Screen.width || mp.y > Screen.height) return;
