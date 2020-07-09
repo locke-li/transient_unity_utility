@@ -49,7 +49,7 @@ namespace Transient {
         public static Vector2 FocusOffset { get; set; }
         private static bool _manualFocus = false;
         private static float FocusStep { get; set; } = 2f;
-        private static ICoordinateSystem CameraSystem;
+        private static AbstractCoordinateSystem CameraSystem;
 
         private static DragReceiver _drag;
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
@@ -90,31 +90,39 @@ namespace Transient {
             UnitPerPixel = _zoom * 2 * _screenHeightInverse;
         }
 
-        public static void InitCoodinateSystem(Vector3 axisX, Vector3 axisY, Vector3 axisZ) {
+        public static void InitCoordinateSystem(Vector3 axisX, Vector3 axisY, Vector3 axisZ) {
             if (!(CameraSystem is FlexibleCoordinateSystem)) {
-                CameraSystem = new FlexibleCoordinateSystem() {
-                    AxisX = axisX.normalized,
-                    AxisY = axisY.normalized,
-                    AxisZ = axisZ.normalized,
-                };
+                CameraSystem = new FlexibleCoordinateSystem();
             }
-            else {
-                CameraSystem.AxisX = axisX.normalized;
-                CameraSystem.AxisY = axisY.normalized;
-                CameraSystem.AxisZ = axisZ.normalized;
+            CameraSystem.AxisX = axisX.normalized;
+            CameraSystem.AxisY = axisY.normalized;
+            CameraSystem.AxisZ = axisZ.normalized;
+            CameraSystem.WorldPosition = MainCamera.transform.position;
+        }
+        public static void InitCoordinateSystem(Transform local) => InitCoordinateSystem(local.right, local.up, local.forward);
+
+        public static void InitCoordinateSystem(Vector3 axisX, Vector3 axisY, Vector3 axisZ, float scaleX, float scaleY, float scaleZ) {
+            if (!(CameraSystem is ScaledCoordinateSystem)) {
+                CameraSystem = new ScaledCoordinateSystem();
             }
+            var system = (ScaledCoordinateSystem)CameraSystem;
+            CameraSystem.AxisX = axisX.normalized;
+            CameraSystem.AxisY = axisY.normalized;
+            CameraSystem.AxisZ = axisZ.normalized;
+            system.ScaleX = scaleX;
+            system.ScaleY = scaleY;
+            system.ScaleZ = scaleZ;
             CameraSystem.WorldPosition = MainCamera.transform.position;
         }
 
         public static void ResetCoordinateSystem() {
             if (!(CameraSystem is WorldCoordinateSystem)) {
-                CameraSystem = new WorldCoordinateSystem() {
-                    //these values won't actually be used
-                    AxisX = Vector3.right,
-                    AxisY = Vector3.up,
-                    AxisZ = Vector3.forward,
-                };
+                CameraSystem = new WorldCoordinateSystem();
             }
+            //these values won't actually be used
+            CameraSystem.AxisX = Vector3.right;
+            CameraSystem.AxisY = Vector3.up;
+            CameraSystem.AxisZ = Vector3.forward;
             CameraSystem.WorldPosition = MainCamera.transform.position;
         }
 
@@ -126,11 +134,13 @@ namespace Transient {
                 CameraSystem.WorldPosition = MainCamera.transform.position;
             };
             _drag.WhenDrag = (d, offset, pos) => {
+                var targetX = CameraSystem.X + offset.x * UnitPerPixel;
+                var targetY = CameraSystem.Y + offset.y * UnitPerPixel;
                 MainCamera.transform.position = CameraSystem.SystemToWorld(
-                    CameraSystem.X + offset.x * UnitPerPixel,
-                    CameraSystem.Y + offset.y * UnitPerPixel,
+                    targetX,
+                    targetY,
                     CameraSystem.Z);
-                OnDrag.Invoke(offset, CameraSystem.PositionXY);
+                OnDrag.Invoke(offset, new Vector3(targetX, targetY, CameraSystem.Z));
             };
             _drag.WhenDragEnd = d => {
                 _manualFocus = false;
