@@ -17,13 +17,15 @@ namespace Transient {
     public class PositionLimit { 
         public float MinX { get; set; }
         public float MaxX { get; set; }
+        public float OffsetX { get; set; }
         public float MinY { get; set; }
         public float MaxY { get; set; }
+        public float OffsetY { get; set; }
 
         public (float x, float y) Limit(float x, float y) {
             return (
-                Mathf.Min(Mathf.Max(x, MinX), MaxX),
-                Mathf.Min(Mathf.Max(y, MinY), MaxY)
+                Mathf.Min(Mathf.Max(x + OffsetX, MinX), MaxX) - OffsetX,
+                Mathf.Min(Mathf.Max(y + OffsetY, MinY), MaxY) - OffsetY
             );
         }
     }
@@ -52,6 +54,7 @@ namespace Transient {
         private static AbstractCoordinateSystem CameraSystem;
 
         private static DragReceiver _drag;
+        public static PositionLimit DragLimit { get; set; }
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
 
         private static float _zoom;
@@ -81,6 +84,12 @@ namespace Transient {
         public static void MoveTo(Vector2 pos) {
             CameraSystem.X = pos.x;
             CameraSystem.Y = pos.y;
+            MainCamera.transform.position = CameraSystem.WorldPosition;
+        }
+
+        public static void TryLimitPosition() {
+            if (DragLimit is null) return;
+            (CameraSystem.X, CameraSystem.Y) = DragLimit.Limit(CameraSystem.X, CameraSystem.Y);
             MainCamera.transform.position = CameraSystem.WorldPosition;
         }
 
@@ -128,7 +137,6 @@ namespace Transient {
 
         public static void InitDrag(DragReceiver drag_) {
             _drag = drag_;
-            //_drag.transform.SetParent(MainCanvas.transform, false);
             _drag.WhenDragBegin = d => {
                 _manualFocus = true;
                 CameraSystem.WorldPosition = MainCamera.transform.position;
@@ -136,6 +144,9 @@ namespace Transient {
             _drag.WhenDrag = (d, offset, pos) => {
                 var targetX = CameraSystem.X + offset.x * UnitPerPixel;
                 var targetY = CameraSystem.Y + offset.y * UnitPerPixel;
+                if (DragLimit != null) {
+                    (targetX, targetY) = DragLimit.Limit(targetX, targetY);
+                }
                 MainCamera.transform.position = CameraSystem.SystemToWorld(
                     targetX,
                     targetY,
