@@ -33,9 +33,11 @@ namespace Transient.Pathfinding {
     public class GridData : IGraphData {
         public Grid[] field;
         public int Size => field.Length;
-        //a size limit of 65536x65536 should be reasonable for grid based data
+        //a size limit of 65534x65534 [1,65534] should be reasonable for grid based data
         public ushort width;
         public ushort height;
+        public ushort widthExpanded;
+        public ushort heightExpanded;
         //origin point coordination in a system where the origin is in the top-left corner
         public ushort originX;
         public ushort originY;
@@ -43,8 +45,10 @@ namespace Transient.Pathfinding {
 
         public void Fill(ushort w_, ushort h_, byte[] v_, ushort originX_ = 0, ushort originY_ = 0) {
             field = new Grid[w_ * h_];
-            width = w_;
-            height = h_;
+            width = (ushort)(w_ - 1);
+            height = (ushort)(h_ - 1);
+            widthExpanded = w_;
+            heightExpanded = h_;
             originX = originX_;
             originY = originY_;
             int i;
@@ -61,7 +65,7 @@ namespace Transient.Pathfinding {
         }
 
         public int Coord2Index(short x, short y) {
-            return (x + originX) + (y + originY) * width;
+            return (x + originX) + (y + originY) * widthExpanded;
         }
 
         public Vector2 Position(int index_) {
@@ -72,22 +76,18 @@ namespace Transient.Pathfinding {
         public byte Cost(int index_) => field[index_].v;
 
         public void PrintNode(int index_, StringBuilder text_) {
-            text_.Append(index_ % width);
+            text_.Append(index_ % widthExpanded);
             text_.Append(",");
-            text_.Append(index_ / width);
+            text_.Append(index_ / widthExpanded);
         }
     }
 
     public class RectGrid4Dir : IGraph {
         private readonly GridData _data;
         public IGraphData data => _data;
-        private readonly ushort widthExpandLimit;
-        private readonly ushort heightExpandLimit;
 
         public RectGrid4Dir(GridData data_) {
             _data = data_;
-            widthExpandLimit = (ushort)(_data.width - 1);
-            heightExpandLimit = (ushort)(_data.height - 1);
         }
 
         public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_) {
@@ -99,9 +99,9 @@ namespace Transient.Pathfinding {
             int y = _data.field[index_].y;
             //4 directions
             if (x > 0) yield return (index_ - 1, 1);
-            if (y > 0) yield return (index_ - _data.width, 1);
-            if (x < widthExpandLimit) yield return (index_ + 1, 1);
-            if (y < heightExpandLimit) yield return (index_ + _data.width, 1);
+            if (y > 0) yield return (index_ - _data.widthExpanded, 1);
+            if (x < _data.width) yield return (index_ + 1, 1);
+            if (y < _data.height) yield return (index_ + _data.widthExpanded, 1);
         }
 
         public uint HeuristicCost(int a_, int b_) {
@@ -114,13 +114,9 @@ namespace Transient.Pathfinding {
     public class RectGrid8Dir : IGraph {
         private readonly GridData _data;
         public IGraphData data => _data;
-        private readonly int widthExpandLimit;
-        private readonly int heightExpandLimit;
 
         public RectGrid8Dir(GridData data_) {
             _data = data_;
-            widthExpandLimit = _data.width - 1;
-            heightExpandLimit = _data.height - 1;
         }
 
         public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_) {
@@ -133,16 +129,16 @@ namespace Transient.Pathfinding {
             //8 directions
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
-                if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
-                if (y < heightExpandLimit) yield return (index_ - 1 + _data.width, 1);//-x+y
+                if (y > 0) yield return (index_ - 1 - _data.widthExpanded, 1);//-x-y
+                if (y < _data.height) yield return (index_ - 1 + _data.widthExpanded, 1);//-x+y
             }
             if (y > 0) yield return (index_ - _data.width, 1);//-y
-            if (x < widthExpandLimit) {
+            if (x < _data.width) {
                 yield return (index_ + 1, 1);//+x
-                if (y > 0) yield return (index_ + 1 - _data.width, 1);//+x-y
-                if (y < heightExpandLimit) yield return (index_ + 1 + _data.width, 1);//+x+y
+                if (y > 0) yield return (index_ + 1 - _data.widthExpanded, 1);//+x-y
+                if (y < _data.height) yield return (index_ + 1 + _data.widthExpanded, 1);//+x+y
             }
-            if (y < heightExpandLimit) yield return (index_ + _data.width, 1);//+y
+            if (y < _data.height) yield return (index_ + _data.widthExpanded, 1);//+y
         }
 
         public uint HeuristicCost(int a_, int b_) {
@@ -155,13 +151,9 @@ namespace Transient.Pathfinding {
     public class AxialHexGrid : IGraph {
         private readonly GridData _data;
         public IGraphData data => _data;
-        private readonly int widthExpandLimit;
-        private readonly int heightExpandLimit;
 
         public AxialHexGrid(GridData data_) {
             _data = data_;
-            widthExpandLimit = _data.width - 1;
-            heightExpandLimit = _data.height - 1;
         }
 
         public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_) {
@@ -174,14 +166,14 @@ namespace Transient.Pathfinding {
             //6 directions
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
-                if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
+                if (y > 0) yield return (index_ - 1 - _data.widthExpanded, 1);//-x-y
             }
-            if (y > 0) yield return (index_ - _data.width, 1);//-y
-            if (x < widthExpandLimit) {
+            if (y > 0) yield return (index_ - _data.widthExpanded, 1);//-y
+            if (x < _data.width) {
                 yield return (index_ + 1, 1);//+x
-                if (y < heightExpandLimit) yield return (index_ + 1 + _data.width, 1);//+x+y
+                if (y < _data.height) yield return (index_ + 1 + _data.widthExpanded, 1);//+x+y
             }
-            if (y < heightExpandLimit) yield return (index_ + _data.width, 1);//+y
+            if (y < _data.height) yield return (index_ + _data.widthExpanded, 1);//+y
         }
 
         public uint HeuristicCost(int a_, int b_) {
@@ -207,9 +199,9 @@ namespace Transient.Pathfinding {
         public Waypoint[] waypoint;
         public int Size => waypoint.Length;
 
-        public int Position2Index(Vector2 position) {
-            var min = float.MaxValue;
-            int ret = 0;
+        public int Position2Index(Vector2 position, float maxDistanceSqr = float.MaxValue) {
+            var min = maxDistanceSqr;
+            int ret = -1;
             for (int o = 0; o < waypoint.Length; ++o) {
                 var dist = (waypoint[o].position - position).sqrMagnitude;
                 if (dist < min) {
@@ -432,7 +424,7 @@ namespace Transient.Pathfinding {
         public Vector2 nodePos;
         public Vector2 dir;
         public bool Reachable { get; private set; }
-        public bool Reached { get { return pathTarget < 0; } }
+        public bool Reached => pathTarget < 0;
 
         public PathMovement() {
             path = new List<int>(16);
