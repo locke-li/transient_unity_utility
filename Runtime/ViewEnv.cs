@@ -57,9 +57,10 @@ namespace Transient {
         public static PositionLimit DragLimit { get; set; }
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
 
-        private static float _zoom;
         private static ZoomSetting _zoomSetting;
         private static float _zoomTarget;
+        public static float Zoom { get; private set; }
+        public static float ZoomPercent => (Zoom - _zoomSetting.min) / (_zoomSetting.max - _zoomSetting.min);
         public static ActionList<float> OnZoom { get; } = new ActionList<float>(8, nameof(OnZoom));
 
         public static void Init(Camera main_, Camera ui_, Canvas canvas_) {
@@ -95,8 +96,8 @@ namespace Transient {
 
         private static void InitViewport() {
             //TODO what about perspective camera?
-            _zoom = MainCamera.orthographicSize;
-            UnitPerPixel = _zoom * 2 * _screenHeightInverse;
+            Zoom = MainCamera.orthographicSize;
+            UnitPerPixel = Zoom * 2 * _screenHeightInverse;
         }
 
         public static void InitCoordinateSystem(Vector3 axisX, Vector3 axisY, Vector3 axisZ) {
@@ -180,7 +181,7 @@ namespace Transient {
                     CameraSystem.Y,
                     -v_ * _perspectiveProjectionFactor);
             }
-            _zoom = v_;
+            Zoom = v_;
             UnitPerPixel = v_ * 2 * _screenHeightInverse;
             OnZoom.Invoke(v_);
         }
@@ -206,7 +207,12 @@ namespace Transient {
             _screenHeight = Screen.height;
             _screenHeightInverse = 1f / Screen.height;
             UIViewScale = UICamera.orthographicSize * _screenHeightInverse * 2f;
-            UnitPerPixel = _zoom * _screenHeightInverse * 2f;
+            UnitPerPixel = Zoom * _screenHeightInverse * 2f;
+        }
+
+        public static Vector3 WorldToCanvasSpace(Vector3 position) {
+            //TODO persist screen offset
+            return (MainCamera.WorldToScreenPoint(position) - new Vector3(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
         }
 
         private void FixedUpdate() {
@@ -231,19 +237,19 @@ namespace Transient {
                 TargetZoom(_zoomTarget - Input.mouseScrollDelta.y * _zoomSetting.scrollStep);
             }
             //TODO touch zoom
-            if(_zoomTarget != _zoom) {
+            if(_zoomTarget != Zoom) {
                 if (_zoomSetting.spring) {
-                    if (_zoomTarget > _zoom) {
-                        _zoom = Mathf.Min(_zoomTarget, _zoom + _zoomSetting.springStep);
+                    if (_zoomTarget > Zoom) {
+                        Zoom = Mathf.Min(_zoomTarget, Zoom + _zoomSetting.springStep);
                     }
                     else {
-                        _zoom = Mathf.Max(_zoomTarget, _zoom - _zoomSetting.springStep);
+                        Zoom = Mathf.Max(_zoomTarget, Zoom - _zoomSetting.springStep);
                     }
                 }
                 else {
-                    _zoom = _zoomTarget;
+                    Zoom = _zoomTarget;
                 }
-                ZoomValue(_zoom);
+                ZoomValue(Zoom);
             }
         }
     }
