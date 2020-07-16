@@ -26,6 +26,7 @@ namespace Transient {
                 ButtonReceiver confirm = trans.FindChecked<ButtonReceiver>(nameof(confirm));
                 ButtonReceiver cancel = trans.FindChecked<ButtonReceiver>(nameof(cancel));
                 var ret = new MessagePopup<M>() {
+                    _obj = obj,
                     _message = message,
                     _confirm = confirm,
                     _cancel = cancel
@@ -39,7 +40,7 @@ namespace Transient {
                     ret.Clear();
                 };
                 obj.SetActive(false);
-                return new MessagePopup<M>() { _obj = obj };
+                return ret;
             }
             catch (Exception e) {
                 Log.Warning($"{nameof(MessagePopup<M>)} create failed. {e.Message}");
