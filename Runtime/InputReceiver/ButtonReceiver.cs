@@ -6,7 +6,7 @@ namespace Transient.UI {
     [DisallowMultipleComponent, ExecuteInEditMode]
     public sealed class ButtonReceiver : MonoBehaviour,
         IPointerDownHandler, IPointerUpHandler, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler,
-        ISubmitHandler, IEventSystemHandler {
+        IBeginDragHandler, ISubmitHandler, IEventSystemHandler {
         public int id { get; set; }
         public object CustomInfo { get; set; }
         public Image image;
@@ -22,6 +22,9 @@ namespace Transient.UI {
         public bool interactable { get => _raycastAdapter.enabled; set => _raycastAdapter.enabled = value; }
         private IEventSystemRaycastAdapter _raycastAdapter;
         private float _pressTime;
+
+        public bool CancelClickOnDrag { get; set; } = false;
+        private bool _drag;
 
         private void OnEnable() {
             if(_raycastAdapter == null) {
@@ -53,7 +56,13 @@ namespace Transient.UI {
             }
         }
 
-        public void OnPointerClick(PointerEventData eventData) => WhenClick(this);
+        public void OnPointerClick(PointerEventData eventData) {
+            if (_drag && CancelClickOnDrag) {
+                _drag = false;
+                return;
+            }
+            WhenClick(this);
+        }
 
         public void OnPointerDown(PointerEventData eventData) {
             if (eventData.button != PointerEventData.InputButton.Left)
@@ -80,6 +89,10 @@ namespace Transient.UI {
         public void OnPointerExit(PointerEventData eventData) {
             StepI.Remove(this);
             WhenHover(this, false);
+        }
+
+        public void OnBeginDrag(PointerEventData eventData) {
+            _drag = true;
         }
 
         public void OnSubmit(BaseEventData eventData) => WhenClick(this);
