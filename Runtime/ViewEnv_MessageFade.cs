@@ -1,11 +1,18 @@
 using UnityEngine;
 using Transient.DataAccess;
-using Label = TMPro.TextMeshProUGUI;
 using Transient.SimpleContainer;
+using TMPro;
+using UnityEngine.UI;
 
 namespace Transient {
-    public class MessageFade {
-        private readonly List<Label> _message;
+    public interface IMessageFade {
+        void Create(string m, Color c);
+        void Fade();
+        void Clear();
+    }
+
+    public class MessageFade<M> : IMessageFade where M : IMessageText, new() {
+        private readonly List<M> _message;
         private readonly Transform _parent;
         public Vector3 StartPos { get; set; } = new Vector3(0, -50, 0);
         public Vector3 EndPos { get; set; } = new Vector3(0, 550f, 0);
@@ -14,48 +21,53 @@ namespace Transient {
 
         public MessageFade(Transform parent_) {
             _parent = parent_;
-            _message = new List<Label>(64);
+            _message = new List<M>(64);
         }
 
-        public static MessageFade TryCreate(string asset_, Transform parent_) {
+        public static MessageFade<M> TryCreate(string asset_, Transform parent_) {
             var obj = AssetMapping.View.Take<GameObject>(null, asset_, false);
-            var message = obj.GetChecked<Label>("message");
-            if(obj == null || message == null) {
-                Log.Warning($"{nameof(MessageFade)} create failed.");
+            var message = new M();
+            if(!message.Init(obj)) {
+                Log.Warning($"{nameof(MessageFade<M>)} create failed.");
                 return null;
             }
-            return new MessageFade(parent_) {
+            return new MessageFade<M>(parent_) {
                 Asset = asset_
             };
         }
 
         public void Create(string m, Color c) {
             var obj = AssetMapping.View.Take<GameObject>(null, Asset, true);
-            var message = obj.GetChecked<Label>("message");
-            message.text = m;
-            message.color = c;
             obj.transform.SetParent(_parent, false);
             obj.transform.localPosition = StartPos;
             obj.gameObject.SetActive(true);
-            if (!_message.Contains(message)) {
-                _message.Add(message);
-            }
+            var message = new M();
+            message.Init(obj);
+            message.Text = m;
+            message.Color = c;
+            _message.Add(message);
         }
 
         public void Fade() {
-            float p;
-            foreach (var m in _message) {
-                if (!m.gameObject.activeSelf) continue;//TODO: micro-optimize with sorting
-                m.transform.localPosition += Velocity * Time.deltaTime;
-                p = (m.transform.localPosition.y - StartPos.y) / (EndPos.y - StartPos.y);
-                if (p >= 1) AssetMapping.View.Recycle(m.gameObject);
-                m.color = new Color(m.color.r, m.color.g, m.color.b, 1 - p + 0.25f);
+            for (int k = 0; k < _message.Count; ++k) {
+                var m = _message[k];
+                m.Root.localPosition += Velocity * Time.deltaTime;
+                float p = (m.Root.localPosition.y - StartPos.y) / (EndPos.y - StartPos.y);
+                if (p >= 1) {
+                    _message.OutOfOrderRemoveAt(k);
+                    AssetMapping.View.Recycle(m.Root.gameObject);
+                    --k;
+                    continue;
+                }
+                var color = m.Color;
+                color.a = 1 - p + 0.25f;
+                m.Color = color;
             }
         }
 
         public void Clear() {
             foreach (var m in _message) {
-                if(m.gameObject.activeSelf) AssetMapping.View.Recycle(m.gameObject);
+                AssetMapping.View.Recycle(m.Root.gameObject);
             }
             _message.Clear();
         }

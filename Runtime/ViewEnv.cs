@@ -14,7 +14,7 @@ namespace Transient {
         public float springTolerance;//TODO: make a smooth implementation
     }
 
-    public class PositionLimit { 
+    public class PositionLimit {
         public float MinX { get; set; }
         public float MaxX { get; set; }
         public float OffsetX { get; set; }
@@ -44,8 +44,8 @@ namespace Transient {
         private static int _screenWidth = 0;
         private static int _screenHeight = 0;
         private static float _screenHeightInverse;
-        public static MessagePopup PopupMessage { get; set; }
-        public static MessageFade FadeMessage { get; set; }
+        public static IMessagePopup PopupMessage { get; set; }
+        public static IMessageFade FadeMessage { get; set; }
         public static ClickVisual ClickVisual { get; set; }
         public static Transform Focus { get; set; } = null;
         public static Vector2 FocusOffset { get; set; }
@@ -199,7 +199,7 @@ namespace Transient {
         }
 
         private static void CheckScreenSize() {
-            if(_screenWidth == Screen.width || _screenHeight == Screen.height)
+            if (_screenWidth == Screen.width || _screenHeight == Screen.height)
                 return;
             RatioXY = (float)Screen.width / Screen.height;
             RatioYX = 1f / RatioXY;
@@ -221,23 +221,23 @@ namespace Transient {
 
         private void Update() {
             FadeMessage?.Fade();
-            if(Focus != null && !_manualFocus) {
+            if (Focus != null && !_manualFocus) {
                 var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
                 var dir = focus - CameraSystem.PositionXY;
-                if(dir.sqrMagnitude < 0.025f) CameraSystem.PositionXY = focus;
+                if (dir.sqrMagnitude < 0.025f) CameraSystem.PositionXY = focus;
                 else CameraSystem.PositionXY += dir * FocusStep * Time.deltaTime;
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             Vector2 mp = Input.mousePosition;
-            if(mp.x < 0 || mp.y < 0 || mp.x > Screen.width || mp.y > Screen.height) return;
-            if(Input.GetMouseButtonDown(0)) {
+            if (mp.x < 0 || mp.y < 0 || mp.x > Screen.width || mp.y > Screen.height) return;
+            if (Input.GetMouseButtonDown(0)) {
                 ClickVisual?.EmitAt(UICamera.ScreenToWorldPoint(mp), UIViewScale);
             }
-            if(Input.mouseScrollDelta.y != 0) {
+            if (Input.mouseScrollDelta.y != 0) {
                 TargetZoom(_zoomTarget - Input.mouseScrollDelta.y * _zoomSetting.scrollStep);
             }
             //TODO touch zoom
-            if(_zoomTarget != Zoom) {
+            if (_zoomTarget != Zoom) {
                 if (_zoomSetting.spring) {
                     if (_zoomTarget > Zoom) {
                         Zoom = Mathf.Min(_zoomTarget, Zoom + _zoomSetting.springStep);

@@ -2,27 +2,30 @@ using UnityEngine;
 using Transient.DataAccess;
 using Transient.UI;
 using System;
-using Label = TMPro.TextMeshProUGUI;
 
 namespace Transient {
-    public class MessagePopup {
+    public interface IMessagePopup {
+        void Create(string m, Action Confirm_, Action Cancel_);
+    }
+
+    public class MessagePopup<M> : IMessagePopup where M : IMessageText, new() {
         private GameObject _obj;
-        private Label _message;
+        private M _message;
         private ButtonReceiver _confirm;
         private ButtonReceiver _cancel;
         private Action _OnConfirm;
         private Action _OnCancel;
 
-        public static MessagePopup TryCreate(string asset_, Transform parent_) {
+        public static MessagePopup<M> TryCreate(string asset_, Transform parent_) {
             try {
                 var obj = AssetMapping.View.TakePersistent<GameObject>(null, asset_);
                 var trans = obj.transform;
-                Label message = trans.FindChecked<Label>(nameof(message));
+                var message = new M();
+                message.Init(obj);
                 trans.SetParent(parent_, false);
                 ButtonReceiver confirm = trans.FindChecked<ButtonReceiver>(nameof(confirm));
                 ButtonReceiver cancel = trans.FindChecked<ButtonReceiver>(nameof(cancel));
-                var ret = new MessagePopup() {
-                    _obj = obj,
+                var ret = new MessagePopup<M>() {
                     _message = message,
                     _confirm = confirm,
                     _cancel = cancel
@@ -36,10 +39,10 @@ namespace Transient {
                     ret.Clear();
                 };
                 obj.SetActive(false);
-                return ret;
+                return new MessagePopup<M>() { _obj = obj };
             }
             catch (Exception e) {
-                Log.Warning($"{nameof(MessagePopup)} create failed. {e.Message}");
+                Log.Warning($"{nameof(MessagePopup<M>)} create failed. {e.Message}");
             }
             return null;
         }
@@ -56,7 +59,7 @@ namespace Transient {
                 _cancel.gameObject.SetActive(true);
                 _confirm.transform.localPosition = new Vector3(-160f, -80f, 0);
             }
-            _message.text = m.Replace("\\n", "\n");
+            _message.Text = m.Replace("\\n", "\n");
             _obj.SetActive(true);
         }
 
