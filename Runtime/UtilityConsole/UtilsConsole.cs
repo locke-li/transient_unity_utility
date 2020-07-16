@@ -280,7 +280,7 @@ namespace Transient.Development {
         public Button AddShortcut(string text_, Action<string> action_, Func<Color> color_ = null, bool closeConsole_ = true, bool checkInput_ = false) {
             //Debug.Log($"addshortcut {aText} {aAction}");
             action_ = action_??(s => Debug.LogWarning($"empty shortcut:{text_}!"));
-            color_ = color_??(() => Color.gray);
+            color_ = color_??(() => Color.white);
             Button button = AddShortcutUnity(text_);
             button.onClick.AddListener(new UnityAction(() => {
                 string p = _params.text;

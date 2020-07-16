@@ -10,8 +10,8 @@ using System;
 namespace Transient.DataAccess {
     public sealed class AssetMapping : System.Collections.Generic.IEqualityComparer<AssetIdentifier> {
         const int ItemPerRecycle = 64;
-        public Transform _activeObjects;
-        public Transform _recycleObjects;
+        public Transform ActiveObjectRoot { get; set; }
+        public Transform RecycleObjectRoot { get; set; }
         public static AssetMapping Default { get; private set; }
         public static AssetMapping View { get; private set; }
 
@@ -79,7 +79,7 @@ namespace Transient.DataAccess {
             _activePool.Add(resObject, resId);
             GameObject rObj;
             if((rObj = resObject as GameObject) is object) {
-                rObj.transform.SetParent(_activeObjects, false);
+                rObj.transform.SetParent(ActiveObjectRoot, false);
                 //rObj.SetActive(true);
             }
             Performance.End(nameof(ActivateObject));
@@ -87,13 +87,13 @@ namespace Transient.DataAccess {
 
         public void Recycle(object resObj_, GameObject go_) {
             go_.SetActive(false);
-            go_.transform.SetParent(_recycleObjects, false);
+            go_.transform.SetParent(RecycleObjectRoot, false);
             Recycle(resObj_);
         }
 
         public void Recycle(GameObject resObj_) {
             resObj_.SetActive(false);
-            resObj_.transform.SetParent(_recycleObjects, false);
+            resObj_.transform.SetParent(RecycleObjectRoot, false);
             Recycle((object)resObj_);
         }
 
