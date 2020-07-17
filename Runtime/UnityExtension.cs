@@ -106,7 +106,7 @@ namespace UnityEngine {
                 member_, file_, line_
                 );
             T ret = transform_.GetComponent<T>();
-            return ret != null ? ret : transform_.gameObject.AddComponent<T>();
+            return ret ?? transform_.gameObject.AddComponent<T>();
         }
 
         public static T GetChecked<T>(
@@ -213,6 +213,11 @@ namespace UnityEngine {
             child_.sizeDelta = new Vector2(0, 0);
             child_.pivot = new Vector2(0.5f, 0.5f);
             return child_;
+        }
+
+        public static bool OrientationEqual(Quaternion a, Quaternion b) {
+            var dot = 1 - Mathf.Abs(Quaternion.Dot(a, b));
+            return dot < 1e-4f;
         }
     }
 }
