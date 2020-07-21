@@ -168,7 +168,7 @@ namespace Transient.Development {
         }
 
         private void LogReceived(string condition_, string stacktrace_, LogType type_) {
-            if(!LogEnabled && type_ != LogType.Log)
+            if(!LogEnabled && type_ == LogType.Log)
                 return;
             Log cLog = null;
             if(_logList.Count >= LOG_LIMIT || (_logList.Count > 0 && !_logList.Peek().enabled)) {
