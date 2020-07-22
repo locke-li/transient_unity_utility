@@ -22,8 +22,7 @@ internal struct CoroutineCache {
     }
 }
 
-public class GeneratorCoroutine
-{
+public class GeneratorCoroutine {
     private List<CoroutineCache> CoroutineList { get; set; } = new List<CoroutineCache>(16);
 
     public GeneratorCoroutine(ActionList<float> Owner) {

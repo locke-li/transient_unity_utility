@@ -16,11 +16,13 @@ namespace Transient.UI {
             Bake();
         }
 
+#if UNITY_EDITOR
         protected override void OnValidate() {
             base.OnValidate();
             Scale(scale);
             Bake();
         }
+#endif
 
         private void Bake() {
             CheckCenter();

@@ -7,7 +7,7 @@ namespace Tests {
     class PathfindingTest {
         private void CheckPath(string path, string pathToCompare) {
             Debug.Log(path);
-            Debug.Assert(path == pathToCompare, pathToCompare);
+            Assert.AreEqual(pathToCompare, path);
         }
 
         [Test]
