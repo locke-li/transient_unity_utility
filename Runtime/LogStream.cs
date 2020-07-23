@@ -266,6 +266,8 @@ namespace Transient {
                 UnityEngine.Debug.LogError(log_);
                 return;
             }
+            //unknown
+            UnityEngine.Debug.Log(log_);
         }
 
         public void ForEach(Action<int, LogEntry> Process, int max_ = EntryLimit) {

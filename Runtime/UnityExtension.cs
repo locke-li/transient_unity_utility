@@ -16,7 +16,7 @@ namespace UnityEngine {
             [CallerFilePath]string file_ = "",
             [CallerLineNumber]int line_ = 0
             ) where T : Component {
-            GameObject go = GameObject.Find(path_);
+            var go = GameObject.Find(path_);
             Log.Assert(
                 go != null, "GameObject {0} not found!",
                 path_, null, null,
@@ -29,6 +29,19 @@ namespace UnityEngine {
                 member_, file_, line_
                 );
             return ret;
+        }
+
+        public static T GameObjectTryFind<T>(
+            string path_,
+            [CallerMemberName] string member_ = "",
+            [CallerFilePath] string file_ = "",
+            [CallerLineNumber] int line_ = 0
+            ) where T : Component {
+            var go = GameObject.Find(path_);
+            if (go is null) {
+                return null;
+            }
+            return go.GetComponent<T>();
         }
 
         private static string LogNotFound => "Path: <{0}> on {1} not found!";
