@@ -65,6 +65,7 @@ namespace Transient.ControlFlow {
     public enum StateTransitMode {
         Automatic,
         Manual,
+        Immediate,
     }
 
     public class State {
@@ -108,6 +109,9 @@ namespace Transient.ControlFlow {
         public void OnEnter() {
             Reset();
             _OnEnter?.Invoke();
+            if (_mode == StateTransitMode.Immediate) {
+                CheckTransition();
+            }
         }
 
         public void OnTick(float dt_) {
@@ -118,6 +122,10 @@ namespace Transient.ControlFlow {
                 //never auto transit || external transition happend
                 return;
             }
+            CheckTransition();
+        }
+
+        private void CheckTransition() {
             foreach (var trans in _transitions) {
                 if (trans.CanTransit(_isDone)) {
                     _fsm.DoTransition(trans);

@@ -21,6 +21,7 @@ namespace Transient.UI {
             Scale(scale);
             Bake();
         }
+
 #if UNITY_EDITOR
         protected override void OnValidate() {
             base.OnValidate();
