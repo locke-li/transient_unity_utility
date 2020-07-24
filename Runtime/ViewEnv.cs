@@ -2,6 +2,7 @@ using UnityEngine;
 using Transient.DataAccess;
 using Transient.UI;
 using System;
+using UnityEngine.EventSystems;
 
 namespace Transient {
     public struct ZoomSetting {
@@ -53,9 +54,15 @@ namespace Transient {
         private static float FocusStep { get; set; } = 2f;
         private static AbstractCoordinateSystem CameraSystem;
 
+        public static bool TouchControlOverride { get; private set; }
+
         private static DragReceiver _drag;
+        private static bool _dragEnabled;
         public static PositionLimit DragLimit { get; set; }
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
+
+        private static bool _pinch = false;
+        private static float _pinchDistance;
 
         private static ZoomSetting _zoomSetting;
         private static float _zoomTarget;
@@ -158,10 +165,18 @@ namespace Transient {
                 _manualFocus = false;
                 CameraSystem.WorldPosition = MainCamera.transform.position;
             };
+            _dragEnabled = true;
+            CheckDragControl();
         }
 
-        public static void ViewportControl(bool t) {
-            _drag.interactable = t;
+        public static void ViewportControl(bool v) {
+            _dragEnabled = v;
+            CheckDragControl();
+        }
+
+        private static void CheckDragControl() {
+            if (_drag == null) return;
+            _drag.interactable = _dragEnabled && !TouchControlOverride;
         }
 
         public static void InitZoom(ZoomSetting setting_) {
@@ -235,6 +250,21 @@ namespace Transient {
             }
             if (Input.mouseScrollDelta.y != 0) {
                 TargetZoom(_zoomTarget - Input.mouseScrollDelta.y * _zoomSetting.scrollStep);
+            }
+            if (_drag != null && Input.touchCount == 2 && EventSystem.current.currentSelectedGameObject == _drag.gameObject) {
+                var finger0 = Input.GetTouch(0);
+                var finger1 = Input.GetTouch(1);
+                var distance = (finger0.position - finger1.position).magnitude;
+                if (_pinch) {
+                    TargetZoom(_zoomTarget * _pinchDistance / distance);
+                }
+                _pinchDistance = distance;
+                _pinch = true;
+                TouchControlOverride = true;
+            }
+            else if(_pinch) {
+                _pinch = false;
+                TouchControlOverride = false;
             }
             //TODO touch zoom
             if (_zoomTarget != Zoom) {
