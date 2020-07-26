@@ -42,9 +42,14 @@ namespace Transient.UI {
         public Action<DragReceiver> WhenDragBegin { get; set; } = d => { };
         public Action<DragReceiver, Vector2, Vector2> WhenDrag { get; set; } = (d, v, p) => { };
         public Action<DragReceiver> WhenDragEnd { get; set; } = d => { };
+        public Action<DragReceiver> WhenPinchBegin { get; set; } = d => { };
+        public Action<DragReceiver, float, float> WhenPinch { get; set; } = (d, b, v) => { };
+        public Action<DragReceiver> WhenPinchEnd { get; set; } = d => { };
         public bool interactable { get => _raycastAdapter.enabled; set => _raycastAdapter.enabled = value; }
         private IEventSystemRaycastAdapter _raycastAdapter;
         private Vector2 _start;
+        private float _distance;
+        private int touchCount;
         public object CustomInfo { get; set; }
 
         private void OnEnable() {
@@ -54,16 +59,42 @@ namespace Transient.UI {
         }
 
         public void OnBeginDrag(PointerEventData eventData) {
-            _start = eventData.position;
-            WhenDragBegin(this);
+            touchCount = Input.touchCount;
+            if (touchCount == 2) {
+                var finger0 = Input.GetTouch(0);
+                var finger1 = Input.GetTouch(1);
+                _distance = (finger0.position - finger1.position).magnitude;
+                WhenPinchBegin(this);
+            }
+            else {
+                _start = eventData.position;
+                WhenDragBegin(this);
+            }
         }
 
         public void OnDrag(PointerEventData eventData) {
-            WhenDrag(this, _start - eventData.position, eventData.position);
+            if (Input.touchCount != touchCount) {
+                return;
+            }
+            if (touchCount == 2) {
+                var finger0 = Input.GetTouch(0);
+                var finger1 = Input.GetTouch(1);
+                var distance = (finger0.position - finger1.position).magnitude;
+                WhenPinch(this, _distance, distance);
+                _distance = distance;
+            }
+            else {
+                WhenDrag(this, _start - eventData.position, eventData.position);
+            }
         }
 
         public void OnEndDrag(PointerEventData eventData) {
-            WhenDragEnd(this);
+            if (touchCount == 2) {
+                WhenPinchEnd(this);
+            }
+            else {
+                WhenDragEnd(this);
+            }
         }
     }
 }

@@ -184,9 +184,9 @@ namespace Transient.Pathfinding {
     }
 }
 
-    #endregion grid based
+#endregion grid based
 
-    #region waypoint based
+#region waypoint based
 
 namespace Transient.Pathfinding {
     public struct Waypoint {
@@ -259,7 +259,7 @@ namespace Transient.Pathfinding {
     }
 }
 
-    #endregion waypoint based
+#endregion waypoint based
 
 namespace Transient.Pathfinding {
     public class AStarPathfinding {
@@ -285,7 +285,7 @@ namespace Transient.Pathfinding {
 
         private void Setup(IGraph graph_) {
             _graph = graph_;
-            if(_state.Length < _graph.data.Size) {
+            if (_state.Length < _graph.data.Size) {
                 _state = new IntermediateState[_graph.data.Size];
             }
             else {
@@ -294,17 +294,17 @@ namespace Transient.Pathfinding {
             _open.Clear();
         }
 
-        public void FillPath(PathMovement movement_, int goal_) {
+        public void FillPath(PathMoveGrid movement_, int goal_) {
             movement_.Reset(_graph.data, FillPath(goal_, movement_.path));
         }
 
-        public void FillPath(PathMovement movement_) => FillPath(movement_, _goal);
+        public void FillPath(PathMoveGrid movement_) => FillPath(movement_, _goal);
 
         public bool FillPath(int goal_, List<int> buffer_) {
             buffer_.Clear();
             int next = goal_;
             int loop = -1;
-            while(next != _start && ++loop < _graph.data.Size) {
+            while (next != _start && ++loop < _graph.data.Size) {
                 //handle unreachable
                 if (_state[next].visited == 0) {
                     return false;
@@ -320,10 +320,10 @@ namespace Transient.Pathfinding {
         public bool FillPathNearest(int goal_, List<int> buffer_) => FillPath(FindNearest(goal_), buffer_);
 
         public string FormattedPath(int goal_, StringBuilder text_ = null) {
-            var text = text_??new StringBuilder("path:");
+            var text = text_ ?? new StringBuilder("path:");
             int next = goal_;
             int loop = -1;
-            while(next != _start && ++loop < _graph.data.Size) {
+            while (next != _start && ++loop < _graph.data.Size) {
                 _graph.data.PrintNode(next, text);
                 //handle unreachable
                 if (_state[next].visited == 0) {
@@ -378,18 +378,18 @@ namespace Transient.Pathfinding {
             uint min;
             int currentIndex = 0;
             int next;
-            while(_open.Count > 0) {
+            while (_open.Count > 0) {
                 min = uint.MaxValue;
-                for(int i = 0; i < _open.Count; ++i) {
+                for (int i = 0; i < _open.Count; ++i) {
                     next = _open[i];
-                    if(_state[next].cost < min) {
+                    if (_state[next].cost < min) {
                         currentIndex = i;
                         _current = next;
                         min = _state[next].cost;
                     }
                 }
                 //Log.Debug($"select {_current}");
-                if(_current == _goal) {
+                if (_current == _goal) {
                     _state[_current].visited = 1;
                     return true;
                 }
@@ -407,7 +407,7 @@ namespace Transient.Pathfinding {
             if (_state[next_].visited == 0) {
                 _open.Add(next_);
             }
-            else if(tentative > _state[next_].value) {
+            else if (tentative > _state[next_].value) {
                 return;
             }
             _state[next_].from = _current;
@@ -417,47 +417,105 @@ namespace Transient.Pathfinding {
         }
     }
 
-    public class PathMovement {
+    public class PathMoveGrid {
         public IGraphData dataRef;
         public List<int> path;
-        public int pathTarget;
-        public Vector2 nodePos;
+        public int target;
+        public int stop;
+        public Vector2 pos;
         public Vector2 dir;
         public bool Reachable { get; private set; }
-        public bool Reached => pathTarget < 0;
+        public bool Reached => target < stop;
 
-        public PathMovement() {
+        public PathMoveGrid() {
             path = new List<int>(16);
+            stop = 0;
         }
 
         public void Reset(IGraphData data_, bool reachable_) {
             dataRef = data_;
-            pathTarget = path.Count - 1;
+            target = path.Count - 1;
             Reachable = reachable_;
-            NextSegment(pathTarget);
+            NextSegment(target);
         }
 
         private void NextSegment(int t_) {
-            if (t_ < 0) return;
-            nodePos = dataRef.Position(path[t_]);
+            pos = dataRef.Position(path[t_]);
         }
 
-        public Vector2 Move(float dist_, Vector2 pos_) {
+        public (Vector2, Vector2) Move(float dist_, Vector2 pos_) {
             Vector2 position = pos_;
-            move_to_next:
-            dir = nodePos - position;
+        move_to_next:
+            dir = pos - position;
             var dist = dir.magnitude;
             if (dist < dist_) {
                 //passed next node
-                position = nodePos;
-                if (--pathTarget < 0) {
+                position = pos;
+                if (--target < stop) {
                     //reached
-                    return position;
+                    return (position, dir);
                 }
-                nodePos = dataRef.Position(path[pathTarget]);
+                NextSegment(target);
                 goto move_to_next;
             }
-            return position + dir * dist_ / dist;
+            return (position + dir * dist_ / dist, dir);
+        }
+    }
+
+    public class PathMoveBezier {
+        public IGraphData dataRef;
+        public List<(int index, float distance)> path;
+        public int target;
+        public int stop;
+        public Vector2 pos;
+        public Vector2 dir;
+        public Vector2 p0, p1, p2;
+        public float move;
+        public float distance;
+        public float segment0;
+        public float segment1;
+        public bool Reachable { get; private set; }
+        public bool Reached => target < stop;
+
+        public PathMoveBezier() {
+            path = new List<(int, float)>(16);
+            stop = 0;
+        }
+
+        public void Reset(IGraphData data_, bool reachable_) {
+            dataRef = data_;
+            target = path.Count - 1;
+            Reachable = reachable_;
+            NextSegment(target);
+        }
+
+        private void NextSegment(int t_) {
+            var (index1, distance1) = path[t_];
+            //TODO
+            //pos = dataRef.Position(path[t_]);
+        }
+
+        private Vector2 EvaluateCurve() {
+            //TODO
+            return Vector2.zero;
+        }
+
+        public (Vector2, Vector2) Move(float dist_, Vector2 pos_) {
+            Vector2 position = pos_;
+        move_to_next:
+            dir = pos - position;
+            var dist = dir.magnitude;
+            if (dist < dist_) {
+                //passed next node
+                position = pos;
+                if (--target < stop) {
+                    //reached
+                    return (position, dir);
+                }
+                NextSegment(target);
+                goto move_to_next;
+            }
+            return (position + dir * dist_ / dist, dir);
         }
     }
 }
