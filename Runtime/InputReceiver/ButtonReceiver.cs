@@ -23,7 +23,6 @@ namespace Transient.UI {
         private IEventSystemRaycastAdapter _raycastAdapter;
         private float _pressTime;
 
-        //TODO use centralized control checking;
         public bool CancelClickOnDrag { get; set; } = false;
         private bool _drag;
 

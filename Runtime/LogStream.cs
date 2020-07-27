@@ -244,7 +244,8 @@ namespace Transient {
             );
         }
 
-        [Conditional("UNITY_EDITOR")]
+        //TODO use LogCache in UtilsConsole, then re-enable this condition
+        //[Conditional("UNITY_EDITOR")]
         private void LogToUnity(string log_, int level_) {
             if (level_ == unityLogLevel[0]) {//Error
                 UnityEngine.Debug.LogError(log_);
