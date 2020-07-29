@@ -3,6 +3,7 @@ using Transient.DataAccess;
 using Transient.UI;
 using System;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace Transient {
     public struct ZoomSetting {
@@ -41,6 +42,7 @@ namespace Transient {
         public static float RatioYX { get; private set; }
         public static float UnitPerPixel { get; private set; }
         public static float UIViewScale { get; private set; } = 1f;
+        public static Vector2 CanvasSize { get; private set; }
         private static float _perspectiveProjectionFactor = 1f;
         private static int _screenWidth = 0;
         private static int _screenHeight = 0;
@@ -55,13 +57,16 @@ namespace Transient {
         private static AbstractCoordinateSystem CameraSystem;
 
         private static DragReceiver _drag;
-        public static PositionLimit DragLimit { get; set; }
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
+
+        public static ViewportLimit ViewportLimit { get; set; }
+        public static PositionLimit PositionLimit { get; set; }
 
         private static ZoomSetting _zoomSetting;
         private static float _zoomTarget;
         public static float Zoom { get; private set; }
         public static float ZoomPercent => (Zoom - _zoomSetting.min) / (_zoomSetting.max - _zoomSetting.min);
+        public static float ZoomRatio => _zoomSetting.max / _zoomSetting.min;
         public static ActionList<float> OnZoom { get; } = new ActionList<float>(8, nameof(OnZoom));
 
         public static void Init(Camera main_, Camera ui_, Canvas canvas_) {
@@ -71,6 +76,7 @@ namespace Transient {
             MainCanvas = canvas_;
             _perspectiveProjectionFactor = (float)Math.Tan(MainCamera.fieldOfView * Mathf.Deg2Rad * 0.5f);
             CheckScreenSize();
+            CheckCanvas();
             InitViewport();
             ResetCoordinateSystem();
             CanvasContent = MainCanvas.transform.AddChildRect("content");
@@ -90,9 +96,31 @@ namespace Transient {
         }
 
         public static void TryLimitPosition() {
-            if (DragLimit is null) return;
-            (CameraSystem.X, CameraSystem.Y) = DragLimit.Limit(CameraSystem.X, CameraSystem.Y);
+            if (PositionLimit is null) return;
+            (CameraSystem.X, CameraSystem.Y) = PositionLimit.Limit(CameraSystem.X, CameraSystem.Y);
             MainCamera.transform.position = CameraSystem.WorldPosition;
+        }
+
+        private static void CheckScreenSize() {
+            if (_screenWidth == Screen.width || _screenHeight == Screen.height)
+                return;
+            RatioXY = (float)Screen.width / Screen.height;
+            RatioYX = 1f / RatioXY;
+            _screenWidth = Screen.width;
+            _screenHeight = Screen.height;
+            _screenHeightInverse = 1f / Screen.height;
+            UIViewScale = UICamera.orthographicSize * _screenHeightInverse * 2f;
+            UnitPerPixel = Zoom * _screenHeightInverse * 2f;
+        }
+
+        private static void CheckCanvas() {
+            var scaler = MainCanvas.GetComponent<CanvasScaler>();
+            if (scaler != null) {
+                CanvasSize = scaler.referenceResolution;
+            }
+            else {
+                CanvasSize = new Vector2(Screen.width, Screen.height);
+            }
         }
 
         private static void InitViewport() {
@@ -137,7 +165,7 @@ namespace Transient {
             CameraSystem.WorldPosition = MainCamera.transform.position;
         }
 
-        public static void InitDrag(DragReceiver drag_) {
+        public static void InitViewportControl(DragReceiver drag_) {
             _drag = drag_;
             _drag.WhenDragBegin = d => {
                 _manualFocus = true;
@@ -146,8 +174,8 @@ namespace Transient {
             _drag.WhenDrag = (d, offset, pos) => {
                 var targetX = CameraSystem.X + offset.x * UnitPerPixel;
                 var targetY = CameraSystem.Y + offset.y * UnitPerPixel;
-                if (DragLimit != null) {
-                    (targetX, targetY) = DragLimit.Limit(targetX, targetY);
+                if (PositionLimit != null) {
+                    (targetX, targetY) = PositionLimit.Limit(targetX, targetY);
                 }
                 MainCamera.transform.position = CameraSystem.SystemToWorld(
                     targetX,
@@ -189,6 +217,7 @@ namespace Transient {
             Zoom = v_;
             UnitPerPixel = v_ * 2 * _screenHeightInverse;
             OnZoom.Invoke(v_);
+            ViewportLimit?.OnZoom(v_);
         }
 
         public static bool SpringZoomSwitch() {
@@ -203,21 +232,14 @@ namespace Transient {
             ZoomValue(TargetZoom(v));
         }
 
-        private static void CheckScreenSize() {
-            if (_screenWidth == Screen.width || _screenHeight == Screen.height)
-                return;
-            RatioXY = (float)Screen.width / Screen.height;
-            RatioYX = 1f / RatioXY;
-            _screenWidth = Screen.width;
-            _screenHeight = Screen.height;
-            _screenHeightInverse = 1f / Screen.height;
-            UIViewScale = UICamera.orthographicSize * _screenHeightInverse * 2f;
-            UnitPerPixel = Zoom * _screenHeightInverse * 2f;
-        }
-
         public static Vector3 WorldToCanvasSpace(Vector3 position) {
             //TODO persist screen offset
             return (MainCamera.WorldToScreenPoint(position) - new Vector3(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
+        }
+
+        public static bool VisibleInCanvas(RectTransform obj) {
+            var pos = obj.anchoredPosition;
+            return pos.x > 0 && pos.x < CanvasSize.x && pos.y > 0 && pos.y < CanvasSize.y;
         }
 
         private void FixedUpdate() {

@@ -15,21 +15,28 @@ namespace Transient {
         private ButtonReceiver _cancel;
         private Action _OnConfirm;
         private Action _OnCancel;
+        private Vector2 _positionBoth;
+        private Vector2 _positionSingle;
 
         public static MessagePopup<M> TryCreate(string asset_, Transform parent_) {
             try {
                 var obj = AssetMapping.View.TakePersistent<GameObject>(null, asset_);
                 var trans = obj.transform;
-                var message = new M();
-                message.Init(obj);
                 trans.SetParent(parent_, false);
-                ButtonReceiver confirm = trans.FindChecked<ButtonReceiver>(nameof(confirm));
-                ButtonReceiver cancel = trans.FindChecked<ButtonReceiver>(nameof(cancel));
+                Transform content = trans.FindChecked<Transform>(nameof(content));
+                var message = new M();
+                message.Init(content.gameObject);
+                ButtonReceiver confirm = content.FindChecked<ButtonReceiver>(nameof(confirm));
+                ButtonReceiver cancel = content.FindChecked<ButtonReceiver>(nameof(cancel));
+                var confirmPos = confirm.transform.localPosition;
+                var cancelPos = cancel.transform.localPosition;
                 var ret = new MessagePopup<M>() {
                     _obj = obj,
                     _message = message,
                     _confirm = confirm,
-                    _cancel = cancel
+                    _cancel = cancel,
+                    _positionBoth = confirmPos,
+                    _positionSingle = (confirmPos + cancelPos) * 0.5f,
                 };
                 confirm.WhenClick = b => {
                     ret._OnConfirm();
@@ -51,14 +58,13 @@ namespace Transient {
         public void Create(string m, Action Confirm_, Action Cancel_) {
             _OnConfirm = Confirm_;
             _OnCancel = Cancel_;
-            //TODO use auto layout or use configurable value
             if (Cancel_ == null) {
                 _cancel.gameObject.SetActive(false);
-                _confirm.transform.localPosition = new Vector3(0, -80f, 0);
+                _confirm.transform.localPosition = _positionSingle;
             }
             else {
                 _cancel.gameObject.SetActive(true);
-                _confirm.transform.localPosition = new Vector3(-160f, -80f, 0);
+                _confirm.transform.localPosition = _positionBoth;
             }
             _message.Text = m.Replace("\\n", "\n");
             _obj.SetActive(true);
