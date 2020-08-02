@@ -16,22 +16,6 @@ namespace Transient {
         public float springTolerance;//TODO: make a smooth implementation
     }
 
-    public class PositionLimit {
-        public float MinX { get; set; }
-        public float MaxX { get; set; }
-        public float OffsetX { get; set; }
-        public float MinY { get; set; }
-        public float MaxY { get; set; }
-        public float OffsetY { get; set; }
-
-        public (float x, float y) Limit(float x, float y) {
-            return (
-                Mathf.Min(Mathf.Max(x + OffsetX, MinX), MaxX) - OffsetX,
-                Mathf.Min(Mathf.Max(y + OffsetY, MinY), MaxY) - OffsetY
-            );
-        }
-    }
-
     public sealed class ViewEnv : MonoBehaviour {
         public static Camera MainCamera { get; private set; }
         public static Camera UICamera { get; private set; }
@@ -54,7 +38,7 @@ namespace Transient {
         public static Vector2 FocusOffset { get; set; }
         private static bool _manualFocus = false;
         private static float FocusStep { get; set; } = 2f;
-        private static AbstractCoordinateSystem CameraSystem;
+        public static AbstractCoordinateSystem CameraSystem { get; private set; }
 
         private static DragReceiver _drag;
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
