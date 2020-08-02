@@ -356,7 +356,9 @@ namespace Transient.Development {
         }
 
         private void OnDestroy() {
-            Application.logMessageReceived -= Instance.LogReceived;
+            if (Instance != null) {
+                Application.logMessageReceived -= Instance.LogReceived;
+            }
             foreach(var shortcut in _shortcutButton) {
                 shortcut.Value.onClick.RemoveAllListeners();
             }
