@@ -142,7 +142,7 @@ namespace Transient {
             if (!(CameraSystem is WorldCoordinateSystem)) {
                 CameraSystem = new WorldCoordinateSystem();
             }
-            //these values won't actually be used
+            //these axis values won't actually be used
             CameraSystem.AxisX = Vector3.right;
             CameraSystem.AxisY = Vector3.up;
             CameraSystem.AxisZ = Vector3.forward;
@@ -237,6 +237,10 @@ namespace Transient {
                 var dir = focus - CameraSystem.PositionXY;
                 if (dir.sqrMagnitude < 0.025f) CameraSystem.PositionXY = focus;
                 else CameraSystem.PositionXY += dir * FocusStep * Time.deltaTime;
+                MainCamera.transform.position = CameraSystem.WorldPosition;
+            }
+            if (PositionLimit != null && PositionLimit.Unstable && !Input.anyKey) {
+                (CameraSystem.X, CameraSystem.Y) = PositionLimit.ElsaticPull();
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             Vector2 mp = Input.mousePosition;

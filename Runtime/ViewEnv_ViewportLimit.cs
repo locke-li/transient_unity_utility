@@ -44,6 +44,8 @@ namespace Transient {
             CalculateViewExtent(zoom_);
             ViewEnv.TryLimitPosition();
         }
+
+        public void InitElastic(float value, float expand) => ViewEnv.PositionLimit.InitElastic(value, expand);
     }
 
     public class PositionLimit {
@@ -53,13 +55,77 @@ namespace Transient {
         public float MinY { get; set; }
         public float MaxY { get; set; }
         public float OffsetY { get; set; }
-        public float Elasticity { get; set; }
+        public float Expand { get; set; }
+        public bool Unstable { get; set; }
+        public float ElasticFactor { get; set; }
+        private float minExpand;
+        private float diffX;
+        private float diffY;
+        private float diffXSign;
+        private float diffYSign;
+        private float borderX;
+        private float borderY;
 
         public (float x, float y) Limit(float x, float y) {
-            return (
-                Mathf.Min(Mathf.Max(x + OffsetX, MinX), MaxX) - OffsetX,
-                Mathf.Min(Mathf.Max(y + OffsetY, MinY), MaxY) - OffsetY
-            );
+            Unstable = false;
+            if (ElasticFactor == 0) {
+                return (
+                    Mathf.Min(Mathf.Max(x + OffsetX, MinX), MaxX) - OffsetX,
+                    Mathf.Min(Mathf.Max(y + OffsetY, MinY), MaxY) - OffsetY
+                );
+            }
+            return LimitElastic(x, y);
+        }
+
+        public (float x, float y) LimitElastic(float x, float y) {
+            x += OffsetX;
+            y += OffsetY;
+            if (x < MinX) {
+                borderX = MinX;
+                diffX = x - MinX;
+            }
+            else if (x > MaxX) { borderX = MaxX; }
+            else { borderX = x; }
+            if (y < MinY) { borderY = MinY; }
+            else if (y > MaxY) { borderY = MaxY; }
+            else { borderY = y; }
+            if (borderX == x && borderY == y) {
+                return (x - OffsetX, y - OffsetY);
+            }
+            Unstable = true;
+            diffX = Mathf.Min(x - borderX, Expand);
+            diffY = Mathf.Min(y - borderY, Expand);
+            diffXSign = Mathf.Sign(diffX);
+            diffYSign = Mathf.Sign(diffY);
+            diffX = Mathf.Min(diffX * diffXSign, Expand);
+            diffY = Mathf.Min(diffY * diffYSign, Expand);
+            borderX -= OffsetX;
+            borderY -= OffsetY;
+            return DiffLimit();
+        }
+
+        private (float x, float y) DiffLimit() {
+            return (borderX + diffX * diffXSign, borderY + diffY * diffYSign);
+        }
+
+        public void InitElastic(float value, float expand) {
+            expand = Mathf.Max(expand, 0f);
+            Expand = expand;
+            //TODO calculate when the gap is less than half pixel, i.e. visually identical
+            minExpand = expand * 0.002f;
+            value = Mathf.Max(value, 0f);
+            ElasticFactor = Mathf.Pow(0.8f, value);
+            Debug.Log(ElasticFactor);
+        }
+
+        public (float x, float y) ElsaticPull() {
+            diffX *= ElasticFactor;
+            diffY *= ElasticFactor;
+            if (diffX <= minExpand && diffY <= minExpand) {
+                Unstable = false;
+                return (borderX, borderY);
+            }
+            return DiffLimit();
         }
     }
 }
