@@ -240,7 +240,7 @@ namespace Transient {
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             if (PositionLimit != null && PositionLimit.Unstable && !Input.anyKey) {
-                (CameraSystem.X, CameraSystem.Y) = PositionLimit.ElsaticPull();
+                (CameraSystem.X, CameraSystem.Y) = PositionLimit.ElasticPull();
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             Vector2 mp = Input.mousePosition;

@@ -8,6 +8,7 @@ namespace Transient {
         private Vector2 borderCenter;
         private Vector2 borderExtent;
         private PositionLimit limit;
+        private float limitExpand;
 
         public void Init(Transform baseTransform, SpriteRenderer border) {
             var sprite = border.sprite;
@@ -40,12 +41,20 @@ namespace Transient {
             //Debug.Log($"{limit.MinX} {limit.MaxX} {limit.MinY} {limit.MaxY}");
         }
 
+        void CalculateViewExpand() {
+            limit.Expand = (1 - ViewEnv.ZoomPercent) * limitExpand;
+        }
+
         public void OnZoom(float zoom_) {
             CalculateViewExtent(zoom_);
             ViewEnv.TryLimitPosition();
         }
 
-        public void InitElastic(float value, float expand) => ViewEnv.PositionLimit.InitElastic(value, expand);
+        public void InitElastic(float elasticity, float expand) {
+            limitExpand = expand;
+            ViewEnv.PositionLimit.InitElastic(elasticity, 0f);
+            CalculateViewExpand();
+        }
     }
 
     public class PositionLimit {
@@ -57,8 +66,7 @@ namespace Transient {
         public float OffsetY { get; set; }
         public float Expand { get; set; }
         public bool Unstable { get; set; }
-        public float ElasticFactor { get; set; }
-        private float minExpand;
+        public float Elasticity { get; set; }
         private float diffX;
         private float diffY;
         private float diffXSign;
@@ -68,7 +76,7 @@ namespace Transient {
 
         public (float x, float y) Limit(float x, float y) {
             Unstable = false;
-            if (ElasticFactor == 0) {
+            if (Expand == 0 || Elasticity == 1) {
                 return (
                     Mathf.Min(Mathf.Max(x + OffsetX, MinX), MaxX) - OffsetX,
                     Mathf.Min(Mathf.Max(y + OffsetY, MinY), MaxY) - OffsetY
@@ -93,8 +101,8 @@ namespace Transient {
                 return (x - OffsetX, y - OffsetY);
             }
             Unstable = true;
-            diffX = Mathf.Min(x - borderX, Expand);
-            diffY = Mathf.Min(y - borderY, Expand);
+            diffX = x - borderX;
+            diffY = y - borderY;
             diffXSign = Mathf.Sign(diffX);
             diffYSign = Mathf.Sign(diffY);
             diffX = Mathf.Min(diffX * diffXSign, Expand);
@@ -105,23 +113,29 @@ namespace Transient {
         }
 
         private (float x, float y) DiffLimit() {
-            return (borderX + diffX * diffXSign, borderY + diffY * diffYSign);
+            var extendX = ElasticForceFactor(diffX) * Expand;
+            var extendY = ElasticForceFactor(diffY) * Expand;
+            //Debug.Log($"{diffX} {diffY} {extendX} {extendY}");
+            return (borderX + extendX * diffXSign, borderY + extendY * diffYSign);
         }
 
-        public void InitElastic(float value, float expand) {
+        private float ElasticForceFactor(float diff) {
+            var percent = diff / Expand;
+            return Elasticity * 0.9f * Mathf.Pow(percent, 1.5f - percent);
+        }
+
+        public void InitElastic(float elasticity, float expand) {
             expand = Mathf.Max(expand, 0f);
             Expand = expand;
-            //TODO calculate when the gap is less than half pixel, i.e. visually identical
-            minExpand = expand * 0.002f;
-            value = Mathf.Max(value, 0f);
-            ElasticFactor = Mathf.Pow(0.8f, value);
-            Debug.Log(ElasticFactor);
+            Elasticity = Mathf.Clamp01(1 / (1 + elasticity));
+            //Debug.Log(Elasticity);
         }
 
-        public (float x, float y) ElsaticPull() {
-            diffX *= ElasticFactor;
-            diffY *= ElasticFactor;
-            if (diffX <= minExpand && diffY <= minExpand) {
+        public (float x, float y) ElasticPull() {
+            var pull = (1 - Elasticity) * Expand;
+            diffX = Mathf.Max(diffX - 0.02f - pull * ElasticForceFactor(diffX), 0f);
+            diffY = Mathf.Max(diffY - 0.02f - pull * ElasticForceFactor(diffY), 0f);
+            if (diffX <= 0 && diffY <= 0) {
                 Unstable = false;
                 return (borderX, borderY);
             }
