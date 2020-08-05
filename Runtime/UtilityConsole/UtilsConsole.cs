@@ -21,10 +21,12 @@ namespace Transient.Development {
             public bool enabled { get { return tr.gameObject.activeSelf; } set { tr.gameObject.SetActive(value); } }
             public Transform tr;
             public Text text;
+            public Text textCount;
             public Button bg;
             public string msg;
             public string stack;
             public LogType type;
+            public int count;
         }
 
         public static UtilsConsole Instance { get; private set; }
@@ -158,6 +160,7 @@ namespace Transient.Development {
             LogTest();
         }
 
+        //TODO move to unity test
         [System.Diagnostics.Conditional("LOG_TEST")]
         private void LogTest() {
             LogReceived("test error", "test stack", LogType.Error);
@@ -165,11 +168,22 @@ namespace Transient.Development {
             LogReceived("test warning", "test stack", LogType.Warning);
             LogReceived("test log", "test stack", LogType.Log);
             LogReceived("test exception", "test stack", LogType.Exception);
+            for (int i = 0; i < 10; ++i) {
+                LogReceived("test merged", "test stack", LogType.Log);
+            }
         }
 
         private void LogReceived(string condition_, string stacktrace_, LogType type_) {
             if(!LogEnabled && type_ == LogType.Log)
                 return;
+            if (_lastLog != null
+                && _lastLog.msg == condition_
+                && _lastLog.stack == stacktrace_
+                && _lastLog.type == type_) {
+                ++_lastLog.count;
+                _lastLog.textCount.text = _lastLog.count.ToString();
+                return;
+            }
             Log cLog = null;
             if(_logList.Count >= LOG_LIMIT || (_logList.Count > 0 && !_logList.Peek().enabled)) {
                 cLog = _logList.Dequeue();
@@ -183,6 +197,7 @@ namespace Transient.Development {
                 cLog = new Log {
                     tr = tr,
                     text = tr.FindChecked<Text>("msg"),
+                    textCount = tr.FindChecked<Text>("count"),
                     bg = tr.GetComponent<Button>()
                 };
                 tr.SetParent(_logTemplate.transform.parent, false);
@@ -194,6 +209,8 @@ namespace Transient.Development {
             cLog.text.text = cLog.msg;
             cLog.stack = stacktrace_;
             cLog.type = type_;
+            cLog.count = 1;
+            cLog.textCount.text = string.Empty;
             cLog.bg.onClick.RemoveAllListeners();
             cLog.bg.onClick.AddListener(() => Select(cLog));
             cLog.bg.image.color = _logColors[(int)type_];

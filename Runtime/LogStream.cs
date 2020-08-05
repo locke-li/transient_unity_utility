@@ -186,6 +186,7 @@ namespace Transient {
         public string stacktrace;
         public int level;
         public EntrySource source;
+        public ushort count;
     }
 
     public struct EntrySource {
@@ -206,7 +207,7 @@ namespace Transient {
     public sealed class LogCache {
         private const int EntryLimit = 10000;
         private readonly LogEntry[] logs = new LogEntry[EntryLimit];
-        private int head = 0, tail = 0;
+        private int head = 0, last = -1, tail = 0;
         private LogEntry defaultLog = new LogEntry();
         public ActionList<LogEntry> LogReceived { get; } = new ActionList<LogEntry>(4);
         //Error/Assert/Warning/Log/Exception
@@ -215,22 +216,31 @@ namespace Transient {
         };
 
         internal LogCache() {
-            
         }
 
         public void Log(string log_, string stacktrace_, int level_, EntrySource source_) {
 #if !SkipPerformance
             Performance.RecordProfiler(nameof(LogCache));
 #endif
+            LogToUnity(log_, level_);
+            //merge consecutive logs with the same content
+            //NOTE source ignored
+            if (last >= 0
+                && logs[last].content == log_
+                && logs[last].stacktrace == stacktrace_
+                && logs[last].level == level_) {
+                ++logs[last].count;
+                return;
+            }
             var log = logs[tail] = new LogEntry() {
                 content = log_,
                 stacktrace = stacktrace_,
                 level = level_,
                 source = source_,
             };
+            last = ++last % logs.Length;
             tail = ++tail % logs.Length;
             LogReceived.Invoke(log);
-            LogToUnity(log_, level_);
 #if !SkipPerformance
             Performance.End(nameof(LogCache));
 #endif
@@ -316,6 +326,7 @@ namespace Transient {
         public void Clear() {
             Array.Clear(logs, 0, logs.Length);
             head = 0;
+            last = -1;
             tail = 0;
         }
     }
