@@ -56,7 +56,12 @@ namespace Transient.UI {
             }
         }
 
+        public bool InvalidInput(PointerEventData eventData)
+            => eventData.button != PointerEventData.InputButton.Left || Input.touchCount > 1;
+
         public void OnPointerClick(PointerEventData eventData) {
+            if (InvalidInput(eventData))
+                return;
             if (_drag && CancelClickOnDrag) {
                 _drag = false;
                 return;
@@ -65,7 +70,7 @@ namespace Transient.UI {
         }
 
         public void OnPointerDown(PointerEventData eventData) {
-            if (eventData.button != PointerEventData.InputButton.Left)
+            if (InvalidInput(eventData))
                 return;
             EventSystem.current.SetSelectedGameObject(gameObject, eventData);
             if(WhenLongPressed != null) {//start tracking long press
@@ -76,7 +81,7 @@ namespace Transient.UI {
         }
 
         public void OnPointerUp(PointerEventData eventData) {
-            if (eventData.button != PointerEventData.InputButton.Left)
+            if (InvalidInput(eventData))
                 return;
             EventSystem.current.SetSelectedGameObject(null);
             StepI.Remove(this);

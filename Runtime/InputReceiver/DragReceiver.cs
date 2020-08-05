@@ -127,13 +127,13 @@ namespace Transient.UI {
                 WhenDragEnd(this);
                 return;
             }
-            touchCount = 0;
             if (touchCount == 2) {
                 WhenPinchEnd(this);
             }
             else if (touchCount == 1) {
                 WhenDragEnd(this);
             }
+            touchCount = 0;
         }
     }
 }
