@@ -14,6 +14,7 @@ namespace Transient.DataAccess {
         public Transform RecycleObjectRoot { get; set; }
         public static AssetMapping Default { get; private set; }
         public static AssetMapping View { get; private set; }
+        public static (string, string) AssetEmpty = ("_internal_", "_empty_");
 
         readonly Dictionary<(string category, string id), AssetIdentifier> _pool;
         readonly Dictionary<object, AssetIdentifier> _activePool;//objects in the scene
@@ -29,6 +30,12 @@ namespace Transient.DataAccess {
             Default = new AssetMapping(16, 512, 512);
             View = new AssetMapping(8, 32, 64);
             AssetAdapter.Redirect(null, null);
+            Default.AddInternal(AssetEmpty, new GameObject());
+        }
+
+        public void AddInternal((string, string) AssetId, GameObject obj) {
+            obj.hideFlags = HideFlags.HideAndDontSave;
+            Default._pool.Add(AssetId, new AssetIdentifier(obj));
         }
 
         public T TakePersistent<T>(string c, string i) where T : UnityEngine.Object => UnityEngine.Object.Instantiate((T)AssetAdapter.Take(c, i, typeof(T)));
@@ -40,6 +47,8 @@ namespace Transient.DataAccess {
             ret.SetActive(true);
             return ret;
         }
+
+        public GameObject TakeEmpty() => Take<GameObject>(AssetEmpty.Item1, AssetEmpty.Item2, true);
 
         public T Take<T>(string c, string i, bool ins = true) where T : class {
             Performance.RecordProfiler(nameof(Take));
@@ -220,6 +229,14 @@ namespace Transient.DataAccess {
         Func<string, object, object> InstantiateI;
 
         public object Instantiate() => InstantiateI(category, Mapped);
+
+        public AssetIdentifier(UnityEngine.Object obj) {
+            category = string.Empty;
+            id = string.Empty;
+            _type = obj.GetType();
+            Raw = Mapped = obj;
+            InstantiateI = InstantiateUnityObject;
+        }
 
         public AssetIdentifier(string category_, string id_, Type type_) {
             category = category_?? string.Empty;

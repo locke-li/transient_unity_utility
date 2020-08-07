@@ -5,12 +5,16 @@ using System;
 
 namespace Transient {
     public interface IMessagePopup {
-        void Create(string m, Action Confirm_, Action Cancel_);
+        void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel);
+        void Sync(Vector3 position);
     }
 
     public class MessagePopup<M> : IMessagePopup where M : IMessageText, new() {
         private GameObject _obj;
+        private RectTransform _content;
+        private Vector2 _defaultPosition;
         private M _message;
+        private bool _blockIsCancel = false;
         private ButtonReceiver _confirm;
         private ButtonReceiver _cancel;
         private Action _OnConfirm;
@@ -23,15 +27,18 @@ namespace Transient {
                 var obj = AssetMapping.View.TakePersistent<GameObject>(null, asset_);
                 var trans = obj.transform;
                 trans.SetParent(parent_, false);
-                Transform content = trans.FindChecked<Transform>(nameof(content));
+                RectTransform content = trans.FindChecked<RectTransform>(nameof(content));
                 var message = new M();
                 message.Init(content.gameObject);
                 ButtonReceiver confirm = content.FindChecked<ButtonReceiver>(nameof(confirm));
                 ButtonReceiver cancel = content.FindChecked<ButtonReceiver>(nameof(cancel));
+                ButtonReceiver block = trans.FindChecked<ButtonReceiver>(nameof(block));
                 var confirmPos = confirm.transform.localPosition;
                 var cancelPos = cancel.transform.localPosition;
                 var ret = new MessagePopup<M>() {
                     _obj = obj,
+                    _content = content,
+                    _defaultPosition = content.anchoredPosition,
                     _message = message,
                     _confirm = confirm,
                     _cancel = cancel,
@@ -46,6 +53,12 @@ namespace Transient {
                     ret._OnCancel();
                     ret.Clear();
                 };
+                block.WhenClick = b => {
+                    if (ret._blockIsCancel) {
+                        //TODO this doesn't feel quite right...
+                        ret._cancel.WhenClick(b);
+                    }
+                };
                 obj.SetActive(false);
                 return ret;
             }
@@ -55,9 +68,10 @@ namespace Transient {
             return null;
         }
 
-        public void Create(string m, Action Confirm_, Action Cancel_) {
+        public void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel) {
             _OnConfirm = Confirm_;
             _OnCancel = Cancel_;
+            _blockIsCancel = blockIsCancel;
             if (Cancel_ == null) {
                 _cancel.gameObject.SetActive(false);
                 _confirm.transform.localPosition = _positionSingle;
@@ -72,8 +86,13 @@ namespace Transient {
 
         public void Clear() {
             _obj.SetActive(false);
+            _content.anchoredPosition = _defaultPosition;
             _OnConfirm = null;
             _OnCancel = null;
+        }
+
+        public void Sync(Vector3 position) {
+            _content.localPosition = ViewEnv.WorldToCanvasSpace(position);
         }
     }
 }

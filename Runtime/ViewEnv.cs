@@ -34,11 +34,13 @@ namespace Transient {
         public static IMessagePopup PopupMessage { get; set; }
         public static IMessageFade FadeMessage { get; set; }
         public static ClickVisual ClickVisual { get; set; }
+        public static AbstractCoordinateSystem CameraSystem { get; private set; }
+
         public static Transform Focus { get; set; } = null;
         public static Vector2 FocusOffset { get; set; }
         private static bool _manualFocus = false;
+        private static bool _focusOnce = false;
         private static float FocusStep { get; set; } = 2f;
-        public static AbstractCoordinateSystem CameraSystem { get; private set; }
 
         private static DragReceiver _drag;
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
@@ -66,12 +68,19 @@ namespace Transient {
             CanvasContent = MainCanvas.transform.AddChildRect("content");
         }
 
-        public static void Message(string m, Action Confirm_, Action Cancel_) => PopupMessage?.Create(m, Confirm_, Cancel_);
+        public static void Message(string m, Action Confirm_, Action Cancel_, bool blockIsCancel = false) => PopupMessage?.Create(m, Confirm_, Cancel_, blockIsCancel);
 
         public static void Message(string m) => FadeMessage?.Create(m, Color.white);
         public static void Message(string m, Color color) => FadeMessage?.Create(m, color);
 
         public static void ClearMessage() => FadeMessage?.Clear();
+
+        public static void InitFocus(Transform location, Vector2 offset, bool once = false, float step = 0f) {
+            Focus = location;
+            FocusOffset = offset;
+            _focusOnce = once;
+            FocusStep = step <= 0 ? FocusStep : step;
+        }
 
         public static void MoveTo(Vector2 pos) {
             CameraSystem.X = pos.x;
@@ -216,7 +225,7 @@ namespace Transient {
             ZoomValue(TargetZoom(v));
         }
 
-        public static Vector3 WorldToCanvasSpace(Vector3 position) {
+        public static Vector2 WorldToCanvasSpace(Vector3 position) {
             //TODO persist screen offset
             return (MainCamera.WorldToScreenPoint(position) - new Vector3(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
         }
@@ -235,8 +244,13 @@ namespace Transient {
             if (Focus != null && !_manualFocus) {
                 var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
                 var dir = focus - CameraSystem.PositionXY;
-                if (dir.sqrMagnitude < 0.025f) CameraSystem.PositionXY = focus;
-                else CameraSystem.PositionXY += dir * FocusStep * Time.deltaTime;
+                var dist = dir.magnitude;
+                var move = FocusStep * Time.deltaTime;
+                if (move >= dist) {
+                    CameraSystem.PositionXY = focus;
+                    if (_focusOnce) Focus = null;
+                }
+                else CameraSystem.PositionXY += dir / Mathf.Min(dist, 1f) * FocusStep * Time.deltaTime;
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             if (PositionLimit != null && PositionLimit.Unstable && !Input.anyKey) {
