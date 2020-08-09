@@ -72,10 +72,16 @@ namespace Transient.UI {
                 WhenDragBegin(this);
                 return;
             }
-            else if (touchCount > 0) {
-                return;
+            //try end current op
+            if (touchCount != Input.touchCount) {
+                if (touchCount == 2) {
+                    WhenPinchEnd(this);
+                }
+                else if (touchCount == 1) {
+                    WhenDragEnd(this);
+                }
+                touchCount = Input.touchCount;
             }
-            touchCount = Input.touchCount;
             if (touchCount == 2) {
                 var touch0 = Input.GetTouch(0);
                 var touch1 = Input.GetTouch(1);

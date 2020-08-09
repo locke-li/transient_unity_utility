@@ -66,6 +66,7 @@ namespace Transient.UI {
                 _drag = false;
                 return;
             }
+            //Log.Debug("button click");
             WhenClick(this);
         }
 
@@ -77,6 +78,7 @@ namespace Transient.UI {
                 _pressTime = 0;
                 StepI.Add(LongPressStep, this);
             }
+            //Log.Debug("button down");
             WhenClickDown(this);
         }
 
@@ -85,6 +87,7 @@ namespace Transient.UI {
                 return;
             EventSystem.current.SetSelectedGameObject(null);
             StepI.Remove(this);
+            //Debug.Log("button up");
             WhenClickUp(this);
         }
 
@@ -97,6 +100,7 @@ namespace Transient.UI {
         }
 
         public void OnBeginDrag(PointerEventData eventData) {
+            //Log.Debug("button drag");
             _drag = true;
         }
 
