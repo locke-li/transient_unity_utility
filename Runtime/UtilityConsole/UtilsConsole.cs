@@ -294,13 +294,13 @@ namespace Transient.Development {
             aButton.targetGraphic.color = aState ? aColor : aTarget;
         }
 
-        public Button AddShortcut(string text_, Action<string> action_, Func<Color> color_ = null, bool closeConsole_ = true, bool checkInput_ = false) {
+        public static Button AddShortcut(string text_, Action<string> action_, Func<Color> color_ = null, bool closeConsole_ = true, bool checkInput_ = false) {
             //Debug.Log($"addshortcut {aText} {aAction}");
             action_ = action_??(s => Debug.LogWarning($"empty shortcut:{text_}!"));
             color_ = color_??(() => Color.white);
             Button button = AddShortcutUnity(text_);
             button.onClick.AddListener(new UnityAction(() => {
-                string p = _params.text;
+                string p = Instance._params.text;
                 //mParams.text = string.Empty;
                 if(!(checkInput_ && string.IsNullOrEmpty(p)))
                     try {
@@ -313,13 +313,13 @@ namespace Transient.Development {
                 else
                     Debug.LogWarning($"debug shortcut {text_} need parameters");
                 if(closeConsole_)
-                    Toggle(false);
+                    Instance.Toggle(false);
             }));
             button.targetGraphic.color = color_();
             return button;
         }
 
-        public Button AddToggleShortcut(string aText, Action<string, Button> aAction, bool aToggleDefaultState, bool aCloseConsole = true, int? aSiblineIndex = null) {
+        public static Button AddToggleShortcut(string aText, Action<string, Button> aAction, bool aToggleDefaultState, bool aCloseConsole = true, int? aSiblineIndex = null) {
             if (Instance == null)
                 return null;
             if (aAction == null) {
@@ -342,27 +342,30 @@ namespace Transient.Development {
             return button;
         }
 
-        public void RemoveShortcut(string text_) {
+        public static void RemoveShortcut(string text_) {
             //Debug.Log($"removeshortcut {aText}");
-            if(_shortcutButton.TryGetValue(text_, out var go)) {
+            if(Instance._shortcutButton.TryGetValue(text_, out var go)) {
                 go.gameObject.SetActive(false);
             }
         }
 
-        public void RemoveAllShortcut() {
-            foreach(var shortcut in _shortcutButton) {
+        public static void RemoveAllShortcut() {
+            var buttons = Instance._shortcutButton;
+            foreach (var shortcut in buttons) {
                 shortcut.Value.onClick.RemoveAllListeners();
                 shortcut.Value.onClick.Invoke();
                 DestroyImmediate(shortcut.Value.gameObject);
             }
-            _shortcutButton.Clear();
+            buttons.Clear();
         }
 
-        private Button AddShortcutUnity(string text_) {
-            if (!_shortcutButton.TryGetValue(text_, out Button s)) {
-                s = Instantiate(_template.gameObject).GetComponent<Button>();
-                s.transform.SetParent(_template.transform.parent, false);
-                _shortcutButton.Add(text_, s);
+        private static Button AddShortcutUnity(string text_) {
+            var buttons = Instance._shortcutButton;
+            var template = Instance._template;
+            if (!buttons.TryGetValue(text_, out Button s)) {
+                s = Instantiate(template.gameObject).GetComponent<Button>();
+                s.transform.SetParent(template.transform.parent, false);
+                buttons.Add(text_, s);
             }
             else {
                 s.onClick.RemoveAllListeners();
