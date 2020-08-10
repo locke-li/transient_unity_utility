@@ -10,24 +10,19 @@ namespace Transient {
         private PositionLimit limit;
         private float limitExpand;
 
-        public void Init(Transform baseTransform, SpriteRenderer border) {
+        public void Init(SpriteRenderer border) {
             var sprite = border.sprite;
             var extent = 0.5f * sprite.rect.size / sprite.pixelsPerUnit;
             var offset = ViewEnv.CameraSystem.WorldToSystemXY(border.transform.position);
-            Init(baseTransform, extent, offset + sprite.rect.center / sprite.pixelsPerUnit - extent);
+            Init(extent, offset + sprite.rect.center / sprite.pixelsPerUnit - extent);
         }
 
-        public void Init(Transform baseTransform, Vector2 extent, Vector2 center) {
-            //assume base transform Y & rotation X won't change
-            Init(baseTransform.position.y, baseTransform.rotation.eulerAngles.x, extent, center);
-        }
-
-        public void Init(float height, float rotationAngle, Vector2 extent, Vector2 center) {
+        public void Init(Vector2 extent, Vector2 center) {
             ViewEnv.ViewportLimit = this;
             borderCenter = center;
             borderExtent = extent;
             limit = new PositionLimit();
-            limit.OffsetY = 0.5f * height / Mathf.Tan(rotationAngle * Mathf.Deg2Rad);
+            limit.OffsetY = ViewEnv.OffsetFromRelativeY(0).y;
             ViewEnv.PositionLimit = limit;
             OnZoom(ViewEnv.Zoom);
         }

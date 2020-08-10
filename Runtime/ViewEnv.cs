@@ -77,7 +77,7 @@ namespace Transient {
 
         public static void InitFocus(Transform location, Vector2 offset, bool once = false, float step = 0f) {
             Focus = location;
-            FocusOffset = offset;
+            FocusOffset = offset - OffsetFromRelativeY(location.position.y);
             _focusOnce = once;
             FocusStep = step <= 0 ? FocusStep : step;
         }
@@ -228,6 +228,13 @@ namespace Transient {
         public static Vector2 WorldToCanvasSpace(Vector3 position) {
             //TODO persist screen offset
             return (MainCamera.WorldToScreenPoint(position) - new Vector3(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
+        }
+
+        //TODO should be in CoordinateSystem
+        public static Vector2 OffsetFromRelativeY(float height) {
+            var relative = MainCamera.transform.position.y - height;
+            var rotationAngle = MainCamera.transform.rotation.eulerAngles.x;
+            return new Vector2(0f, 0.5f * relative / Mathf.Tan(rotationAngle * Mathf.Deg2Rad));
         }
 
         public static bool VisibleInCanvas(RectTransform obj) {
