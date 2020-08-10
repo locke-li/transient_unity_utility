@@ -34,30 +34,42 @@ namespace Transient.UI {
             var scaleX = rect.x > rect.z ? -1 : 1;
             var scaleY = rect.y > rect.w ? -1 : 1;
             Vector4 rectInner = new Vector4(rect.x + border.x * scaleX, rect.y + border.y * scaleY, rect.z - border.z * scaleX, rect.w - border.w * scaleY);
-            //middle-center
-            vh.AddVert(center + new Vector2(rectInner.x, rectInner.y), color, new Vector2(uvInner.x, uvInner.y));
-            vh.AddVert(center + new Vector2(rectInner.x, rectInner.w), color, new Vector2(uvInner.x, uvInner.w));
-            vh.AddVert(center + new Vector2(rectInner.z, rectInner.w), color, new Vector2(uvInner.z, uvInner.w));
-            vh.AddVert(center + new Vector2(rectInner.z, rectInner.y), color, new Vector2(uvInner.z, uvInner.y));
-            TriangleBuffer.Add((offset, offset + 1, offset + 2));
-            TriangleBuffer.Add((offset, offset + 2, offset + 3));
-            int m = offset + 4, n, t = 0;
-            //TODO check for fill region collapsing, when a given size is less than sprite size
-            if (border.y > 0) {
-                //bottom-center
-                vh.AddVert(center + new Vector2(rectInner.x, rect.y), color, new Vector2(uvInner.x, uv.y));
-                vh.AddVert(center + new Vector2(rectInner.z, rect.y), color, new Vector2(uvInner.z, uv.y));
-                TriangleBuffer.Add((m, offset, offset + 3));
-                TriangleBuffer.Add((m, offset + 3, m + 1));
-                m += 2;
+            //Debug.Log($"{rect} {rectInner} {border}");
+            int m = offset, n, t = 0, b = 1;
+            if (rectInner.x * scaleX < rectInner.z * scaleX) {
+                //middle-center
+                vh.AddVert(center + new Vector2(rectInner.x, rectInner.y), color, new Vector2(uvInner.x, uvInner.y));
+                vh.AddVert(center + new Vector2(rectInner.x, rectInner.w), color, new Vector2(uvInner.x, uvInner.w));
+                vh.AddVert(center + new Vector2(rectInner.z, rectInner.w), color, new Vector2(uvInner.z, uvInner.w));
+                vh.AddVert(center + new Vector2(rectInner.z, rectInner.y), color, new Vector2(uvInner.z, uvInner.y));
+                TriangleBuffer.Add((offset, offset + 1, offset + 2));
+                TriangleBuffer.Add((offset, offset + 2, offset + 3));
+                m += 4;
+                //TODO check for fill region collapsing, when a given size is less than sprite size
+                if (border.y > 0) {
+                    //bottom-center
+                    vh.AddVert(center + new Vector2(rectInner.x, rect.y), color, new Vector2(uvInner.x, uv.y));
+                    vh.AddVert(center + new Vector2(rectInner.z, rect.y), color, new Vector2(uvInner.z, uv.y));
+                    TriangleBuffer.Add((m, offset, offset + 3));
+                    TriangleBuffer.Add((m, offset + 3, m + 1));
+                    b = m;
+                    m += 2;
+                }
+                if (border.w > 0) {
+                    //top-center
+                    vh.AddVert(center + new Vector2(rectInner.x, rect.w), color, new Vector2(uvInner.x, uv.w));
+                    vh.AddVert(center + new Vector2(rectInner.z, rect.w), color, new Vector2(uvInner.z, uv.w));
+                    TriangleBuffer.Add((offset + 1, m, m + 1));
+                    TriangleBuffer.Add((offset + 1, m + 1, offset + 2));
+                    t = m;
+                    m += 2;
+                }
             }
-            if (border.w > 0) {
-                //top-center
+            else {
+                vh.AddVert(center + new Vector2(rectInner.x, rect.y), color, new Vector2(uvInner.x, uv.y));
                 vh.AddVert(center + new Vector2(rectInner.x, rect.w), color, new Vector2(uvInner.x, uv.w));
-                vh.AddVert(center + new Vector2(rectInner.z, rect.w), color, new Vector2(uvInner.z, uv.w));
-                TriangleBuffer.Add((offset + 1, m, m + 1));
-                TriangleBuffer.Add((offset + 1, m + 1, offset + 2));
-                t = m;
+                b = m;
+                t = m + 1;
                 m += 2;
             }
             if (border.x > 0) {
@@ -71,7 +83,7 @@ namespace Transient.UI {
                     //bottom-left
                     vh.AddVert(center + new Vector2(rect.x, rect.y), color, new Vector2(uv.x, uv.y));
                     TriangleBuffer.Add((n, m, offset));
-                    TriangleBuffer.Add((n, offset, offset + 4));
+                    TriangleBuffer.Add((n, offset, b));
                     n += 1;
                 }
                 if (border.w > 0) {
@@ -93,8 +105,8 @@ namespace Transient.UI {
                 if (border.y > 0) {
                     //bottom-right
                     vh.AddVert(center + new Vector2(rect.z, rect.y), color, new Vector2(uv.z, uv.y));
-                    TriangleBuffer.Add((offset + 5, offset + 3, m));
-                    TriangleBuffer.Add((offset + 5, m, n));
+                    TriangleBuffer.Add((b + 1, offset + 3, m));
+                    TriangleBuffer.Add((b + 1, m, n));
                     n += 1;
                 }
                 if (border.w > 0) {

@@ -59,6 +59,9 @@ namespace Transient.UI {
                 }
             }
             width = rectTransform.rect.width * 0.5f - width;
+            //TODO handle width < middle.rect.width
+            //TODO handle width < 0
+            //Debug.Log($"{width}");
             uv = DataUtility.GetOuterUV(mirrored);
             uvInner = DataUtility.GetInnerUV(mirrored);
             rect = new Vector4(-width, -height, 0, height);
