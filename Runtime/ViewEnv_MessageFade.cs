@@ -11,8 +11,8 @@ namespace Transient {
         void Clear();
     }
 
-    public class MessageFade<M> : IMessageFade where M : IMessageText, new() {
-        private readonly List<M> _message;
+    public class MessageFade<M> : IMessageFade where M : struct, IMessageText {
+        private readonly Queue<M> _message;
         private readonly Transform _parent;
         public Vector3 StartPos { get; set; } = new Vector3(0, -50, 0);
         public Vector3 EndPos { get; set; } = new Vector3(0, 550f, 0);
@@ -21,7 +21,7 @@ namespace Transient {
 
         public MessageFade(Transform parent_) {
             _parent = parent_;
-            _message = new List<M>(64);
+            _message = new Queue<M>(64, 4);
         }
 
         public static MessageFade<M> TryCreate(string asset_, Transform parent_) {
@@ -40,28 +40,34 @@ namespace Transient {
             var obj = AssetMapping.View.Take<GameObject>(null, Asset, true);
             obj.transform.SetParent(_parent, false);
             obj.transform.localPosition = StartPos;
-            obj.gameObject.SetActive(true);
             var message = new M();
             message.Init(obj);
             message.Text = m;
             message.Color = c;
-            _message.Add(message);
+            _message.Enqueue(message);
         }
 
         public void Fade() {
+            float start, end = 0f;
             for (int k = 0; k < _message.Count; ++k) {
-                var m = _message[k];
-                m.Root.localPosition += Velocity * Time.deltaTime;
-                float p = (m.Root.localPosition.y - StartPos.y) / (EndPos.y - StartPos.y);
-                if (p >= 1) {
-                    _message.OutOfOrderRemoveAt(k);
-                    AssetMapping.View.Recycle(m.Root.gameObject);
-                    --k;
-                    continue;
+                var l = _message.RawIndex(k);
+                var transform = (RectTransform)_message.Data[l].Root;
+                transform.localPosition += Velocity * Time.deltaTime;
+                var height = transform.sizeDelta.y * 0.5f;
+                start = transform.anchoredPosition.y - height;
+                if (start < end) {
+                    transform.anchoredPosition += new Vector2(0f, end - start);
                 }
-                var color = m.Color;
-                color.a = 1 - p + 0.25f;
-                m.Color = color;
+                end = transform.anchoredPosition.y + height;
+                float p = (transform.localPosition.y - StartPos.y) / (EndPos.y - StartPos.y);
+                var color = _message.Data[l].Color;
+                color.a = 1.25f - p;
+                _message.Data[l].Color = color;
+            }
+            while (_message.Count > 0 && _message.Peek().Root.localPosition.y >= EndPos.y) {
+                var m = _message.Dequeue();
+                AssetMapping.Default.Recycle(m.Root.gameObject);
+                m.Recycle();
             }
         }
 

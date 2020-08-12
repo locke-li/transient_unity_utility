@@ -206,6 +206,7 @@ namespace Transient.SimpleContainer {
         int ps, pe;
         readonly int ext;
         public int Count { get; private set; }
+        public E[] Data => data;
 
         public Queue(int c, int ext_) {
             data = new E[c];
@@ -250,6 +251,8 @@ namespace Transient.SimpleContainer {
         public E Peek() => data[ps];
 
         public E Peek(int i) => data[(ps + i) % data.Length];
+
+        public int RawIndex(int index) => (ps + index) % data.Length;
 
         #region Enumerator
 

@@ -8,6 +8,7 @@ namespace Transient {
         string Text { get; set; }
         Color Color { get; set; }
         bool Init(GameObject obj);
+        void Recycle();
     }
 
     public struct TextUGUI : IMessageText {
@@ -28,6 +29,11 @@ namespace Transient {
             Content = obj?.FindChecked<Text>("message");
             return Content != null;
         }
+
+        public void Recycle() {
+            Root = null;
+            Content = null;
+        }
     }
 
     public struct TextTMPro : IMessageText {
@@ -47,6 +53,11 @@ namespace Transient {
             Root = obj?.transform;
             Content = obj?.FindChecked<TextMeshProUGUI>("message");
             return Content != null;
+        }
+
+        public void Recycle() {
+            Root = null;
+            Content = null;
         }
     }
 }
