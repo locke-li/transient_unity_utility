@@ -146,12 +146,21 @@ namespace UnityEngine {
         }
 
         public static T GetChecked<T>(
-            this GameObject gameObject_,
+            this GameObject obj_,
             [CallerMemberName]string member_ = "",
             [CallerFilePath]string file_ = "",
             [CallerLineNumber]int line_ = 0
             ) where T : Component {
-            return GetChecked<T>(gameObject_?.transform, member_, file_, line_);
+            return GetChecked<T>(obj_?.transform, member_, file_, line_);
+        }
+
+        public static T GetChecked<T>(
+            this Component obj_,
+            [CallerMemberName] string member_ = "",
+            [CallerFilePath] string file_ = "",
+            [CallerLineNumber] int line_ = 0
+            ) where T : Component {
+            return GetChecked<T>(obj_?.transform, member_, file_, line_);
         }
 
         public static T FindChecked<T>(
@@ -166,12 +175,21 @@ namespace UnityEngine {
         }
 
         public static T FindChecked<T>(
-            this GameObject transform_, string path_,
+            this GameObject obj_, string path_,
             [CallerMemberName]string member_ = "",
             [CallerFilePath]string file_ = "",
             [CallerLineNumber]int line_ = 0
             ) where T : Component {
-            return FindChecked<T>(transform_?.transform, path_, member_, file_, line_);
+            return FindChecked<T>(obj_?.transform, path_, member_, file_, line_);
+        }
+
+        public static T FindChecked<T>(
+            this Component obj_, string path_,
+            [CallerMemberName] string member_ = "",
+            [CallerFilePath] string file_ = "",
+            [CallerLineNumber] int line_ = 0
+            ) where T : Component {
+            return FindChecked<T>(obj_?.transform, path_, member_, file_, line_);
         }
 
         public static Transform AddChild(
