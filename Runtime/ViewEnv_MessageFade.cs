@@ -37,7 +37,7 @@ namespace Transient {
         }
 
         public void Create(string m, Color c) {
-            var obj = AssetMapping.View.Take<GameObject>(null, Asset, true);
+            var obj = AssetMapping.View.TakeActive(null, Asset);
             obj.transform.SetParent(_parent, false);
             obj.transform.localPosition = StartPos;
             var message = new M();
@@ -48,8 +48,8 @@ namespace Transient {
         }
 
         public void Fade() {
-            float start, end = 0f;
-            for (int k = 0; k < _message.Count; ++k) {
+            float start, end = float.MinValue;
+            for (int k = _message.Count - 1; k >= 0; --k) {
                 var l = _message.RawIndex(k);
                 var transform = (RectTransform)_message.Data[l].Root;
                 transform.localPosition += Velocity * Time.deltaTime;
@@ -66,7 +66,7 @@ namespace Transient {
             }
             while (_message.Count > 0 && _message.Peek().Root.localPosition.y >= EndPos.y) {
                 var m = _message.Dequeue();
-                AssetMapping.Default.Recycle(m.Root.gameObject);
+                AssetMapping.View.Recycle(m.Root.gameObject);
                 m.Recycle();
             }
         }
