@@ -33,6 +33,13 @@ namespace Transient.DataAccess {
             Default.AddInternal(AssetEmpty, new GameObject());
         }
 
+        public static void RootObject(Transform active, Transform recycle) {
+            Default.ActiveObjectRoot = active;
+            Default.RecycleObjectRoot = recycle;
+            View.ActiveObjectRoot = active;
+            View.RecycleObjectRoot = recycle;
+        }
+
         public void AddInternal((string, string) AssetId, GameObject obj) {
             obj.hideFlags = HideFlags.HideAndDontSave;
             Default._pool.Add(AssetId, new AssetIdentifier(obj));
@@ -108,7 +115,13 @@ namespace Transient.DataAccess {
 
         public void Recycle(object resObj_) {
             var registeredActiveObj = _activePool.TryGetValue(resObj_, out var resId);
-            Log.Assert(registeredActiveObj, $"recycling un-registered object {resObj_}");
+            if (!registeredActiveObj) {
+                Log.Error($"recycling un-registered object {resObj_}");
+                //properly? handle un-registered object
+                if (resObj_ is GameObject obj) {
+                    GameObject.Destroy(obj);
+                }
+            }
             _activePool.Remove(resObj_);
             List<object> recyclables;
             if(!_recyclePool.ContainsKey(resId)) {
