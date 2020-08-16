@@ -69,6 +69,7 @@ namespace Transient {
         }
 
         public void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel) {
+            Performance.RecordProfiler(nameof(MessagePopup<M>));
             _OnConfirm = Confirm_;
             _OnCancel = Cancel_;
             _blockIsCancel = blockIsCancel;
@@ -82,6 +83,7 @@ namespace Transient {
             }
             _message.Text = m.Replace("\\n", "\n");
             _obj.SetActive(true);
+            Performance.End(nameof(MessagePopup<M>));
         }
 
         public void Clear() {

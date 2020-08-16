@@ -37,6 +37,7 @@ namespace Transient {
         }
 
         public void Create(string m, Color c) {
+            Performance.RecordProfiler(nameof(MessageFade<M>));
             var obj = AssetMapping.View.TakeActive(null, Asset);
             obj.transform.SetParent(_parent, false);
             obj.transform.localPosition = StartPos;
@@ -45,6 +46,7 @@ namespace Transient {
             message.Text = m;
             message.Color = c;
             _message.Enqueue(message);
+            Performance.End(nameof(MessageFade<M>), true);
         }
 
         public void Fade() {

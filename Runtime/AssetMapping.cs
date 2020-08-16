@@ -114,6 +114,7 @@ namespace Transient.DataAccess {
         }
 
         public void Recycle(object resObj_) {
+            Performance.RecordProfiler(nameof(Recycle));
             var registeredActiveObj = _activePool.TryGetValue(resObj_, out var resId);
             if (!registeredActiveObj) {
                 Log.Error($"recycling un-registered object {resObj_}");
@@ -134,6 +135,7 @@ namespace Transient.DataAccess {
                 Log.Assert(recyclables != null, "empty entry in recycle pool");
                 recyclables.Push(resObj_);
             }
+            Performance.End(nameof(Recycle));
         }
 
         public void Clear() {
