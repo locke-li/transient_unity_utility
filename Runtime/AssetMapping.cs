@@ -46,6 +46,7 @@ namespace Transient.DataAccess {
         }
 
         public T TakePersistent<T>(string c, string i) where T : UnityEngine.Object => UnityEngine.Object.Instantiate((T)AssetAdapter.Take(c, i, typeof(T)));
+        public T TakeDirect<T>(string c, string i) => (T)AssetAdapter.Take(c, i, typeof(T));
 
         public T TakeAs<T>(string c, string i, bool ins = true) where T : Component => TakeActive(c, i, ins).GetChecked<T>();
 
@@ -222,8 +223,11 @@ namespace Transient.DataAccess {
         }
 
         private static object SearchPacked(string path_, Type type_) {
-            #if UNITY_EDITOR
-            var ext = TypeToExtension[type_];
+#if UNITY_EDITOR
+            //TODO Texture2D extension?
+            if (!TypeToExtension.TryGetValue(type_, out var ext)) {
+                return null;
+            }
             return UnityEditor.AssetDatabase.LoadAssetAtPath($"{PackedPathFromAssets}{path_}.{ext}", type_)
                     ??UnityEditor.AssetDatabase.LoadAssetAtPath($"{StagingPathFromAssets}{path_}.{ext}", type_);
             #else

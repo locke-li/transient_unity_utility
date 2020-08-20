@@ -236,6 +236,8 @@ namespace UnityEngine {
             {
                 child_.name = name_;
             }
+            //assume layer = UI
+            child_.gameObject.layer = LayerMask.NameToLayer("UI");
             child_.SetParent(transform_, false);
             child_.localPosition = Vector3.zero;
             child_.rotation = Quaternion.identity;
