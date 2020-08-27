@@ -5,17 +5,17 @@ using UnityEngine.UI;
 using Transient.SimpleContainer;
 
 namespace Transient.UI {
-    public sealed class ScrollRect : UnityEngine.UI.ScrollRect {
-        ScrollRectDataSource ds { get; set; }
-        public void Reset(ScrollRectDataSource ds_) => ds = ds_;
+    public sealed class ScrollDataView : UnityEngine.UI.ScrollRect {
+        ScrollData data { get; set; }
+        public void Reset(ScrollData data_) => data = data_;
 
         public float ContentPos(float xScale, float yScale) => content.anchoredPosition.x* xScale + content.anchoredPosition.y * yScale;
 
         protected override void LateUpdate() {
             base.LateUpdate();
-            if(ds == null || ds.posFixed)
+            if(data == null || data.posFixed)
                 return;
-            ds.Refresh();
+            data.Refresh();
         }
 
 #if ScriptableScrollRect_Test
@@ -56,7 +56,7 @@ namespace Transient.UI {
         }
     }
 
-    public abstract class ScrollRectDataSource {
+    public abstract class ScrollData {
         public bool posFixed;
         public bool vertical = true;
 
@@ -66,9 +66,9 @@ namespace Transient.UI {
         public abstract void SnapTo(int id);
     }
 
-    public sealed class FlexibleScrollRectDataSource<T> : ScrollRectDataSource where T : new() {
+    public sealed class ScrollDataFlex<T> : ScrollData where T : new() {
         public const float DefaultRecyclePadding = 5;
-        ScrollRect _scroll;
+        ScrollDataView _scroll;
         Vector2 defaultElementSize;
         int elementPerLine;
         Vector2 elementPositionUnit;
@@ -90,7 +90,7 @@ namespace Transient.UI {
         float xScale, yScale;
         ScrollToTarget scrollToTarget;
 
-        public FlexibleScrollRectDataSource<T> Init(ScrollRect scroll_, Func<RectTransform, T> PrepareT_, Action<T, bool> SwitchT_) {
+        public ScrollDataFlex<T> Init(ScrollDataView scroll_, Func<RectTransform, T> PrepareT_, Action<T, bool> SwitchT_) {
             _scroll = scroll_;
             elementPerLine = 1;
             headPadding = 0;
@@ -111,26 +111,26 @@ namespace Transient.UI {
             return this;
         }
 
-        public FlexibleScrollRectDataSource<T> Repurpose(Func<int, T, EntryModifier> FillT_, Func<int, int, Vector2, Vector2> ReposT_ = null) {
+        public ScrollDataFlex<T> Repurpose(Func<int, T, EntryModifier> FillT_, Func<int, int, Vector2, Vector2> ReposT_ = null) {
             Reposition = ReposT_ ?? RepositionDefault;
             FillT = FillT_;
             _scroll.Reset(this);
             return this;
         }
 
-        public FlexibleScrollRectDataSource<T> Padding(float headPadding_, float tailPadding_, float recyclePadding_ = DefaultRecyclePadding) {
+        public ScrollDataFlex<T> Padding(float headPadding_, float tailPadding_, float recyclePadding_ = DefaultRecyclePadding) {
             headPadding = headPadding_;
             tailPadding = tailPadding_;
             recyclePadding = recyclePadding_;
             return this;
         }
 
-        public FlexibleScrollRectDataSource<T> Offset(float oftX_, float oftY_) {
+        public ScrollDataFlex<T> Offset(float oftX_, float oftY_) {
             contentOffset = new Vector2(oftX_, oftY_);
             return this;
         }
 
-        public FlexibleScrollRectDataSource<T> Resize(int elementPerLine_, float visibleSize_ = -1f, float elementFlexibleDirSize_ = 0, float elementFixedDirSize_ = 0) {
+        public ScrollDataFlex<T> Resize(int elementPerLine_ = 1, float visibleSize_ = -1f, float elementFlexibleDirSize_ = 0, float elementFixedDirSize_ = 0) {
             elementPerLine = elementPerLine_;
             if (visibleSize_ >= 0)
                 ((RectTransform)_scroll.transform).sizeDelta = flexibleSize * visibleSize_;
@@ -347,8 +347,8 @@ namespace Transient.UI {
         }
     }
 
-    public sealed class FixedScrollRectDataSource<T> : ScrollRectDataSource where T : new() {
-        ScrollRect _scroll;
+    public sealed class ScrollDataFixed<T> : ScrollData where T : new() {
+        ScrollDataView _scroll;
         int LineScrollRange { get; set; }
         Vector2 defaultElementSize;
         int elementPerLine;
@@ -371,12 +371,12 @@ namespace Transient.UI {
         float xScale, yScale;
         ScrollToTarget scrollToTarget;
 
-        public FixedScrollRectDataSource<T> Init(ScrollRect scroll_, Func<RectTransform, T> PrepareT_, Action<T, bool> SwitchT_) {
+        public ScrollDataFixed<T> Init(ScrollDataView scroll_, Func<RectTransform, T> PrepareT_, Action<T, bool> SwitchT_, string templateName_ = "entry") {
             _scroll = scroll_;
             elementPerLine = 1;
             PrepareT = PrepareT_;
             SwitchT = SwitchT_;
-            template = (RectTransform)_scroll.content.Find("entry");
+            template = (RectTransform)_scroll.content.Find(templateName_);
             template.gameObject.SetActive(false);
             defaultElementSize = template.sizeDelta;
             entry = new StorageList<Entry<T>>(64, 16);
@@ -389,14 +389,14 @@ namespace Transient.UI {
             return this;
         }
 
-        public FixedScrollRectDataSource<T> Repurpose(Func<int, T, EntryModifier> FillT_, Func<int, int, Vector2, Vector2, Vector2> ReposT_ = null) {
+        public ScrollDataFixed<T> Repurpose(Func<int, T, EntryModifier> FillT_, Func<int, int, Vector2, Vector2, Vector2> ReposT_ = null) {
             Reposition = ReposT_ ?? RepositionDefault;
             FillT = FillT_;
             _scroll.Reset(this);
             return this;
         }
 
-        public FixedScrollRectDataSource<T> Resize(int elementPerLine_, float visibleSize_ = -1f, float elementFlexibleDirSize_ = 0, float elementFixedDirSize_ = 0) {
+        public ScrollDataFixed<T> Resize(int elementPerLine_ = 1, float visibleSize_ = -1f, float elementFlexibleDirSize_ = 0, float elementFixedDirSize_ = 0) {
             elementPerLine = elementPerLine_;
             pivotOffset = Vector2.zero;
             contentOffset = Vector2.zero;
@@ -501,7 +501,7 @@ namespace Transient.UI {
             targetCount = count_;
             lineCountViewport = Mathf.CeilToInt(viewportSize/elementSize) + 1;
             int lineCountContent = Mathf.CeilToInt((float)targetCount / elementPerLine);
-            Debug.Log(lineCountContent + " " + lineCountViewport);
+            //Debug.Log(lineCountContent + " " + lineCountViewport);
             posFixed = lineCountContent < lineCountViewport;
             LineScrollRange = lineCountContent - lineCountViewport;
             _scroll.content.sizeDelta = flexibleSize * lineCountContent * elementSize;
