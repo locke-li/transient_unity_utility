@@ -3,14 +3,6 @@ using UnityEngine.UI;
 
 namespace Transient.UI {
     public sealed class ShapeRegular : Graphic {
-        public enum Shape {
-            Custom = 0,
-            Triangle = 3,
-            Diamond = 4,
-            Pentagon = 5,
-            Hexagon = 6,
-        }
-
         private Vector2[] _baked;
         public Shape shape = Shape.Custom;
         public float scale = 1;

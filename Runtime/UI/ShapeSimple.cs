@@ -3,12 +3,6 @@ using UnityEngine.UI;
 
 namespace Transient.UI {
     public sealed class ShapeSimple : Graphic {
-        public enum Shape {
-            Custom = 0,
-            Cross = 128,
-            Rectangle = 129,
-        }
-
         private Vector2[] _baked;
         public Shape shape = Shape.Custom;
         public Vector2 scale = Vector2.one;
@@ -41,6 +35,7 @@ namespace Transient.UI {
         }
 
         public void BakeCross(float size_, float r_) {
+            shape = Shape.Cross;
             rotation = r_;
             float sizeX = size_ / scale.x, sizeY = size_ / scale.y;
             _baked = new Vector2[] {
@@ -62,6 +57,7 @@ namespace Transient.UI {
         }
 
         public void BakeRectangle() {
+            shape = Shape.Rectangle;
             _baked = new Vector2[] {
                 new Vector2(-1, 1),
                 new Vector2(1, 1),

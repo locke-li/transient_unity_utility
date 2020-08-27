@@ -12,7 +12,6 @@ public enum CoroutineState {
 
 internal struct CoroutineCache {
     public Enumerator enumerator;
-    public Action OnExecuteDone;
 
     public CoroutineState Step() {
         if (enumerator.MoveNext()) {
@@ -29,11 +28,9 @@ public class GeneratorCoroutine {
         Owner.Add(Update, this);
     }
 
-    public void Execute<P>(Func<P, Enumerator> routine_, P parameter_, Action OnExecuteDone_ = null) {
+    public void Execute<P>(Func<P, Enumerator> routine_, P parameter_) {
         CoroutineList.Add(new CoroutineCache() {
             enumerator = routine_(parameter_),
-            //can be null
-            OnExecuteDone = OnExecuteDone_
         });
     }
 
@@ -41,7 +38,6 @@ public class GeneratorCoroutine {
         for (int r = 0; r < CoroutineList.Count; ++r) {
             var state = CoroutineList[r].Step();
             if (state == CoroutineState.Done) {
-                CoroutineList[r].OnExecuteDone?.Invoke();
                 CoroutineList.OutOfOrderRemoveAt(r);
                 --r;
             }

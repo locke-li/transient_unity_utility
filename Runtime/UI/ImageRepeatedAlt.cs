@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using Transient.SimpleContainer;
 
 namespace Transient.UI {
-    public class ImageRepeatedOption : Graphic {
+    public class ImageRepeatedAlt : Graphic {
         //NOTE must be on the same texture
         public Sprite sprite;
         public Sprite option = null;

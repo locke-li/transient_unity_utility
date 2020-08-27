@@ -3,14 +3,6 @@ using UnityEngine.UI;
 
 namespace Transient.UI {
     public sealed class ShapeRegularFlex : Graphic {
-        public enum Shape {
-            Custom = 0,
-            Triangle = 3,
-            Rectangle = 4,
-            Pentagon = 5,
-            Hexagon = 6
-        }
-
         private Vector2[] _baked;
         private float[] _value;
         public int Count => _value.Length;
