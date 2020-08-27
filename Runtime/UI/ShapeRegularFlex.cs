@@ -11,7 +11,6 @@ namespace Transient.UI {
             Hexagon = 6
         }
 
-        private Vector2 _center;
         private Vector2[] _baked;
         private float[] _value;
         public int Count => _value.Length;
@@ -45,7 +44,6 @@ namespace Transient.UI {
         }
 
         public void BakeCustom(int s, float r) {
-            CheckCenter();
             rotation = r;
             _baked = new Vector2[s];
             _value = new float[s];
@@ -56,12 +54,6 @@ namespace Transient.UI {
                 _value[t] = 1f;
             }
             SetVerticesDirty();
-        }
-
-        private void CheckCenter() {
-            var pivot = rectTransform.pivot;
-            var rect = rectTransform.rect;
-            _center = new Vector2((0.5f-pivot.x)*rect.width, (0.5f-pivot.y)*rect.height);
         }
 
         protected override void OnRectTransformDimensionsChange() {
@@ -78,12 +70,13 @@ namespace Transient.UI {
         protected override void OnPopulateMesh(VertexHelper vh) {
             vh.Clear();
             if(_baked == null || _baked.Length < 3) return;
-            vh.AddVert(_center, color, new Vector2(0, scale));
+            var center = TransformUtility.CheckCenter(rectTransform);
+            vh.AddVert(center, color, new Vector2(0, scale));
             var uv = new Vector2(1, scale);
-            vh.AddVert(_center + _baked[0] * _value[0]*scale, color, uv);
+            vh.AddVert(center + _baked[0] * _value[0]*scale, color, uv);
             int r = 1;
             for(;r < _value.Length;++r) {
-                vh.AddVert(_center + _baked[r] * _value[r]*scale, color, uv);
+                vh.AddVert(center + _baked[r] * _value[r]*scale, color, uv);
                 vh.AddTriangle(0, r+1, r);
             }
             vh.AddTriangle(0, 1, r);

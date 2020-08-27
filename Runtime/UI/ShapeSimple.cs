@@ -9,7 +9,6 @@ namespace Transient.UI {
             Rectangle = 129,
         }
 
-        private Vector2 _center;
         private Vector2[] _baked;
         public Shape shape = Shape.Custom;
         public Vector2 scale = Vector2.one;
@@ -42,7 +41,6 @@ namespace Transient.UI {
         }
 
         public void BakeCross(float size_, float r_) {
-            CheckCenter();
             rotation = r_;
             float sizeX = size_ / scale.x, sizeY = size_ / scale.y;
             _baked = new Vector2[] {
@@ -64,7 +62,6 @@ namespace Transient.UI {
         }
 
         public void BakeRectangle() {
-            CheckCenter();
             _baked = new Vector2[] {
                 new Vector2(-1, 1),
                 new Vector2(1, 1),
@@ -74,16 +71,9 @@ namespace Transient.UI {
             SetVerticesDirty();
         }
 
-        private void CheckCenter() {
-            var pivot = rectTransform.pivot;
-            var rect = rectTransform.rect;
-            _center = new Vector2((0.5f-pivot.x)*rect.width, (0.5f-pivot.y)*rect.height);
-        }
-
         protected override void OnRectTransformDimensionsChange() {
             base.OnRectTransformDimensionsChange();
             Scale(rectTransform.rect.size * 0.5f);
-            CheckCenter();
         }
 
         public void Scale(Vector2 v_) {
@@ -94,13 +84,14 @@ namespace Transient.UI {
         protected override void OnPopulateMesh(VertexHelper vh) {
             vh.Clear();
             if(_baked == null || _baked.Length < 3) return;
+            var center = TransformUtility.CheckCenter(rectTransform);
             var l = scale.magnitude;
-            vh.AddVert(_center, color, new Vector2(0, l));
+            vh.AddVert(center, color, new Vector2(0, l));
             var uv = new Vector2(0, l);
-            vh.AddVert(_center + _baked[0] * scale, color, uv);
+            vh.AddVert(center + _baked[0] * scale, color, uv);
             int r = 1;
             for(;r < _baked.Length;++r) {
-                vh.AddVert(_center + _baked[r] * scale, color, uv);
+                vh.AddVert(center + _baked[r] * scale, color, uv);
                 vh.AddTriangle(0, r+1, r);
             }
             vh.AddTriangle(0, 1, r);
