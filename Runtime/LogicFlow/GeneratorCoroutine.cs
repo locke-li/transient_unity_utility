@@ -29,7 +29,7 @@ public class GeneratorCoroutine {
         Owner.Add(Update, this);
     }
 
-    public void Execute<P>(Func<P, Enumerator> routine_, P parameter_, Action OnExecuteDone_) {
+    public void Execute<P>(Func<P, Enumerator> routine_, P parameter_, Action OnExecuteDone_ = null) {
         CoroutineList.Add(new CoroutineCache() {
             enumerator = routine_(parameter_),
             //can be null
