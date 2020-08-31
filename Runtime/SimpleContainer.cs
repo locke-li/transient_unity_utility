@@ -120,12 +120,12 @@ namespace Transient.SimpleContainer {
             return rval;
         }
 
-        public void BubbleSort(System.Collections.Generic.IComparer<E> comparer) {
+        public void BubbleSort(Comparison<E> Compare) {
             int a = 0;
             E t;
             while (++a < Count) {
                 for (int r = a, k = a - 1; r > 0; --r, --k) {
-                    if (comparer.Compare(data[k], data[r]) > 0) {
+                    if (Compare(data[k], data[r]) > 0) {
                         t = data[k];
                         data[k] = data[r];
                         data[r] = t;
