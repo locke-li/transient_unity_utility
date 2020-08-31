@@ -34,7 +34,9 @@ namespace Transient.UI {
             var scaleX = rect.x > rect.z ? -1 : 1;
             var scaleY = rect.y > rect.w ? -1 : 1;
             Vector4 rectInner = new Vector4(rect.x + border.x * scaleX, rect.y + border.y * scaleY, rect.z - border.z * scaleX, rect.w - border.w * scaleY);
+            //border = L B R T
             //Debug.Log($"{rect} {rectInner} {border}");
+            //TODO properly check for fill region collapsing, when a given size is less than sprite size
             int m = offset, n, t = 0, b = 1;
             if (rectInner.x * scaleX < rectInner.z * scaleX) {
                 //middle-center
@@ -45,7 +47,6 @@ namespace Transient.UI {
                 TriangleBuffer.Add((offset, offset + 1, offset + 2));
                 TriangleBuffer.Add((offset, offset + 2, offset + 3));
                 m += 4;
-                //TODO check for fill region collapsing, when a given size is less than sprite size
                 if (border.y > 0) {
                     //bottom-center
                     vh.AddVert(center + new Vector2(rectInner.x, rect.y), color, new Vector2(uvInner.x, uv.y));
@@ -65,12 +66,14 @@ namespace Transient.UI {
                     m += 2;
                 }
             }
-            else {
+            else {//skip center
                 vh.AddVert(center + new Vector2(rectInner.x, rect.y), color, new Vector2(uvInner.x, uv.y));
+                vh.AddVert(center + new Vector2(rectInner.x, rectInner.y), color, new Vector2(uvInner.x, uvInner.y));
                 vh.AddVert(center + new Vector2(rectInner.x, rect.w), color, new Vector2(uvInner.x, uv.w));
+                vh.AddVert(center + new Vector2(rectInner.x, rectInner.w), color, new Vector2(uvInner.x, uvInner.w));
                 b = m;
-                t = m + 1;
-                m += 2;
+                t = m + 2;
+                m += 4;
             }
             if (border.x > 0) {
                 //middle-left

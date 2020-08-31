@@ -8,12 +8,13 @@ namespace Transient.UI {
         //NOTE both sprites need to be on the same texture
         public Sprite mirrored;
         public Sprite middle;
-        public override Texture mainTexture => mirrored == null ? base.mainTexture : mirrored.texture;
+        public override Texture mainTexture =>
+            middle != null ? middle.texture :
+            mirrored != null ? mirrored.texture : base.mainTexture;
 
         protected override void OnPopulateMesh(VertexHelper vh) {
             vh.Clear();
             //TODO extend direction
-            if (mirrored == null) return;
             var offset = new Vector2(0, 0);
             var width = 0f;
             var height = rectTransform.rect.height * 0.5f;
@@ -21,7 +22,7 @@ namespace Transient.UI {
             var centerLocal = center;
             Vector4 uv, uvInner;
             Vector4 rect, border;
-            if (middle != null && middle.texture == mirrored.texture) {
+            if (middle != null) {
                 width = middle.rect.width * 0.5f;
                 offset = new Vector2(width, 0);
                 uv = DataUtility.GetOuterUV(middle);
@@ -36,8 +37,8 @@ namespace Transient.UI {
                 }
             }
             width = rectTransform.rect.width * 0.5f - width;
-            //TODO handle width < middle.rect.width
-            //TODO handle width < 0
+            //handle width < 0
+            if (mirrored == null || width <= 0) return;
             //Debug.Log($"{width}");
             uv = DataUtility.GetOuterUV(mirrored);
             uvInner = DataUtility.GetInnerUV(mirrored);
