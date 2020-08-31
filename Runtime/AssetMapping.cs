@@ -10,6 +10,7 @@ using System;
 namespace Transient.DataAccess {
     public sealed class AssetMapping : System.Collections.Generic.IEqualityComparer<AssetIdentifier> {
         const int ItemPerRecycle = 64;
+        const int ItemPerRecycleIncrement = 32;
         public Transform ActiveObjectRoot { get; set; }
         public Transform RecycleObjectRoot { get; set; }
         public static AssetMapping Default { get; private set; }
@@ -46,7 +47,7 @@ namespace Transient.DataAccess {
         }
 
         public T TakePersistent<T>(string c, string i) where T : UnityEngine.Object => UnityEngine.Object.Instantiate((T)AssetAdapter.Take(c, i, typeof(T)));
-        public T TakeDirect<T>(string c, string i) => (T)AssetAdapter.Take(c, i, typeof(T));
+        public T TakeDirect<T>(string c, string i, string ext_ = null) => (T)AssetAdapter.Take(c, i, typeof(T), ext_);
 
         public T TakeAs<T>(string c, string i, bool ins = true) where T : Component => TakeActive(c, i, ins).GetChecked<T>();
 
@@ -97,7 +98,6 @@ namespace Transient.DataAccess {
             GameObject rObj;
             if((rObj = resObject as GameObject) is object) {
                 rObj.transform.SetParent(ActiveObjectRoot, false);
-                //rObj.SetActive(true);
             }
             Performance.End(nameof(ActivateObject));
         }
@@ -127,7 +127,7 @@ namespace Transient.DataAccess {
             _activePool.Remove(resObj_);
             List<object> recyclables;
             if(!_recyclePool.ContainsKey(resId)) {
-                recyclables = new List<object>(ItemPerRecycle, 32);//TODO optimize/move external
+                recyclables = new List<object>(ItemPerRecycle, ItemPerRecycleIncrement);
                 recyclables.Push(resObj_);
                 _recyclePool.Add(resId, recyclables);
             }
@@ -216,24 +216,23 @@ namespace Transient.DataAccess {
             return null;
         };
 
-        public static object Take(string category_, string id_, Type type_) {
+        public static object Take(string category_, string id_, Type type_, string ext_ = null) {
             var path = string.IsNullOrEmpty(category_) ? id_ : $"{category_}_{id_}";
-            var ret = SearchPacked(path, type_)??Resources.Load(path, type_)??ExtendedSearch?.Invoke(path, type_);
+            var ret = SearchPacked(path, type_, ext_)??Resources.Load(path, type_)??ExtendedSearch?.Invoke(path, type_);
             return ret;
         }
 
-        private static object SearchPacked(string path_, Type type_) {
+        private static object SearchPacked(string path_, Type type_, string ext_) {
 #if UNITY_EDITOR
-            //TODO Texture2D extension?
-            if (!TypeToExtension.TryGetValue(type_, out var ext)) {
+            if (ext_ == null && !TypeToExtension.TryGetValue(type_, out ext_)) {
                 return null;
             }
-            return UnityEditor.AssetDatabase.LoadAssetAtPath($"{PackedPathFromAssets}{path_}.{ext}", type_)
-                    ??UnityEditor.AssetDatabase.LoadAssetAtPath($"{StagingPathFromAssets}{path_}.{ext}", type_);
-            #else
+            return UnityEditor.AssetDatabase.LoadAssetAtPath($"{PackedPathFromAssets}{path_}.{ext_}", type_)
+                    ??UnityEditor.AssetDatabase.LoadAssetAtPath($"{StagingPathFromAssets}{path_}.{ext_}", type_);
+#endif
             //TODO
             return null;
-            #endif
+            
         }
     }
 
