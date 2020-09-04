@@ -301,15 +301,14 @@ namespace Transient.SimpleContainer {
         public E this[int i] { get => data[i]; set => data[i] = value; }
         public int Count { get; private set; }
         public int Reserve { get; private set; }
-        private Action<E> OnCreate;
-        private readonly static Action<E> DefaultOnCreate = e => { };
+        private Func<E> CreateOne;
 
-        public StorageList(int c, int ext_) {
+        public StorageList(int c, int ext_, Func<E> CreateOne_) {
             data = new E[c];
             Count = 0;
             Reserve = 0;
             ext = ext_;
-            OnCreate = DefaultOnCreate;
+            CreateOne = CreateOne_;
         }
 
         #region Enumerator
@@ -350,14 +349,6 @@ namespace Transient.SimpleContainer {
         public Enumerator GetEnumerator() => new Enumerator(this);
 
         #endregion Enumerator
-
-        public void WhenCreate(Action<E> OnCreate_) => OnCreate = OnCreate_ ?? DefaultOnCreate;
-
-        private E CreateOne() {
-            var ret = new E();
-            OnCreate(ret);
-            return ret;
-        }
 
         public void Clear() {
             Array.Clear(data, 0, data.Length);

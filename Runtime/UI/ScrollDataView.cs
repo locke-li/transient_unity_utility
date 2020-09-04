@@ -101,8 +101,7 @@ namespace Transient.UI {
             template = (RectTransform)_scroll.content.Find("entry");
             template.gameObject.SetActive(false);
             defaultElementSize = template.sizeDelta;
-            entry = new StorageList<Entry<T>>(128, 16);
-            entry.WhenCreate(InitEntry);
+            entry = new StorageList<Entry<T>>(128, 16, InitEntry);
             var e = PrepareT(template);
             entry.Add(new Entry<T>() {
                 transform = template,
@@ -258,10 +257,12 @@ namespace Transient.UI {
             return contentOffset + (headOffset + currentContentSize + offset_) * flexibleSize + Reposition(u_, elementPerLine, elementPositionUnit);
         }
 
-        private void InitEntry(Entry<T> e_) {
+        private Entry<T> InitEntry() {
+            var entry = new Entry<T>();
             RectTransform element = (RectTransform)GameObject.Instantiate<GameObject>(template.gameObject, _scroll.content, false).transform;
-            e_.transform = element;
-            e_.item = PrepareT(element);
+            entry.transform = element;
+            entry.item = PrepareT(element);
+            return entry;
         }
 
         private Entry<T> ActivateEntry(Entry<T> e_) {
@@ -359,7 +360,8 @@ namespace Transient.UI {
         public bool Loop { get; set; }//TODO: loop data
         private StorageList<Entry<T>> entry;
         Func<RectTransform, T> PrepareT;
-        Func<int, T, EntryModifier> FillT;
+        Action<int, T> FillT;
+        EntryModifier modifier;
         Action<T, bool> SwitchT;
         RectTransform template;
         int ps, pe, lineCountViewport, indexOffset;
@@ -379,8 +381,7 @@ namespace Transient.UI {
             template = (RectTransform)_scroll.content.Find(templateName_);
             template.gameObject.SetActive(false);
             defaultElementSize = template.sizeDelta;
-            entry = new StorageList<Entry<T>>(64, 16);
-            entry.WhenCreate(InitEntry);
+            entry = new StorageList<Entry<T>>(64, 16, InitEntry);
             var e = PrepareT(template);
             entry.Add(new Entry<T>() {
                 transform = template,
@@ -389,7 +390,7 @@ namespace Transient.UI {
             return this;
         }
 
-        public ScrollDataFixed<T> Repurpose(Func<int, T, EntryModifier> FillT_, Func<int, int, Vector2, Vector2, Vector2> ReposT_ = null) {
+        public ScrollDataFixed<T> Repurpose(Action<int, T> FillT_, Func<int, int, Vector2, Vector2, Vector2> ReposT_ = null) {
             Reposition = ReposT_ ?? RepositionDefault;
             FillT = FillT_;
             _scroll.Reset(this);
@@ -491,10 +492,12 @@ namespace Transient.UI {
             return contentOffset + pivotOffset + Reposition(u, elementPerLine, lineOffset, elementOffset);
         }
 
-        private void InitEntry(Entry<T> e_) {
+        private Entry<T> InitEntry() {
+            var entry = new Entry<T>();
             RectTransform element = (RectTransform)GameObject.Instantiate<GameObject>(template.gameObject, _scroll.content, false).transform;
-            e_.transform = element;
-            e_.item = PrepareT(element);
+            entry.transform = element;
+            entry.item = PrepareT(element);
+            return entry;
         }
 
         public void Refit(int count_) {
