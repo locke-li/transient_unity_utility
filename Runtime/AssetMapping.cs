@@ -62,28 +62,28 @@ namespace Transient.DataAccess {
         public T Take<T>(string c, string i, bool ins = true) where T : class {
             Performance.RecordProfiler(nameof(Take));
             object retv;
-            if(!_pool.TryGetValue((c, i), out var resi)) {
+            if (!_pool.TryGetValue((c, i), out var resi)) {
                 Performance.RecordProfiler(nameof(AssetIdentifier));
                 resi = new AssetIdentifier(c, i, typeof(T));
                 resi.Load();//load for the first time
                 _pool.Add((c, i), resi);//add to pool
                 Performance.End(nameof(AssetIdentifier), true, $"first load:{c}_{i}");
             }
-            if(!ins) {
+            if (!ins) {
                 retv = resi.Mapped;
             }
-            else if(!TryGetRecycle(resi, out retv)) {//look for reusable fails, load pool prototype
+            else if (!TryGetRecycle(resi, out retv)) {//look for reusable fails, load pool prototype
                 retv = resi.Instantiate();
             }
             Log.Assert(retv != null, "load failed {0}_{1}", c, i);
-            if(ins) ActivateObject(retv, resi);
+            if (ins) ActivateObject(retv, resi);
             Performance.End(nameof(Take));
             return retv as T;
         }
 
         bool TryGetRecycle(AssetIdentifier resId, out object resObject) {
-            if(_recyclePool.TryGetValue(resId, out var recyclables)) {
-                if(recyclables.Count > 0) {
+            if (_recyclePool.TryGetValue(resId, out var recyclables)) {
+                if (recyclables.Count > 0) {
                     resObject = recyclables.Pop();
                     return resObject is object;
                 }
@@ -96,7 +96,7 @@ namespace Transient.DataAccess {
             Performance.RecordProfiler(nameof(ActivateObject));
             _activePool.Add(resObject, resId);
             GameObject rObj;
-            if((rObj = resObject as GameObject) is object) {
+            if ((rObj = resObject as GameObject) is object) {
                 rObj.transform.SetParent(ActiveObjectRoot, false);
             }
             Performance.End(nameof(ActivateObject));
@@ -126,7 +126,7 @@ namespace Transient.DataAccess {
             }
             _activePool.Remove(resObj_);
             List<object> recyclables;
-            if(!_recyclePool.ContainsKey(resId)) {
+            if (!_recyclePool.ContainsKey(resId)) {
                 recyclables = new List<object>(ItemPerRecycle, ItemPerRecycleIncrement);
                 recyclables.Push(resObj_);
                 _recyclePool.Add(resId, recyclables);
@@ -142,17 +142,17 @@ namespace Transient.DataAccess {
         public void Clear() {
             List<object> stack;
             object o;
-            foreach(var resi in _recyclePool) {
+            foreach (var resi in _recyclePool) {
                 stack = resi.Value;
-                while(stack.Count > 0) {
+                while (stack.Count > 0) {
                     o = stack.Pop();
-                    if(o is GameObject) GameObject.Destroy((GameObject)o);
+                    if (o is GameObject) GameObject.Destroy((GameObject)o);
                 }
             }
             _recyclePool.Clear();
-            foreach(var assetId in _activePool) {
+            foreach (var assetId in _activePool) {
                 o = assetId.Key;
-                if(o is GameObject) GameObject.Destroy((GameObject)o);
+                if (o is GameObject) GameObject.Destroy((GameObject)o);
             }
             _activePool.Clear();
         }
@@ -161,7 +161,7 @@ namespace Transient.DataAccess {
 
         public bool Equals(AssetIdentifier a, AssetIdentifier b) => a.category == b.category && a.id == b.id;
 
-        public int GetHashCode(AssetIdentifier i) => i.category.GetHashCode()^i.id.GetHashCode();
+        public int GetHashCode(AssetIdentifier i) => i.category.GetHashCode() ^ i.id.GetHashCode();
 
         #endregion
     }
@@ -172,7 +172,7 @@ namespace Transient.DataAccess {
         public static string DeployPath { get; private set; }
         public static string PackedPath { get; private set; }
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         public static string PackedPathFromAssets { get; private set; }
         public static string StagingPathFromAssets { get; private set; }
         private static readonly System.Collections.Generic.Dictionary<Type, string> TypeToExtension = new System.Collections.Generic.Dictionary<Type, string>() {
@@ -180,7 +180,7 @@ namespace Transient.DataAccess {
             { typeof(Material), "mat" },
             { typeof(Sprite), "png" },
         };
-        #endif
+#endif
 
         public struct TypeCoalescing {
             public Func<string, object, object> Mapping;
@@ -190,14 +190,14 @@ namespace Transient.DataAccess {
         private static readonly Dictionary<string, TypeCoalescing> TypeCoalescingByCategory = new Dictionary<string, TypeCoalescing>(16, StringComparer.Ordinal);
 
         public static void Redirect(string stagingDir, string packedDir) {
-            PackedDir = packedDir??PackedDir;
-            StagingDir = stagingDir??StagingDir;
+            PackedDir = packedDir ?? PackedDir;
+            StagingDir = stagingDir ?? StagingDir;
             DeployPath = $"{Application.persistentDataPath}/{PackedDir}/";
             PackedPath = $"{Application.streamingAssetsPath}/{PackedDir}/";
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             PackedPathFromAssets = $"Assets/StreamingAssets/{PackedDir}/";
             StagingPathFromAssets = $"Assets/{StagingDir}/";
-            #endif
+#endif
         }
 
         public static void CategoryTypeCoalescing(string category_, Type type_, Func<string, object, object> mapping_, Func<string, object, object> inst_) {
@@ -208,7 +208,7 @@ namespace Transient.DataAccess {
             });
         }
 
-        public static bool TryGetTypeCoalescing(string category_, out TypeCoalescing t_) => 
+        public static bool TryGetTypeCoalescing(string category_, out TypeCoalescing t_) =>
             TypeCoalescingByCategory.TryGetValue(category_, out t_);
 
         public static Func<string, Type, object> ExtendedSearch { get; set; } = (p, t) => {
@@ -218,7 +218,7 @@ namespace Transient.DataAccess {
 
         public static object Take(string category_, string id_, Type type_, string ext_ = null) {
             var path = string.IsNullOrEmpty(category_) ? id_ : $"{category_}_{id_}";
-            var ret = SearchPacked(path, type_, ext_)??Resources.Load(path, type_)??ExtendedSearch?.Invoke(path, type_);
+            var ret = SearchPacked(path, type_, ext_) ?? Resources.Load(path, type_) ?? ExtendedSearch?.Invoke(path, type_);
             return ret;
         }
 
@@ -227,12 +227,14 @@ namespace Transient.DataAccess {
             if (ext_ == null && !TypeToExtension.TryGetValue(type_, out ext_)) {
                 return null;
             }
-            return UnityEditor.AssetDatabase.LoadAssetAtPath($"{PackedPathFromAssets}{path_}.{ext_}", type_)
-                    ??UnityEditor.AssetDatabase.LoadAssetAtPath($"{StagingPathFromAssets}{path_}.{ext_}", type_);
+            var file = $"{path_}.{ext_}";
+            return UnityEditor.AssetDatabase.LoadAssetAtPath($"{PackedPathFromAssets}{file}", type_)
+                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath($"{StagingPathFromAssets}{file}", type_)
+                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath($"Assets/{file}", type_);
 #endif
             //TODO
             return null;
-            
+
         }
     }
 
@@ -257,7 +259,7 @@ namespace Transient.DataAccess {
         }
 
         public AssetIdentifier(string category_, string id_, Type type_) {
-            category = category_?? string.Empty;
+            category = category_ ?? string.Empty;
             id = id_;
             _type = type_;
             Mapped = null;
@@ -266,10 +268,10 @@ namespace Transient.DataAccess {
         }
 
         internal void Load() {
-            if(AssetAdapter.TryGetTypeCoalescing(category, out var lt)) {
+            if (AssetAdapter.TryGetTypeCoalescing(category, out var lt)) {
                 InstantiateI = lt.Inst;
                 Raw = AssetAdapter.Take(category, id, lt.targetType);
-                if(Raw != null) Mapped = lt.Mapping(category, Raw);
+                if (Raw != null) Mapped = lt.Mapping(category, Raw);
             }
             else {
                 InstantiateI = InstantiateUnityObject;
@@ -303,8 +305,8 @@ namespace Transient.DataAccess {
         public void AutoRecycle(ParticleSystem ps) => _pool.Add(ps);
 
         public void CheckRecycle(float _) {
-            for(int y = 0;y < _pool.Count;++y) {
-                if(!_pool[y].IsAlive(false)) {//assume the root particle system survive longest, for performance
+            for (int y = 0; y < _pool.Count; ++y) {
+                if (!_pool[y].IsAlive(false)) {//assume the root particle system survive longest, for performance
                     _mapping.Recycle(_pool[y].gameObject);
                     _pool.RemoveAt(y);
                     --y;
