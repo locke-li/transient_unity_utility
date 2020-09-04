@@ -31,8 +31,8 @@ namespace Transient.UI {
                 TriangleBuffer.Clear();
             }
             var offset = vh.currentVertCount;
-            var scaleX = rect.x > rect.z ? -1 : 1;
-            var scaleY = rect.y > rect.w ? -1 : 1;
+            var scaleX = rect.x - rect.z > 0 ? -1 : 1;
+            var scaleY = rect.y - rect.w > 0 ? -1 : 1;
             Vector4 rectInner = new Vector4(rect.x + border.x * scaleX, rect.y + border.y * scaleY, rect.z - border.z * scaleX, rect.w - border.w * scaleY);
             //border = L B R T
             //Debug.Log($"{rect} {rectInner} {border}");
