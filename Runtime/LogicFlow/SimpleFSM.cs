@@ -10,6 +10,7 @@ namespace Transient.ControlFlow {
         public bool IsAtEnd => CurrentState == EndState;
         private int transitDepth = 0;
         public static int MaxTransitDepth { get; set; } = 16;
+        public Action<int, int, int> WhenTransit { get; set; }
 
         public SimpleFSM() {
             const int StateIdStart = -1;
@@ -33,6 +34,7 @@ namespace Transient.ControlFlow {
                 Log.Assert(false, "max fsm transit depth reached");
                 return;
             }
+            WhenTransit?.Invoke(CurrentState.Id, trans_.Target.Id, transitDepth);
             CurrentState.OnExit();
             CurrentState = trans_.Target;
             CurrentState.OnEnter();

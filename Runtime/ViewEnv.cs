@@ -68,7 +68,8 @@ namespace Transient {
             CanvasContent = MainCanvas.transform.AddChildRect("content");
         }
 
-        public static void Message(string m, Action Confirm_, Action Cancel_, bool blockIsCancel = false) => PopupMessage?.Create(m, Confirm_, Cancel_, blockIsCancel);
+        public static void Message(string m, Action Confirm_, Action Cancel_, bool blockIsCancel = false, Action<RectTransform> Modify_ = null)
+            => PopupMessage?.Create(m, Confirm_, Cancel_, blockIsCancel, Modify_);
 
         public static void Message(string m) => FadeMessage?.Create(m, Color.white);
         public static void Message(string m, Color color) => FadeMessage?.Create(m, color);

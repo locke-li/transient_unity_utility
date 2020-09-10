@@ -5,7 +5,7 @@ using System;
 
 namespace Transient {
     public interface IMessagePopup {
-        void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel);
+        void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel, Action<RectTransform> Modify_);
         void Sync(Vector3 position);
     }
 
@@ -68,7 +68,7 @@ namespace Transient {
             return null;
         }
 
-        public void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel) {
+        public void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel, Action<RectTransform> Modify_) {
             Performance.RecordProfiler(nameof(MessagePopup<M>));
             _OnConfirm = Confirm_;
             _OnCancel = Cancel_;
@@ -82,6 +82,9 @@ namespace Transient {
                 _confirm.transform.localPosition = _positionBoth;
             }
             _message.Text = m.Replace("\\n", "\n");
+            if (Modify_ != null) {
+                Modify_(_content);
+            }
             _obj.SetActive(true);
             Performance.End(nameof(MessagePopup<M>));
         }
