@@ -11,25 +11,33 @@ using Transient;
 
 namespace UnityEngine {
     public static class UnityExtension {
-        public static T GameObjectFindChecked<T>(string path_,
+        public static Component GameObjectFindChecked(Type type_, string path_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
-            ) where T : Component {
+            ) {
             var go = GameObject.Find(path_);
             Log.Assert(go != null, "GameObject {0} not found!",
                 arg0_:path_, member_:member_, filePath_:file_, lineNumber_:line_);
-            T ret = go.GetComponent<T>();
+            var ret = go.GetComponent(type_);
             Log.Assert(ret != null, "Component {0} not found on {1}",
-                arg0_:typeof(T), arg1_:path_, member_: member_, filePath_: file_, lineNumber_: line_);
+                arg0_:type_, arg1_:path_, member_: member_, filePath_: file_, lineNumber_: line_);
             return ret;
         }
 
-        public static T GameObjectTryFind<T>(string path_) where T : Component {
+        public static T GameObjectFindChecked<T>(string path_,
+            [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
+            ) where T : Component
+            => (T)GameObjectFindChecked(typeof(T), path_, member_, file_, line_);
+
+        public static Component GameObjectTryFind(string path_, Type type_) {
             var go = GameObject.Find(path_);
             if (go is null) {
                 return null;
             }
-            return go.GetComponent<T>();
+            return go.GetComponent(type_);
         }
+
+        public static T GameObjectTryFind<T>(string path_) where T : Component
+            => (T)GameObjectTryFind(path_, typeof(T));
 
         private static string LogNotFound => "Path: <{0}> on {1} not found!";
 
@@ -170,6 +178,18 @@ namespace UnityEngine {
             child_.sizeDelta = new Vector2(0, 0);
             child_.pivot = new Vector2(0.5f, 0.5f);
             return child_;
+        }
+
+        public static Transform Duplicate(this Transform transform_) {
+            var obj = GameObject.Instantiate<GameObject>(transform_.gameObject);
+            obj.transform.SetParent(transform_.parent, false);
+            return obj.transform;
+        }
+
+        public static RectTransform Duplicate(this RectTransform transform_) {
+            var obj = GameObject.Instantiate<GameObject>(transform_.gameObject);
+            obj.transform.SetParent(transform_.parent, false);
+            return (RectTransform)obj.transform;
         }
 
         public static bool OrientationEqual(Quaternion a, Quaternion b) {
