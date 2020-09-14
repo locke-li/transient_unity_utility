@@ -65,5 +65,21 @@ namespace Transient {
 #endif
             return File.ReadAllBytes(path);
         }
+
+        public static string TryReadText(string path) {
+            if (!File.Exists(path)) return null;
+            return File.ReadAllText(path);
+        }
+
+        public static void WriteWithBackup(string path, string content) {
+            var temp = path + "_temp";
+            if (File.Exists(path)) {
+                File.WriteAllText(temp, content);
+                File.Replace(temp, path, path + "_bak");
+            }
+            else {
+                File.WriteAllText(path, content);
+            }
+        }
     }
 }

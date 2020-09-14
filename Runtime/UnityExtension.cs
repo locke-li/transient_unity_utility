@@ -71,6 +71,16 @@ namespace UnityEngine {
             return GetChecked(t, type_, member_, file_, line_);
         }
 
+        public static Component TryFind(this Component comp_, Type type_, string path_) {
+            var t = comp_.transform.Find(path_);
+            if (t == null) return null;
+            return t.GetComponent(type_);
+        }
+
+        public static T TryFind<T>(this Component comp_, string path_) where T : Component {
+            return (T)TryFind(comp_, typeof(T), path_);
+        }
+
         public static Component FindChecked(this GameObject obj_, Type type_, string path_, 
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {

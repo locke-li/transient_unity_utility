@@ -31,10 +31,9 @@ namespace Transient {
                 var message = new M();
                 message.Init(content.gameObject);
                 ButtonReceiver confirm = content.FindChecked<ButtonReceiver>(nameof(confirm));
-                ButtonReceiver cancel = content.FindChecked<ButtonReceiver>(nameof(cancel));
+                ButtonReceiver cancel = content.TryFind<ButtonReceiver>(nameof(cancel));
                 ButtonReceiver block = trans.FindChecked<ButtonReceiver>(nameof(block));
                 var confirmPos = confirm.transform.localPosition;
-                var cancelPos = cancel.transform.localPosition;
                 var ret = new MessagePopup<M>() {
                     _obj = obj,
                     _content = content,
@@ -43,22 +42,26 @@ namespace Transient {
                     _confirm = confirm,
                     _cancel = cancel,
                     _positionBoth = confirmPos,
-                    _positionSingle = (confirmPos + cancelPos) * 0.5f,
+                    _positionSingle = confirmPos,
                 };
                 confirm.WhenClick = b => {
                     ret._OnConfirm();
                     ret.Clear();
                 };
-                cancel.WhenClick = b => {
-                    ret._OnCancel();
-                    ret.Clear();
-                };
+                if(cancel != null) {
+                    cancel.WhenClick = b => {
+                        ret._OnCancel();
+                        ret.Clear();
+                    };
+                    ret._positionSingle = (confirmPos + cancel.transform.localPosition) * 0.5f;
+                }
                 block.WhenClick = b => {
                     if (ret._blockIsCancel) {
-                        //TODO this doesn't feel quite right...
-                        ret._cancel.WhenClick(b);
+                        ret._OnCancel();
+                        ret.Clear();
                     }
                 };
+                
                 obj.SetActive(false);
                 return ret;
             }
@@ -74,11 +77,11 @@ namespace Transient {
             _OnCancel = Cancel_;
             _blockIsCancel = blockIsCancel;
             if (Cancel_ == null) {
-                _cancel.gameObject.SetActive(false);
+                UnityExtension.TrySetActive(_cancel, false);
                 _confirm.transform.localPosition = _positionSingle;
             }
             else {
-                _cancel.gameObject.SetActive(true);
+                UnityExtension.TrySetActive(_cancel, true);
                 _confirm.transform.localPosition = _positionBoth;
             }
             _message.Text = m.Replace("\\n", "\n");
