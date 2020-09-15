@@ -26,21 +26,24 @@ namespace Transient.Development {
             AddShortcut("Continue", t => Time.timeScale = 1, () => SystemColor);
             AddShortcut("Log Enabled", t => LogEnabled = !LogEnabled, () => ColorByState(LogEnabled), closeConsole_ : false);
             AddShortcut("Clear Log", t => Instance.ClearLog(), closeConsole_ : false);
-            AddShortcut("Snapshot", _ => TakeSnapshot());
+            AddShortcut("Snapshot", t => TakeSnapshot(int.TryParse(t, out var v) ? v : 1080));
             AddShortcut("Load Scene", name => SceneManager.LoadScene(name), checkInput_ : true);
         }
 
 #if UNITY_EDITOR
         [MenuItem("Tools/Snapshot", priority = 1200)]
+        public static void TakeSnapshotDefault() {
+            TakeSnapshot(1080);
+        }
 #endif
-        public static void TakeSnapshot() {
+        public static void TakeSnapshot(int height) {
             const string dir = "SnapShot";
             if (!Directory.Exists(dir)) {
                 Directory.CreateDirectory(dir);
             }
             var time = DateTime.Now.ToString("yyyyMMddHHmmssffff");
             var path = $"{dir}/snapshot_{time}.png";
-            var scale = Mathf.RoundToInt(1080f / Screen.height);
+            var scale = Mathf.CeilToInt((float)height / Screen.height);
             ScreenCapture.CaptureScreenshot(path, scale);
             Debug.Log(path);
         }
