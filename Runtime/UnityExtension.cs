@@ -137,7 +137,21 @@ namespace UnityEngine {
             return ret;
         }
 
-        public static T GetChecked<T>(this Component comp_,
+        public static Component GetChecked(this GameObject obj_, Type type_,
+            [CallerMemberName] string member_ = "", [CallerFilePath] string file_ = "", [CallerLineNumber] int line_ = 0
+            ) {
+            Log.Assert(obj_ != null, "{0} called on null object",
+                arg0_: nameof(GetChecked), member_: member_, filePath_: file_, lineNumber_: line_);
+            var ret = obj_.GetComponent(type_);
+            if (ret == null) {
+                Log.Warning("Expected component of type {0} not found on {1}!",
+                    arg0_: type_, arg1_: obj_.name, member_: member_, filePath_: file_, lineNumber_: line_);
+                ret = obj_.AddComponent(type_);
+            }
+            return ret;
+        }
+
+            public static T GetChecked<T>(this Component comp_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) where T : Component {
             return (T)GetChecked(comp_, typeof(T), member_, file_, line_);
@@ -146,7 +160,7 @@ namespace UnityEngine {
         public static T GetChecked<T>(this GameObject obj_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) where T : Component {
-            return (T)GetChecked(obj_?.transform, typeof(T), member_, file_, line_);
+            return (T)GetChecked(obj_, typeof(T), member_, file_, line_);
         }
 
         public static Transform AddChild(this Transform transform_, string name_, Transform child_ = null,
