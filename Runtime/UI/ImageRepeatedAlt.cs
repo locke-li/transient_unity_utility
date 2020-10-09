@@ -35,7 +35,7 @@ namespace Transient.UI {
             var size = new Vector4(0, -height, width, height);
             var uv = DataUtility.GetOuterUV(sprite);
             width = rectTransform.sizeDelta.x + spacing;
-            var basePos = TransformUtility.CheckOffsetBiased(rectTransform, spacing, count);
+            var basePos = TransformUtility.CheckOffsetBiased(rectTransform, spacing, value);
             int e = 0;
             for (; e < Mathf.Min(value, count); ++e) {
                 var pos = basePos + new Vector2(e * width, 0f);
