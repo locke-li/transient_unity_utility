@@ -29,21 +29,25 @@ namespace Transient.ControlFlow {
 
         public bool IsInState(int id_) => CurrentState.Id == id_;
 
-        private void Transit(Transition trans_) {
+        private void Transit(State target) {
             if (++transitDepth >= MaxTransitDepth) {
-                Log.Assert(false, "max fsm transit depth reached");
+                Log.Assert(false, "max fsm transit depth reached. current = {0}", CurrentState.Id);
                 return;
             }
-            WhenTransit?.Invoke(CurrentState.Id, trans_.Target.Id, transitDepth);
+            WhenTransit?.Invoke(CurrentState.Id, target.Id, transitDepth);
             CurrentState.OnExit();
-            CurrentState = trans_.Target;
+            CurrentState = target;
             CurrentState.OnEnter();
             --transitDepth;
         }
 
+        public void SelfTransit() {
+            Transit(CurrentState);
+        }
+
         public void DoTransition(Transition trans_) {
             if (trans_.Source == AnyState || trans_.Source == CurrentState) {
-                Transit(trans_);
+                Transit(trans_.Target);
             }
         }
 
@@ -56,6 +60,11 @@ namespace Transient.ControlFlow {
             foreach (var state in _states) {
                 state.Value.Reset();
             }
+        }
+
+        public void ForceState(int id_) {
+            CurrentState = _states[id_];
+            //CurrentState.OnEnter();
         }
 
         public State AddState(StateTransitMode mode_ = StateTransitMode.Automatic) {
