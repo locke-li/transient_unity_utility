@@ -193,6 +193,9 @@ namespace Transient {
 
         public static void InitZoom(ZoomSetting setting_) {
             _zoomSetting = setting_;
+#if UNITY_EDITOR_WIN
+            _zoomSetting.scrollStep *= 4f;
+#endif
             if (!MainCamera.orthographic) {
                 MainCamera.farClipPlane = setting_.max + 1;
             }

@@ -18,5 +18,9 @@ namespace Transient.UI {
             if (target == null) return;
             target.sprite = option[index];
         }
+
+        public void SelectFor(int index, Image image) {
+            image.sprite = option[index];
+        }
     }
 }

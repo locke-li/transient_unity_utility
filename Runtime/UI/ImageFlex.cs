@@ -8,6 +8,7 @@ namespace Transient.UI {
         private bool hidden;
 
         public void Hide(bool value) {
+            if (hidden == value) return;
             hidden = value;
             SetVerticesDirty();
         }
