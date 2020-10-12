@@ -9,7 +9,7 @@ public static class TransformUtility {
         return new Vector2((0.5f - pivot.x) * rect.width, (0.5f - pivot.y) * rect.height);
     }
 
-    public static Vector2 CheckOffsetBiased(RectTransform root, float spacing, int count) {
+    public static Vector2 CheckOffsetBiased(RectTransform root, float spacing, float count) {
         var pivot = root.pivot;
         var rect = root.rect;
         var y = (0.5f - pivot.y) * rect.height;
