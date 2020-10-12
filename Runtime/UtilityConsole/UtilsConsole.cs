@@ -319,7 +319,7 @@ namespace Transient.Development {
             return button;
         }
 
-        public static Button AddToggleShortcut(string aText, Action<string, Button> aAction, bool aToggleDefaultState, bool aCloseConsole = true, int? aSiblineIndex = null) {
+        public static Button AddToggleShortcut(string aText, Action<string, Button> aAction, bool aToggleDefaultState, bool aCloseConsole = true, int? aSiblingIndex = null) {
             if (Instance == null)
                 return null;
             if (aAction == null) {
@@ -335,8 +335,8 @@ namespace Transient.Development {
                     Instance.Toggle(false);
                 }
             }));
-            if (aSiblineIndex != null) {
-                button.transform.SetSiblingIndex((int)aSiblineIndex);
+            if (aSiblingIndex != null) {
+                button.transform.SetSiblingIndex((int)aSiblingIndex);
             }
             ColorByState(button, aToggleDefaultState);
             return button;
