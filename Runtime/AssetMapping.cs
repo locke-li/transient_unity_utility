@@ -95,8 +95,7 @@ namespace Transient.DataAccess {
         void ActivateObject(object resObject, AssetIdentifier resId) {
             Performance.RecordProfiler(nameof(ActivateObject));
             _activePool.Add(resObject, resId);
-            GameObject rObj;
-            if ((rObj = resObject as GameObject) is object) {
+            if (resObject is GameObject rObj) {
                 rObj.transform.SetParent(ActiveObjectRoot, false);
             }
             Performance.End(nameof(ActivateObject));
@@ -146,13 +145,13 @@ namespace Transient.DataAccess {
                 stack = resi.Value;
                 while (stack.Count > 0) {
                     o = stack.Pop();
-                    if (o is GameObject) GameObject.Destroy((GameObject)o);
+                    if (o is GameObject obj) GameObject.Destroy(obj);
                 }
             }
             _recyclePool.Clear();
             foreach (var assetId in _activePool) {
                 o = assetId.Key;
-                if (o is GameObject) GameObject.Destroy((GameObject)o);
+                if (o is GameObject obj) GameObject.Destroy(obj);
             }
             _activePool.Clear();
         }
