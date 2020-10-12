@@ -45,7 +45,7 @@ namespace Transient {
             return File.ReadAllBytes(target);
         }
 
-        public static byte[] LoadBytes(string path) {
+        public static byte[] LoadBytesIntegrated(string path) {
             Log.Info($"loading {path}");
             //only extract on Android
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -62,8 +62,9 @@ namespace Transient {
                 Thread.Sleep(100);
             }
             return handler.data;
-#endif
+#else
             return File.ReadAllBytes(path);
+#endif
         }
 
         public static string TryReadText(string path) {
@@ -71,7 +72,12 @@ namespace Transient {
             return File.ReadAllText(path);
         }
 
-        public static void WriteWithBackup(string path, string content) {
+        public static byte[] TryReadBytes(string path) {
+            if (!File.Exists(path)) return null;
+            return File.ReadAllBytes(path);
+        }
+
+        public static void WriteTextWithBackup(string path, string content) {
             var temp = path + "_temp";
             if (File.Exists(path)) {
                 File.WriteAllText(temp, content);
@@ -79,6 +85,17 @@ namespace Transient {
             }
             else {
                 File.WriteAllText(path, content);
+            }
+        }
+
+        public static void WriteBytesWithBackup(string path, byte[] content) {
+            var temp = path + "_temp";
+            if (File.Exists(path)) {
+                File.WriteAllBytes(temp, content);
+                File.Replace(temp, path, path + "_bak");
+            }
+            else {
+                File.WriteAllBytes(path, content);
             }
         }
     }
