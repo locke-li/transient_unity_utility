@@ -29,15 +29,9 @@ namespace Transient {
 
         public ActionList<float> OnUpdate { get; private set; } = new ActionList<float>(16);
 
-        public event Action OnAppExit = () => { };
-
         private void Update() {
             float deltaTime = Time.deltaTime;
             OnUpdate.Invoke(deltaTime);
-        }
-
-        private void OnApplicationQuit() {
-            OnAppExit();
         }
     }
 }

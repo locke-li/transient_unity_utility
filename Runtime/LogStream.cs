@@ -203,7 +203,7 @@ namespace Transient {
         }
     }
 
-#if DEBUG
+#if LogEnabled
     public sealed class LogCache {
         private const int EntryLimit = 10000;
         private readonly LogEntry[] logs = new LogEntry[EntryLimit];
@@ -335,9 +335,9 @@ namespace Transient {
         private LogEntry defaultLog = new LogEntry();
         
         [Conditional("DEBUG")]
-        public void Log(string aLog, int aLevel, EntrySource source_) {}
+        public void Log(string log_, string stacktrace_, int level_, EntrySource source_) {}
         [Conditional("DEBUG")]
-        public void ForEach(ActionAlt<int, LogEntry> Process) {}
+        public void ForEach(Action<int, LogEntry> Process) {}
         public int Offset(int n, int f) { return n+f; }
         public LogEntry EntryAt(int n) { return defaultLog; }
         public void Clear() {}
