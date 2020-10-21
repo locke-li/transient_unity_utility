@@ -8,16 +8,22 @@ using System.Linq;
 namespace Transient {
     [AttributeUsage(AttributeTargets.Method, Inherited = false)]
     public class ExtendableToolAttribute : Attribute {
-        public string Name { get;  }
-        public string Group { get;  }
-        public int Priority { get;  }
-        public bool IsToggle { get; }
+        public string Name { get; }
+        public string Group { get; }
+        public int Priority { get; }
+        public bool IsToggle { get; set; }
 
-        public ExtendableToolAttribute(string name = null, string group = null, int priority = 0, bool toggle = false) {
+        public ExtendableToolAttribute(string name = null, string group = null, int priority = 0) {
             Name = name;
             Group = group;
             Priority = priority;
-            IsToggle = toggle;
+        }
+
+        public void CheckType(MethodInfo method) {
+            if (method.ReturnParameter.ParameterType == typeof(bool)) {
+                var input = method.GetParameters();
+                IsToggle = input.Length > 0 && input[0].ParameterType == typeof(bool?);
+            }
         }
     }
 
@@ -50,6 +56,9 @@ namespace Transient {
                 .OrderBy(pair => pair.attr.Group)
                 .ThenBy(pair => pair.attr.Priority);
             Entry = methodWithAttr.ToArray();
+            foreach (var (method, attr) in Entry) {
+                attr.CheckType(method);
+            }
         }
 
         private void RefreshStyle() {
@@ -107,6 +116,8 @@ namespace Transient {
             const float padding = 4;
             float lineWidth = 0;
             var widthLimit = position.width - 2;
+            var guiOption = new GUILayoutOption[2];
+            var parameters = new object[1];
             foreach (var (method, attr) in Entry) {
                 if (attr.Group != group) {
                     group = attr.Group;
@@ -116,15 +127,29 @@ namespace Transient {
                     lineWidth = 0;
                 }
                 var name = attr.Name ?? method.Name;
-                var size = styleButton.CalcSize(new GUIContent(name));
+                var content = new GUIContent(name);
+                var size = styleButton.CalcSize(content);
                 if (lineWidth + size.x > widthLimit) {
                     GUILayout.EndHorizontal();
                     GUILayout.BeginHorizontal();
                     lineWidth = 0;
                 }
                 lineWidth += size.x + padding;
-                if (GUILayout.Button(name, styleButton, GUILayout.Width(size.x), GUILayout.MinHeight(ButtonHeight))) {
-                    method.Invoke(null, null);
+                guiOption[0] = GUILayout.Width(size.x);
+                guiOption[1] =  GUILayout.MinHeight(ButtonHeight);
+                if (attr.IsToggle) {
+                    parameters[0] = null;
+                    var toggleValue = (bool)method.Invoke(null, parameters);
+                    var toggleValueEdit = GUILayout.Toggle(toggleValue, content, styleButton, guiOption);
+                    if (toggleValue != toggleValueEdit) {
+                        parameters[0] = toggleValueEdit;
+                        method.Invoke(null, parameters);
+                    }
+                }
+                else {
+                    if (GUILayout.Button(content, styleButton, guiOption)) {
+                        method.Invoke(null, null);
+                    }
                 }
             }
             GUILayout.EndHorizontal();
