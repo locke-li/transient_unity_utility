@@ -6,9 +6,10 @@ namespace Transient {
     public class SceneControl {
         private Func<(AsyncOperation, Action), IEnumerator<CoroutineState>> _SceneLoading = SceneLoading;
 
-        public void LoadSceneAsync(string name, LoadSceneMode mode, Action OnLoaded) {
+        public AsyncOperation LoadSceneAsync(string name, LoadSceneMode mode, Action OnLoaded) {
             var asyncOp = SceneManager.LoadSceneAsync(name, mode);
             MainLoop.Coroutine.Execute(_SceneLoading, (asyncOp, OnLoaded));
+            return asyncOp;
         }
 
         private static IEnumerator<CoroutineState> SceneLoading((AsyncOperation asyncOp, Action OnLoaded) context) {
