@@ -11,6 +11,7 @@ namespace Transient.ControlFlow {
         private int transitDepth = 0;
         public static int MaxTransitDepth { get; set; } = 16;
         public Action<int, int, int> WhenTransit { get; set; }
+        private const int StateIdOffset = 3;//start, end, any
 
         public SimpleFSM() {
             const int StateIdStart = -1;
@@ -68,7 +69,7 @@ namespace Transient.ControlFlow {
         }
 
         public State AddState(StateTransitMode mode_ = StateTransitMode.Automatic) {
-            var state = new State(_states.Count, this, mode_);
+            var state = new State(_states.Count - StateIdOffset, this, mode_);
             _states.Add(state.Id, state);
             return state;
         }
@@ -125,22 +126,29 @@ namespace Transient.ControlFlow {
         }
 
         public void OnEnter() {
+            const string key = "State.OnEnter";
+            Performance.RecordProfiler(key);
             Reset();
             _OnEnter?.Invoke();
             if (_mode == StateTransitMode.Immediate) {
                 CheckTransition();
             }
+            Performance.End(key);
         }
 
         public void OnTick(float dt_) {
+            const string key = "State.OnTick";
+            Performance.RecordProfiler(key);
             if (!_isDone) {
                 _isDone = _OnTick(dt_);
             }
             if (_mode == StateTransitMode.Manual || _fsm.CurrentState != this) {
                 //never auto transit || external transition happend
+                Performance.End(key);
                 return;
             }
             CheckTransition();
+            Performance.End(key);
         }
 
         private void CheckTransition() {
@@ -153,7 +161,10 @@ namespace Transient.ControlFlow {
         }
 
         public void OnExit() {
+            const string key = "State.OnExit";
+            Performance.RecordProfiler(key);
             _OnExit?.Invoke();
+            Performance.End(key);
         }
     }
 
