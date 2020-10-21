@@ -88,9 +88,17 @@ namespace Transient.Development {
             Menu.SetChecked(EnabledMenuPath, ConsoleEnabled);
             return true;
         }
+
+        [ExtendableTool("Console", "Enable")]
+        public static bool ToggleEnabled(bool? value) {
+            if (!value.HasValue) {
+                return ConsoleEnabled;
+            }
+            ConsoleEnabled = value.Value;
+            return true;
+        }
 #endif
 
-        [System.Diagnostics.Conditional("DEBUG")]
         public static void Init() {
             var go = Resources.Load<GameObject>(nameof(UtilsConsole));
             if(go == null)
@@ -295,6 +303,9 @@ namespace Transient.Development {
         }
 
         public static Button AddShortcut(string text_, Action<string> action_, Func<Color> color_ = null, bool closeConsole_ = true, bool checkInput_ = false) {
+            if (Instance == null) {
+                return null;
+            }
             //Debug.Log($"addshortcut {aText} {aAction}");
             action_ = action_??(s => Debug.LogWarning($"empty shortcut:{text_}!"));
             color_ = color_??(() => Color.white);
@@ -320,8 +331,9 @@ namespace Transient.Development {
         }
 
         public static Button AddToggleShortcut(string aText, Action<string, Button> aAction, bool aToggleDefaultState, bool aCloseConsole = true, int? aSiblingIndex = null) {
-            if (Instance == null)
+            if (Instance == null) {
                 return null;
+            }
             if (aAction == null) {
                 aAction = (s, b) => Debug.LogWarning($"empty shortcut:{aText}!");
             }
