@@ -24,7 +24,16 @@ namespace Transient {
         }
 
         public const int logLevel = 16;
-        private static readonly Dictionary<string, Session> _record = new Dictionary<string, Session>(4);
+        private static Dictionary<string, Session> _record;
+
+        static Performance() {
+            Init();
+        }
+
+        [Conditional("PerformanceRecord")]
+        public static void Init() {
+            _record = new Dictionary<string, Session>(4);
+        }
 
         [Conditional("PerformanceRecord")]
         public static void Record(
