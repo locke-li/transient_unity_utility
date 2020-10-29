@@ -70,10 +70,16 @@ namespace Transient.ControlFlow {
             Transit(CurrentState);
         }
 
-        public void DoTransition(Transition trans_) {
+        public bool DoTransition(Transition trans_) {
+            if (CurrentState == null) {
+                Log.Warning("transition is invalid during state exit");
+                return false;
+            }
             if (trans_.Source == AnyState || trans_.Source == CurrentState) {
                 Transit(trans_.Target);
+                return true;
             }
+            return false;
         }
 
         public void OnTick(float dt_) {
