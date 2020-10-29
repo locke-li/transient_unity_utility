@@ -760,7 +760,7 @@ namespace Transient.SimpleContainer {
         public struct Enumerator {
             private readonly Dictionary<TKey, TValue> dictionary;
             private int index;
-            public KeyValuePair<TKey, TValue> Current { get; private set; }
+            public (TKey key, TValue value) Current { get; private set; }
 
             internal Enumerator(Dictionary<TKey, TValue> dictionary) {
                 this.dictionary = dictionary;
@@ -771,7 +771,7 @@ namespace Transient.SimpleContainer {
             public bool MoveNext() {
                 while (index < dictionary.count) {
                     if (dictionary.entries[index].hashCode >= 0) {
-                        Current = new KeyValuePair<TKey, TValue>(dictionary.entries[index].key, dictionary.entries[index].value);
+                        Current = (dictionary.entries[index].key, dictionary.entries[index].value);
                         ++index;
                         return true;
                     }

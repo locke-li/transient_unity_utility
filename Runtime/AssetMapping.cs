@@ -6,9 +6,10 @@
 using UnityEngine;
 using Transient.SimpleContainer;
 using System;
+using Generic = System.Collections.Generic;
 
 namespace Transient.DataAccess {
-    public sealed class AssetMapping : System.Collections.Generic.IEqualityComparer<AssetIdentifier> {
+    public sealed class AssetMapping {
         const int ItemPerRecycle = 64;
         const int ItemPerRecycleIncrement = 32;
         public Transform ActiveObjectRoot { get; set; }
@@ -16,18 +17,20 @@ namespace Transient.DataAccess {
         public static AssetMapping Default { get; private set; }
         public static AssetMapping View { get; private set; }
         public static (string, string) AssetEmpty = ("_internal_", "_empty_");
+        internal static AssetMappingComparer _comparer;
 
-        readonly Dictionary<(string category, string id), AssetIdentifier> _pool;
+        readonly Dictionary<(string, string), AssetIdentifier> _pool;
         readonly Dictionary<object, AssetIdentifier> _activePool;//objects in the scene
         readonly Dictionary<AssetIdentifier, List<object>> _recyclePool;//recyclable(resetable) disabled objects
 
         private AssetMapping(int category_, int active_, int recycle_) {
-            _pool = new Dictionary<(string, string), AssetIdentifier>(category_);
-            _activePool = new Dictionary<object, AssetIdentifier>(active_, DefaultObjectEqualityComparer<object>.Default);
-            _recyclePool = new Dictionary<AssetIdentifier, List<object>>(recycle_, this);
+            _pool = new Dictionary<(string, string), AssetIdentifier>(category_, _comparer);
+            _activePool = new Dictionary<object, AssetIdentifier>(active_);
+            _recyclePool = new Dictionary<AssetIdentifier, List<object>>(recycle_, _comparer);
         }
 
         public static void Init() {
+            _comparer = new AssetMappingComparer();
             Default = new AssetMapping(16, 512, 512);
             View = new AssetMapping(8, 32, 64);
             AssetAdapter.Redirect(null, null);
@@ -139,30 +142,28 @@ namespace Transient.DataAccess {
         }
 
         public void Clear() {
-            List<object> stack;
-            object o;
-            foreach (var resi in _recyclePool) {
-                stack = resi.Value;
+            foreach (var (_, stack) in _recyclePool) {
                 while (stack.Count > 0) {
-                    o = stack.Pop();
-                    if (o is GameObject obj) GameObject.Destroy(obj);
+                    if (stack.Pop() is GameObject obj) GameObject.Destroy(obj);
                 }
             }
             _recyclePool.Clear();
-            foreach (var assetId in _activePool) {
-                o = assetId.Key;
-                if (o is GameObject obj) GameObject.Destroy(obj);
+            foreach (var (key, _) in _activePool) {
+                if (key is GameObject obj) GameObject.Destroy(obj);
             }
             _activePool.Clear();
         }
+    }
 
-        #region IEqualityComparer<AssetIdentifier>
-
+    internal sealed class AssetMappingComparer :
+        Generic.IEqualityComparer<AssetIdentifier>,
+        Generic.IEqualityComparer<(string, string)>
+        {
         public bool Equals(AssetIdentifier a, AssetIdentifier b) => a.category == b.category && a.id == b.id;
-
         public int GetHashCode(AssetIdentifier i) => i.category.GetHashCode() ^ i.id.GetHashCode();
 
-        #endregion
+        public bool Equals((string, string) a, (string, string) b) => a.Item1 == b.Item1 && a.Item2 == b.Item2;
+        public int GetHashCode((string, string) i) => i.GetHashCode();
     }
 
     public static class AssetAdapter {
@@ -174,7 +175,7 @@ namespace Transient.DataAccess {
 #if UNITY_EDITOR
         public static string PackedPathFromAssets { get; private set; }
         public static string StagingPathFromAssets { get; private set; }
-        private static readonly System.Collections.Generic.Dictionary<Type, string> TypeToExtension = new System.Collections.Generic.Dictionary<Type, string>() {
+        private static readonly Generic.Dictionary<Type, string> TypeToExtension = new Generic.Dictionary<Type, string>() {
             { typeof(GameObject), "prefab" },
             { typeof(Material), "mat" },
             { typeof(Sprite), "png" },
