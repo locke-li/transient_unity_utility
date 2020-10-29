@@ -1,4 +1,5 @@
-﻿using Transient.SimpleContainer;
+﻿using System;
+using Transient.SimpleContainer;
 
 namespace Transient.ControlFlow {
     public class SimpleFSM {
@@ -6,29 +7,44 @@ namespace Transient.ControlFlow {
         public State StartState { get; private set; }
         public State EndState { get; private set; }
         public State AnyState { get; private set; }
+        public State ErrorState { get; private set; }
         public State CurrentState { get; private set; }
         public bool IsAtEnd => CurrentState == EndState;
         private int transitDepth = 0;
         public static int MaxTransitDepth { get; set; } = 16;
         public Action<int, int, int> WhenTransit { get; set; }
-        private const int StateIdOffset = 3;//start, end, any
+        private const int StateIdOffset = 4;//start, end, any, error
 
         public SimpleFSM() {
             const int StateIdStart = -1;
             const int StateIdEnd = -2;
             const int StateIdAny = -3;
+            const int StateIdError = -4;
             _states = new Dictionary<int, State>(16);
             StartState = new State(StateIdStart, this, StateTransitMode.Automatic);
             EndState = new State(StateIdEnd, this, StateTransitMode.Manual);
             AnyState = new State(StateIdAny, this, StateTransitMode.Manual);
+            ErrorState = new State(StateIdError, this, StateTransitMode.Manual);
             _states.Add(StateIdStart, StartState);
             _states.Add(StateIdEnd, EndState);
             _states.Add(StateIdAny, AnyState);
+            _states.Add(StateIdError, ErrorState);
             CurrentState = StartState;
             StartState.OnEnter();
         }
 
         public bool IsInState(int id_) => CurrentState.Id == id_;
+
+        private void Error(Exception e_) {
+            Log.Error(e_.Message);
+            CurrentState = ErrorState;
+            ErrorState.OnEnter();
+        }
+
+        public void WhenError(Action Enter_, Func<float, bool> Tick_) {
+            ErrorState.WhenEnter(Enter_);
+            ErrorState.WhenTick(Tick_);
+        }
 
         private void Transit(State target) {
             if (++transitDepth >= MaxTransitDepth) {
@@ -36,9 +52,17 @@ namespace Transient.ControlFlow {
                 return;
             }
             WhenTransit?.Invoke(CurrentState.Id, target.Id, transitDepth);
-            CurrentState.OnExit();
+            try {
+                var state = CurrentState;
+                //check/prevent transition in state exit
+                CurrentState = null;
+                state.OnExit();
             CurrentState = target;
             CurrentState.OnEnter();
+            }
+            catch (Exception e) {
+                Error(e);
+            }
             --transitDepth;
         }
 
@@ -53,13 +77,19 @@ namespace Transient.ControlFlow {
         }
 
         public void OnTick(float dt_) {
+            try {
             CurrentState.OnTick(dt_);
+        }
+            catch (Exception e) {
+                Log.Error($"{e.Message}\n{e.StackTrace}");
+                CurrentState = ErrorState;
+            }
         }
 
         public void Reset() {
             CurrentState = StartState;
-            foreach (var state in _states) {
-                state.Value.Reset();
+            foreach (var (_, value) in _states) {
+                value.Reset();
             }
         }
 
