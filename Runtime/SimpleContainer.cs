@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using Generic = System.Collections.Generic;
 
 namespace Transient.SimpleContainer {
     public sealed class List<E> {
@@ -139,7 +140,7 @@ namespace Transient.SimpleContainer {
         }
 
         //Array.Sort caused allocation in ArraySortHelper<T>.Sort(), it is unclear how that happened
-        public void Sort(System.Collections.Generic.IComparer<E> comparer) => Array.Sort(data, 0, Count, comparer);
+        public void Sort(Generic.IComparer<E> comparer) => Array.Sort(data, 0, Count, comparer);
 
         public int IndexOf(E v) => Array.IndexOf(data, v, 0, Count);
 
@@ -520,17 +521,17 @@ namespace Transient.SimpleContainer {
         private Slot[] m_slots;
         private int m_lastIndex;
         private int m_freeList;
-        private readonly System.Collections.Generic.IEqualityComparer<T> m_comparer;
+        private readonly Generic.IEqualityComparer<T> m_comparer;
 
         public int Count { get; private set; }
 
-        public HashSet(int c, System.Collections.Generic.IEqualityComparer<T> comparer) {
+        public HashSet(int c, Generic.IEqualityComparer<T> comparer) {
 #if DEBUG
             if (comparer == null) {
                 throw new ArgumentNullException("comparer should not be null!");
             }
 #endif
-            m_comparer = comparer;
+            m_comparer = comparer ?? ComparerHelper.GetComparer<T>();
             m_lastIndex = 0;
             Count = 0;
             m_freeList = -1;
@@ -710,20 +711,24 @@ namespace Transient.SimpleContainer {
         }
     }
 
-    //trimed from (4.0) System.Collections.Generic.KeyValuePair<TKey, TValue>
-    public struct KeyValuePair<TKey, TValue> {
-        public TKey Key { get; }
-        public TValue Value { get; }
-
-        public KeyValuePair(TKey key, TValue value) {
-            Key = key;
-            Value = value;
+    public static class ComparerHelper {
+        public static Generic.IEqualityComparer<T> GetComparer<T>() {
+            var type = typeof(T);
+            if (type == typeof(int)) {
+                return (Generic.IEqualityComparer<T>)(object)IntComparer.Default;
+            }
+#if DEBUG
+            if (type.IsValueType) {
+                Log.Warning($"using object comparer on value type {type.Name}");
+            }
+#endif
+            return ObjectComparer<T>.Default;
         }
     }
 
-    public sealed class DefaultObjectEqualityComparer<T> : System.Collections.Generic.IEqualityComparer<T> {
-        public static DefaultObjectEqualityComparer<T> Default = new DefaultObjectEqualityComparer<T>();
-        private DefaultObjectEqualityComparer() { }
+    public sealed class ObjectComparer<T> : Generic.IEqualityComparer<T> {
+        public static ObjectComparer<T> Default = new ObjectComparer<T>();
+        private ObjectComparer() { }
         public bool Equals(T x, T y) {
             return object.Equals(x, y);
         }
@@ -732,7 +737,7 @@ namespace Transient.SimpleContainer {
         }
     }
 
-    public sealed class IntComparer : System.Collections.Generic.IEqualityComparer<int> {
+    public sealed class IntComparer : Generic.IEqualityComparer<int> {
         public static IntComparer Default = new IntComparer();
         private IntComparer() { }
         public bool Equals(int x, int y) {
@@ -788,7 +793,7 @@ namespace Transient.SimpleContainer {
         private int count;
         private int freeList;
         private int freeCount;
-        private readonly System.Collections.Generic.IEqualityComparer<TKey> comparer;
+        private readonly Generic.IEqualityComparer<TKey> comparer;
 
         /// <summary>Gets the number of key/value pairs contained in the <see cref="T:System.Collections.Generic.Dictionary`2" />.</summary>
         /// <returns>The number of key/value pairs contained in the <see cref="T:System.Collections.Generic.Dictionary`2" />.</returns>
@@ -807,7 +812,7 @@ namespace Transient.SimpleContainer {
 
         public Dictionary(int capacity) {
             Initialize(capacity);
-            comparer = DefaultObjectEqualityComparer<TKey>.Default;
+            comparer = ComparerHelper.GetComparer<TKey>();
         }
 
         /// <summary>Initializes a new instance of the <see cref="T:System.Collections.Generic.Dictionary`2" /> class that is empty, has the specified initial capacity, and uses the specified <see cref="T:System.Collections.Generic.IEqualityComparer`1" />.</summary>
@@ -815,9 +820,9 @@ namespace Transient.SimpleContainer {
         /// <param name="comparer">The <see cref="T:System.Collections.Generic.IEqualityComparer`1" /> implementation to use when comparing keys, or null to use the default <see cref="T:System.Collections.Generic.EqualityComparer`1" /> for the type of the key.</param>
         /// <exception cref="T:System.ArgumentOutOfRangeException">
         ///   <paramref name="capacity" /> is less than 0.</exception>
-        public Dictionary(int capacity, System.Collections.Generic.IEqualityComparer<TKey> comparer) {
+        public Dictionary(int capacity, Generic.IEqualityComparer<TKey> comparer) {
             Initialize(capacity);
-            this.comparer = comparer ?? DefaultObjectEqualityComparer<TKey>.Default;
+            this.comparer = comparer ?? ComparerHelper.GetComparer<TKey>();
         }
 
         /// <summary>Adds the specified key and value to the dictionary.</summary>
@@ -851,7 +856,7 @@ namespace Transient.SimpleContainer {
         /// <summary>Determines whether the <see cref="T:System.Collections.Generic.Dictionary`2" /> contains a specific value.</summary>
         /// <returns>true if the <see cref="T:System.Collections.Generic.Dictionary`2" /> contains an element with the specified value; otherwise, false.</returns>
         /// <param name="value">The value to locate in the <see cref="T:System.Collections.Generic.Dictionary`2" />. The value can be null for reference types.</param>
-        public bool ContainsValue(TValue value, System.Collections.Generic.EqualityComparer<TValue> comparer) {
+        public bool ContainsValue(TValue value, Generic.EqualityComparer<TValue> comparer) {
             if (value == null) {
                 for (int i = 0; i < count; ++i) {
                     if (entries[i].hashCode >= 0 && entries[i].value == null) {
@@ -1059,8 +1064,6 @@ namespace Transient.SimpleContainer {
 }
 
 namespace Transient.SimpleContainer {
-    using Generic = System.Collections.Generic;
-
     public static class LinqAlikeExtension {
         public static Dictionary<TKey, TSource> ToDictionary<TSource, TKey>(this Generic.IEnumerable<TSource> source, Func<TSource, TKey> keySelector, int capacity_ = 8) {
             var dict = new Dictionary<TKey, TSource>(capacity_);
