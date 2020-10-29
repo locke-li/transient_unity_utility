@@ -57,8 +57,8 @@ namespace Transient.ControlFlow {
                 //check/prevent transition in state exit
                 CurrentState = null;
                 state.OnExit();
-            CurrentState = target;
-            CurrentState.OnEnter();
+                CurrentState = target;
+                CurrentState.OnEnter();
             }
             catch (Exception e) {
                 Error(e);
@@ -84,8 +84,8 @@ namespace Transient.ControlFlow {
 
         public void OnTick(float dt_) {
             try {
-            CurrentState.OnTick(dt_);
-        }
+                CurrentState.OnTick(dt_);
+            }
             catch (Exception e) {
                 Log.Error($"{e.Message}\n{e.StackTrace}");
                 CurrentState = ErrorState;
@@ -131,10 +131,9 @@ namespace Transient.ControlFlow {
         public StateTransitMode _mode;
         private bool _isDone;
         private Func<float, bool> _OnTick;
+        private Action _OnTickDone;
         private Action _OnEnter;
         private Action _OnExit;
-        private static readonly Action _DefaultEnter = () => { };
-        private static readonly Action _DefaultExit = () => { };
 
         private State() {
         }
@@ -148,14 +147,17 @@ namespace Transient.ControlFlow {
 
         public void AddTransition(Transition trans) => _transitions.Add(trans);
 
-        public void WhenTick(Func<float, bool> OnTick_) {
+        public void WhenTick(Func<float, bool> OnTick_, Action OnTickDone_ = null) {
             _OnTick = OnTick_;
+            _OnTickDone = OnTickDone_;
             _isDone = _OnTick == null;
         }
 
-        public void WhenEnter(Action OnEnter_) => _OnEnter = OnEnter_ ?? _DefaultEnter;
+        public void WhenTickDone(Action OnTickDone_) => _OnTickDone = OnTickDone_;
 
-        public void WhenExit(Action OnExit_) => _OnExit = OnExit_ ?? _DefaultExit;
+        public void WhenEnter(Action OnEnter_) => _OnEnter = OnEnter_;
+
+        public void WhenExit(Action OnExit_) => _OnExit = OnExit_;
 
         public void Reset() {
             _isDone = _OnTick == null;
@@ -177,6 +179,9 @@ namespace Transient.ControlFlow {
             Performance.RecordProfiler(key);
             if (!_isDone) {
                 _isDone = _OnTick(dt_);
+                if (_isDone) {
+                    _OnTickDone?.Invoke();
+                }
             }
             if (_mode == StateTransitMode.Manual || _fsm.CurrentState != this) {
                 //never auto transit || external transition happend
