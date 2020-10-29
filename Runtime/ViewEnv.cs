@@ -246,6 +246,11 @@ namespace Transient {
             return pos.x > 0 && pos.x < CanvasSize.x && pos.y > 0 && pos.y < CanvasSize.y;
         }
 
+        public static bool VisibleInView(Vector3 pos) {
+            pos = MainCamera.WorldToViewportPoint(pos);
+            return pos.x > 0 && pos.x < 1 && pos.y > 0 && pos.y < 1;
+        }
+
         private void FixedUpdate() {
             CheckScreenSize();
         }
