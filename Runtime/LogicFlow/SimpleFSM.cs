@@ -28,6 +28,7 @@ namespace Transient.ControlFlow {
                 return;
             }
             CurrentState = Graph[id_];
+            _isDone = CurrentState.ShouldSkipTick;
         }
 
 
