@@ -3,47 +3,47 @@ using Transient.SimpleContainer;
 
 namespace Transient.ControlFlow {
     public class SimpleFSM {
-        private readonly Dictionary<int, State> _states;
-        public State StartState { get; private set; }
-        public State EndState { get; private set; }
-        public State AnyState { get; private set; }
-        public State ErrorState { get; private set; }
+        public SimpleFSMGraph Graph { get; set; }
         public State CurrentState { get; private set; }
-        public bool IsAtEnd => CurrentState == EndState;
-        private int transitDepth = 0;
-        public static int MaxTransitDepth { get; set; } = 16;
+        internal object[] Token { get; private set; }
+        private bool _isDone;
         public Action<int, int, int> WhenTransit { get; set; }
-        private const int StateIdOffset = 4;//start, end, any, error
-
-        public SimpleFSM() {
-            const int StateIdStart = -1;
-            const int StateIdEnd = -2;
-            const int StateIdAny = -3;
-            const int StateIdError = -4;
-            _states = new Dictionary<int, State>(16);
-            StartState = new State(StateIdStart, this, StateTransitMode.Automatic);
-            EndState = new State(StateIdEnd, this, StateTransitMode.Manual);
-            AnyState = new State(StateIdAny, this, StateTransitMode.Manual);
-            ErrorState = new State(StateIdError, this, StateTransitMode.Manual);
-            _states.Add(StateIdStart, StartState);
-            _states.Add(StateIdEnd, EndState);
-            _states.Add(StateIdAny, AnyState);
-            _states.Add(StateIdError, ErrorState);
-            CurrentState = StartState;
-            StartState.OnEnter();
-        }
+        private int transitDepth = 0;
+        public static int MaxTransitDepth = 16;
 
         public bool IsInState(int id_) => CurrentState.Id == id_;
 
-        private void Error(Exception e_) {
-            Log.Error(e_.Message);
-            CurrentState = ErrorState;
-            ErrorState.OnEnter();
+        public void Init(SimpleFSMGraph graph_, params object[] token_) {
+            Graph = graph_;
+            Token = token_ ?? new object[1];
         }
 
-        public void WhenError(Action Enter_, Func<float, bool> Tick_) {
-            ErrorState.WhenEnter(Enter_);
-            ErrorState.WhenTick(Tick_);
+        public void Reset() {
+            TransitTo(Graph[0]);
+        }
+
+        public void ForceState(int id_) {
+            if (id_ < 0) {
+                Log.Warning($"invalid state {id_}");
+                return;
+            }
+            CurrentState = Graph[id_];
+        }
+
+
+        internal void Error(Exception e_) {
+            Log.Error($"{e_.Message}\n{e_.StackTrace}");
+            CurrentState = SimpleFSMGraph.ErrorState;
+            CurrentState.OnEnter(this, false);
+        }
+
+        public void OnTick(float dt_) {
+            try {
+                CurrentState.OnTick(this, dt_, ref _isDone);
+            }
+            catch (Exception e) {
+                Error(e);
+            }
         }
 
         private void Transit(State target) {
@@ -56,14 +56,19 @@ namespace Transient.ControlFlow {
                 var state = CurrentState;
                 //check/prevent transition in state exit
                 CurrentState = null;
-                state.OnExit();
-                CurrentState = target;
-                CurrentState.OnEnter();
+                state.OnExit(this);
+                TransitTo(target);
             }
             catch (Exception e) {
                 Error(e);
             }
             --transitDepth;
+        }
+
+        private void TransitTo(State state_) {
+            _isDone = state_.ShouldSkipTick;
+            CurrentState = state_;
+            CurrentState.OnEnter(this, _isDone);
         }
 
         public void SelfTransit() {
@@ -75,43 +80,41 @@ namespace Transient.ControlFlow {
                 Log.Warning("transition is invalid during state exit");
                 return false;
             }
-            if (trans_.Source == AnyState || trans_.Source == CurrentState) {
+            if (trans_.Source == SimpleFSMGraph.AnyState || trans_.Source == CurrentState) {
                 Transit(trans_.Target);
                 return true;
             }
             return false;
         }
+    }
 
-        public void OnTick(float dt_) {
-            try {
-                CurrentState.OnTick(dt_);
+    public class SimpleFSMGraph {
+        private readonly List<State> _states;
+        internal State this[int index] => _states[index];
+        public static State AnyState { get; private set; }
+        public static State ErrorState { get; private set; }
+
+        public SimpleFSMGraph() {
+            if (AnyState == null) {
+                AnyState = new State(-1, StateTransitMode.Manual);
+                ErrorState = new State(-2, StateTransitMode.Manual);
             }
-            catch (Exception e) {
-                Log.Error($"{e.Message}\n{e.StackTrace}");
-                CurrentState = ErrorState;
-            }
+            _states = new List<State>(16);
         }
 
-        public void Reset() {
-            CurrentState = StartState;
-            foreach (var (_, value) in _states) {
-                value.Reset();
-            }
-        }
-
-        public void ForceState(int id_) {
-            CurrentState = _states[id_];
-            //CurrentState.OnEnter();
+        public void WhenError(Action<object> Enter_, Func<object, float, bool> Tick_) {
+            ErrorState.WhenEnter(Enter_);
+            ErrorState.WhenTick(Tick_);
         }
 
         public State AddState(StateTransitMode mode_ = StateTransitMode.Automatic) {
-            var state = new State(_states.Count - StateIdOffset, this, mode_);
-            _states.Add(state.Id, state);
+            var state = new State(_states.Count, mode_);
+            _states.Add(state);
             return state;
         }
 
-        public Transition AddTransition(State source_, State target_, TransitMode mode_ = TransitMode.ActionResult) {
-            var trans = new Transition(source_, target_, mode_);
+        public Transition AddTransition(State source_, State target_, Func<object, bool, bool> Condition_ = null, int token_ = 0) {
+            var trans = new Transition(source_, target_, Condition_, token_);
             source_.AddTransition(trans);
             return trans;
         }
@@ -126,123 +129,125 @@ namespace Transient.ControlFlow {
     public class State {
         public int Id { get; private set; }
 
-        private readonly SimpleFSM _fsm;
         private readonly List<Transition> _transitions;
         public StateTransitMode _mode;
-        private bool _isDone;
-        private Func<float, bool> _OnTick;
-        private Action _OnTickDone;
-        private Action _OnEnter;
-        private Action _OnExit;
+        private Func<object, float, bool> _OnTick;
+        internal bool ShouldSkipTick => _OnTick == null;
+        private Action<object> _OnTickDone;
+        private Action<object> _OnEnter;
+        private Action<object> _OnExit;
+        private int _tokenOnTick;
+        private int _tokenTickDone;
+        private int _tokenOnEnter;
+        private int _tokenOnExit;
 
         private State() {
         }
 
-        public State(int id_, SimpleFSM fsm_, StateTransitMode mode_) {
+        public State(int id_, StateTransitMode mode_) {
             Id = id_;
-            _fsm = fsm_;
             _transitions = new List<Transition>(2);
             _mode = mode_;
         }
 
         public void AddTransition(Transition trans) => _transitions.Add(trans);
 
-        public void WhenTick(Func<float, bool> OnTick_, Action OnTickDone_ = null) {
+        public void WhenTick(Func<object, float, bool> OnTick_, int token_ = 0) {
             _OnTick = OnTick_;
+            _tokenOnTick = token_;
+        }
+        public void WhenTickDone(Action<object> OnTickDone_, int token_ = 0) {
             _OnTickDone = OnTickDone_;
-            _isDone = _OnTick == null;
+            _tokenTickDone = token_;
+        }
+        public void WhenEnter(Action<object> OnEnter_, int token_ = 0) {
+            _OnEnter = OnEnter_;
+            _tokenOnEnter = token_;
+        }
+        public void WhenExit(Action<object> OnExit_, int token_ = 0) {
+            _OnExit = OnExit_;
+            _tokenOnExit = token_;
         }
 
-        public void WhenTickDone(Action OnTickDone_) => _OnTickDone = OnTickDone_;
-
-        public void WhenEnter(Action OnEnter_) => _OnEnter = OnEnter_;
-
-        public void WhenExit(Action OnExit_) => _OnExit = OnExit_;
-
-        public void Reset() {
-            _isDone = _OnTick == null;
-        }
-
-        public void OnEnter() {
+        public void OnEnter(SimpleFSM fsm_, bool isDone_) {
             const string key = "State.OnEnter";
             Performance.RecordProfiler(key);
-            Reset();
-            _OnEnter?.Invoke();
+            _OnEnter?.Invoke(fsm_.Token[_tokenOnEnter]);
             if (_mode == StateTransitMode.Immediate) {
-                CheckTransition();
+                CheckTransition(fsm_, isDone_);
             }
             Performance.End(key);
         }
 
-        public void OnTick(float dt_) {
+        public void OnTick(SimpleFSM fsm_, float dt_, ref bool isDone_) {
             const string key = "State.OnTick";
             Performance.RecordProfiler(key);
-            if (!_isDone) {
-                _isDone = _OnTick(dt_);
-                if (_isDone) {
-                    _OnTickDone?.Invoke();
+            if (!isDone_) {
+                isDone_ = _OnTick(fsm_.Token[_tokenOnTick], dt_);
+                if (isDone_) {
+                    _OnTickDone?.Invoke(fsm_.Token[_tokenTickDone]);
                 }
             }
-            if (_mode == StateTransitMode.Manual || _fsm.CurrentState != this) {
-                //never auto transit || external transition happend
-                Performance.End(key);
-                return;
+            if (_mode == StateTransitMode.Manual || fsm_.CurrentState != this) {
+                //still ticking || never auto transit || external transition happend
+                goto end;
             }
-            CheckTransition();
+            CheckTransition(fsm_, isDone_);
+        end:
             Performance.End(key);
         }
 
-        private void CheckTransition() {
+        private void CheckTransition(SimpleFSM fsm_, bool isDone_) {
+            //give OnExit a change to execute, for dead-end states
+            if (_transitions.Count == 0 && isDone_) {
+                OnExit(fsm_);
+                return;
+            }
             foreach (var trans in _transitions) {
-                if (trans.CanTransit(_isDone)) {
-                    _fsm.DoTransition(trans);
+                if (trans.TryTransit(fsm_, isDone_)) {
                     return;
                 }
             }
         }
 
-        public void OnExit() {
+        public void OnExit(SimpleFSM fsm_) {
             const string key = "State.OnExit";
             Performance.RecordProfiler(key);
-            _OnExit?.Invoke();
+            _OnExit?.Invoke(fsm_.Token[_tokenOnExit]);
             Performance.End(key);
         }
-    }
-
-    public enum TransitMode {
-        PassThrough = 0,
-        ActionResult,
     }
 
     public class Transition {
         public State Source { get; private set; }
         public State Target { get; private set; }
+        private int _token;
 
-        private Func<bool, bool> _Condition;
-        private static readonly Func<bool, bool> _DefaultActionResultCondition = c => c;
-        private static readonly Func<bool, bool> _DefaultPassThroughCondition = c => true;
-        private readonly TransitMode _mode;
+        private static readonly Func<object, bool, bool> _DefaultActionResultCondition = (_, c) => c;
+        public static readonly Func<object, bool, bool> ConditionSkip = (_, __) => true;
+
+        private Func<object, bool, bool> _Condition;
 
         private Transition() {
         }
 
-        public Transition(State source_, State target_, TransitMode mode_) {
-            _mode = mode_;
+        public Transition(State source_, State target_, Func<object, bool, bool> Condition_, int token_) {
             Source = source_;
             Target = target_;
-            _Condition = DefaultCondition();
+            TransitCondition(Condition_, token_);
         }
 
-        private Func<bool, bool> DefaultCondition() {
-            if (_mode == TransitMode.ActionResult) {
-                return _DefaultActionResultCondition;
+        public void TransitCondition(Func<object, bool, bool> Condition_, int token_) {
+            _token = token_;
+            _Condition = Condition_ ?? _DefaultActionResultCondition;
+        }
+
+        public bool TryTransit(SimpleFSM fsm_, bool isDone_) {
+            bool ret = _Condition(fsm_.Token[_token], isDone_);
+            if (ret) {
+                fsm_.DoTransition(this);
             }
-            //TransitionMode.PassThrough
-            return _DefaultPassThroughCondition;
+            return ret;
         }
-
-        public void TransitCondition(Func<bool, bool> Condition_) => _Condition = Condition_ ?? DefaultCondition();
-
-        public bool CanTransit(bool stateIsDone_) => _Condition(stateIsDone_);
     }
 }
