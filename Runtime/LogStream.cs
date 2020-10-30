@@ -10,37 +10,33 @@ namespace Transient {
         [Conditional("LogEnabled")]
         public static void Debug(
             string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Debug(msg_, arg0_, arg1_, arg2_, member_, filePath_, lineNumber_);
+            LogStream.Default.Debug(msg_, member_, filePath_, lineNumber_);
         }
 
         [Conditional("LogEnabled")]
         public static void Info(
             string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Info(msg_, arg0_, arg1_, arg2_, member_, filePath_, lineNumber_);
+            LogStream.Default.Info(msg_, member_, filePath_, lineNumber_);
         }
 
         [Conditional("LogEnabled")]
         public static void Warning(
             string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Warning(msg_, arg0_, arg1_, arg2_, member_, filePath_, lineNumber_);
+            LogStream.Default.Warning(msg_, member_, filePath_, lineNumber_);
         }
 
         [Conditional("LogEnabled")]
         public static void Error(
             string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Error(msg_, arg0_, arg1_, arg2_, member_, filePath_, lineNumber_);
+            LogStream.Default.Error(msg_, member_, filePath_, lineNumber_);
         }
 
         [Conditional("LogEnabled")]
@@ -55,17 +51,15 @@ namespace Transient {
         [Conditional("LogEnabled")]
         public static void Custom(
             int level_, string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Custom(level_, msg_, arg0_, arg1_, arg2_, member_, filePath_, lineNumber_);
+            LogStream.Default.Custom(level_, msg_, member_, filePath_, lineNumber_);
         }
     }
 
     public sealed class LogStream {
         public static LogStream Default { get; private set; } = new LogStream();
 
-        private readonly StringBuilder _buffer = new StringBuilder(1024);
         public const int debug = 0;
         public const int normal = 1;
         public const int warning = 2;
@@ -80,15 +74,13 @@ namespace Transient {
         [Conditional("LogEnabled")]
         public void Debug(
             string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
+            object arg0_, object arg1_, object arg2_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
 #if !SkipPerformance
             Performance.RecordProfiler(nameof(LogStream));
 #endif
-            _buffer.Length = 0;
-            _buffer.AppendFormat(msg_, arg0_, arg1_, arg2_);
-            Cache.Log(_buffer.ToString(), skipStacktrace[debug] ? null : new StackTrace(1, true).ToString(), debug, new EntrySource(member_, filePath_, lineNumber_));
+            Cache.Log(msg_, skipStacktrace[debug] ? null : new StackTrace(1, true).ToString(), debug, new EntrySource(member_, filePath_, lineNumber_));
 #if !SkipPerformance
             Performance.End(nameof(LogStream));
 #endif
@@ -97,15 +89,13 @@ namespace Transient {
         [Conditional("LogEnabled")]
         public void Info(
             string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
+            object arg0_, object arg1_, object arg2_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
 #if !SkipPerformance
             Performance.RecordProfiler(nameof(LogStream));
 #endif
-            _buffer.Length = 0;
-            _buffer.AppendFormat(msg_, arg0_, arg1_, arg2_);
-            Cache.Log(_buffer.ToString(), skipStacktrace[normal] ? null : new StackTrace(1, true).ToString(), normal, new EntrySource(member_, filePath_, lineNumber_));
+            Cache.Log(msg_, skipStacktrace[normal] ? null : new StackTrace(1, true).ToString(), normal, new EntrySource(member_, filePath_, lineNumber_));
 #if !SkipPerformance
             Performance.End(nameof(LogStream));
 #endif
@@ -114,15 +104,13 @@ namespace Transient {
         [Conditional("LogEnabled")]
         public void Warning(
             string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
+            object arg0_, object arg1_, object arg2_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
 #if !SkipPerformance
             Performance.RecordProfiler(nameof(LogStream));
 #endif
-            _buffer.Length = 0;
-            _buffer.AppendFormat(msg_, arg0_, arg1_, arg2_);
-            Cache.Log(_buffer.ToString(), skipStacktrace[warning] ? null : new StackTrace(1, true).ToString(), warning, new EntrySource(member_, filePath_, lineNumber_));
+            Cache.Log(msg_, skipStacktrace[warning] ? null : new StackTrace(1, true).ToString(), warning, new EntrySource(member_, filePath_, lineNumber_));
 #if !SkipPerformance
             Performance.End(nameof(LogStream));
 #endif
@@ -131,15 +119,13 @@ namespace Transient {
         [Conditional("LogEnabled")]
         public void Error(
             string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
+            object arg0_, object arg1_, object arg2_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
 #if !SkipPerformance
             Performance.RecordProfiler(nameof(LogStream));
 #endif
-            _buffer.Length = 0;
-            _buffer.AppendFormat(msg_, arg0_, arg1_, arg2_);
-            Cache.Log(_buffer.ToString(), skipStacktrace[error] ? null : new StackTrace(1, true).ToString(), error, new EntrySource(member_, filePath_, lineNumber_));
+            Cache.Log(msg_, skipStacktrace[error] ? null : new StackTrace(1, true).ToString(), error, new EntrySource(member_, filePath_, lineNumber_));
 #if !SkipPerformance
             Performance.End(nameof(LogStream));
 #endif
@@ -148,16 +134,14 @@ namespace Transient {
         [Conditional("LogEnabled")]
         public void Assert(
             bool condition_, string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
+            object arg0_, object arg1_, object arg2_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
             if(condition_) return;
 #if !SkipPerformance
             Performance.RecordProfiler(nameof(LogStream));
 #endif
-            _buffer.Length = 0;
-            _buffer.AppendFormat(msg_, arg0_, arg1_, arg2_);
-            Cache.Log(_buffer.ToString(), skipStacktrace[assert] ? null : new StackTrace(1, true).ToString(), assert, new EntrySource(member_, filePath_, lineNumber_));
+            Cache.Log(string.Format(msg_, arg0_, arg1_, arg2_), skipStacktrace[assert] ? null : new StackTrace(1, true).ToString(), assert, new EntrySource(member_, filePath_, lineNumber_));
 #if !SkipPerformance
             Performance.End(nameof(LogStream));
 #endif
@@ -166,15 +150,12 @@ namespace Transient {
         [Conditional("LogEnabled")]
         public void Custom(
             int level_, string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
 #if !SkipPerformance
             Performance.RecordProfiler(nameof(LogStream));
 #endif
-            _buffer.Length = 0;
-            _buffer.AppendFormat(msg_, arg0_, arg1_, arg2_);
-            Cache.Log(_buffer.ToString(), null, level_, new EntrySource(member_, filePath_, lineNumber_));
+            Cache.Log(msg_, null, level_, new EntrySource(member_, filePath_, lineNumber_));
 #if !SkipPerformance
             Performance.End(nameof(LogStream));
 #endif

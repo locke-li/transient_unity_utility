@@ -51,7 +51,6 @@ namespace Transient {
                 s.sw.Restart();
                 if((method_ & Method.NoStartLog) == 0) {
                     Log.Custom(logLevel, $"perf[{key_}|Start]",
-                        null, null, null,
                         member_, filePath_, lineNumber_
                         );
                 }
@@ -68,7 +67,6 @@ namespace Transient {
             }
             s.sw.Restart();
             Log.Custom(logLevel, $"perf[{key_}|Start]",
-                null, null, null,
                 member_, filePath_, lineNumber_
             );
         }
@@ -104,7 +102,6 @@ namespace Transient {
             ref var s = ref _record.ValueRef(key_);
             if((s.method & Method.Log) != 0) {
                 Log.Custom(logLevel, $"perf[{key_}/{mark_}]{s.sw.ElapsedMilliseconds}ms|{s.sw.ElapsedTicks}ticks",
-                    null, null, null,
                     member_, filePath_, lineNumber_
                     );
             }
@@ -124,7 +121,6 @@ namespace Transient {
             if((s.method & Method.Log) != 0) {
                 s.sw.Stop();
                 Log.Custom(logLevel, $"perf[{key_}|{msg_}]{s.sw.ElapsedMilliseconds}ms|{s.sw.ElapsedTicks}ticks",
-                    null, null, null,
                     member_, filePath_, lineNumber_
                     );
             }

@@ -130,8 +130,8 @@ namespace UnityEngine {
                 arg0_:nameof(GetChecked), member_: member_, filePath_: file_, lineNumber_: line_);
             var ret = comp_.GetComponent(type_);
             if(ret == null) {
-                Log.Warning("Expected component of type {0} not found on {1}!",
-                    arg0_:type_, arg1_: comp_.name, member_: member_, filePath_: file_, lineNumber_: line_);
+                Log.Warning($"Expected component of type {type_} not found on {comp_.name}!",
+                    member_, file_, line_);
                 ret = comp_.gameObject.AddComponent(type_);
             }
             return ret;
@@ -144,8 +144,8 @@ namespace UnityEngine {
                 arg0_: nameof(GetChecked), member_: member_, filePath_: file_, lineNumber_: line_);
             var ret = obj_.GetComponent(type_);
             if (ret == null) {
-                Log.Warning("Expected component of type {0} not found on {1}!",
-                    arg0_: type_, arg1_: obj_.name, member_: member_, filePath_: file_, lineNumber_: line_);
+                Log.Warning($"Expected component of type {type_} not found on {obj_.name}!",
+                    member_, file_, line_);
                 ret = obj_.AddComponent(type_);
             }
             return ret;
