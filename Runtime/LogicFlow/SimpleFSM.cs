@@ -2,24 +2,53 @@
 using Transient.SimpleContainer;
 
 namespace Transient.ControlFlow {
+    public class FSMStack {
+        private readonly List<(FSMGraph, State, object[])> _stacked;
+        private readonly SimpleFSM _active;
+
+        public FSMStack(SimpleFSM fsm_) {
+            _active = fsm_;
+            _stacked = new List<(FSMGraph, State, object[])>(4);
+        }
+
+        public void Push(FSMGraph graph_, State entry_, State exit_, object[] token_) {
+            _stacked.Push((_active.Graph, exit_ ?? _active.CurrentState, _active.Token));
+            _active.Init(graph_, token_);
+            _active.Reset(entry_);
+        }
+
+        public void Pop() {
+            var (graph, state, token) = _stacked.Pop();
+            _active.Init(graph, token);
+            _active.TransitTo(state);
+        }
+    }
+
     public class SimpleFSM {
-        public SimpleFSMGraph Graph { get; set; }
+        public FSMGraph Graph { get; set; }
         public State CurrentState { get; private set; }
         internal object[] Token { get; private set; }
         private bool _isDone;
         public Action<int, int, int> WhenTransit { get; set; }
         private int transitDepth = 0;
         public static int MaxTransitDepth = 16;
+        private static readonly object[] DefaultToken = new object[1];
 
         public bool IsInState(int id_) => CurrentState.Id == id_;
 
-        public void Init(SimpleFSMGraph graph_, params object[] token_) {
+        public void Init(FSMGraph graph_, params object[] token_) {
             Graph = graph_;
-            Token = token_ ?? new object[1];
+            Token = token_ ?? Token ?? DefaultToken;
         }
 
-        public void Reset() {
-            TransitTo(Graph[0]);
+        public void Reset(State state_ = null) {
+            try {
+                transitDepth = 0;
+                TransitTo(state_??Graph[0]);
+            }
+            catch (Exception e) {
+                Error(e);
+            }
         }
 
         public void ForceState(int id_) {
@@ -31,10 +60,9 @@ namespace Transient.ControlFlow {
             _isDone = CurrentState.ShouldSkipTick;
         }
 
-
-        internal void Error(Exception e_) {
+        private void Error(Exception e_) {
             Log.Error($"{e_.Message}\n{e_.StackTrace}");
-            CurrentState = SimpleFSMGraph.ErrorState;
+            CurrentState = FSMGraph.ErrorState;
             CurrentState.OnEnter(this, false);
         }
 
@@ -47,18 +75,18 @@ namespace Transient.ControlFlow {
             }
         }
 
-        private void Transit(State target) {
+        private void Transit(State target_) {
             if (++transitDepth >= MaxTransitDepth) {
-                Log.Assert(false, "max fsm transit depth reached. current = {0}", CurrentState.Id);
+                Error(new Exception($"max fsm transit depth reached. current state = {CurrentState.Id}"));
                 return;
             }
-            WhenTransit?.Invoke(CurrentState.Id, target.Id, transitDepth);
+            WhenTransit?.Invoke(CurrentState.Id, target_.Id, transitDepth);
             try {
                 var state = CurrentState;
                 //check/prevent transition in state exit
                 CurrentState = null;
                 state.OnExit(this);
-                TransitTo(target);
+                TransitTo(target_);
             }
             catch (Exception e) {
                 Error(e);
@@ -66,7 +94,7 @@ namespace Transient.ControlFlow {
             --transitDepth;
         }
 
-        private void TransitTo(State state_) {
+        internal void TransitTo(State state_) {
             _isDone = state_.ShouldSkipTick;
             CurrentState = state_;
             CurrentState.OnEnter(this, _isDone);
@@ -81,7 +109,7 @@ namespace Transient.ControlFlow {
                 Log.Warning("transition is invalid during state exit");
                 return false;
             }
-            if (trans_.Source == SimpleFSMGraph.AnyState || trans_.Source == CurrentState) {
+            if (trans_.Source == FSMGraph.AnyState || trans_.Source == CurrentState) {
                 Transit(trans_.Target);
                 return true;
             }
@@ -89,13 +117,13 @@ namespace Transient.ControlFlow {
         }
     }
 
-    public class SimpleFSMGraph {
+    public class FSMGraph {
         private readonly List<State> _states;
         internal State this[int index] => _states[index];
         public static State AnyState { get; private set; }
         public static State ErrorState { get; private set; }
 
-        public SimpleFSMGraph() {
+        public FSMGraph() {
             if (AnyState == null) {
                 AnyState = new State(-1, StateTransitMode.Manual);
                 ErrorState = new State(-2, StateTransitMode.Manual);
