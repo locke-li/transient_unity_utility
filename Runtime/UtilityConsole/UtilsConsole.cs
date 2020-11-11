@@ -18,7 +18,7 @@ using UnityEditor;
 namespace Transient.Development {
     public partial class UtilsConsole : MonoBehaviour {
         private class Log {
-            public bool enabled { get { return tr.gameObject.activeSelf; } set { tr.gameObject.SetActive(value); } }
+            public bool enabled { get => tr.gameObject.activeSelf; set => tr.gameObject.SetActive(value); }
             public Transform tr;
             public Text text;
             public Text textCount;
@@ -35,7 +35,9 @@ namespace Transient.Development {
 
         private float _fpsFactor;
         private GameObject _content;
-        private Button _template;
+        private Button _templateShortcut;
+        private RectTransform _templateSlider;
+        private RectTransform _templateWatch;
         private Button _entry;
         private Text _fps;
         private float[] _fpsLast;
@@ -56,12 +58,12 @@ namespace Transient.Development {
         private ScrollRect _logDetailScroll;
         private Text _logDetailText;
         private Text _logDetailStackText;
-        private Slider _speedup;
-        private Slider _speeddown;
-        private Slider _contentAlpha;
         private InputField _params;
         private float _time;
+        private float _watchRefreshTime;
         private Dictionary<string, Button> _shortcutButton;
+        private Dictionary<string, Slider> _valueSlider;
+        private List<(Text, Func<string>)> _watchList;
         private CanvasGroup _contentGroup;
 
         public static bool LogEnabled;
@@ -110,10 +112,7 @@ namespace Transient.Development {
 
         private void Awake() {
             const float FPS_SEGMENT = 0.5f;
-            const float TIME_MAX_VALUE = 5;
-            const float TIME_MIN_VALUE = 0;
             Instance = this;
-            _shortcutButton = new Dictionary<string, Button>(32);
             _fpsLast = new float[4];
             _last = -1;
             _fpsFactor = 1 / (_fpsLast.Length * FPS_SEGMENT);
@@ -131,23 +130,17 @@ namespace Transient.Development {
             _entry.onClick.AddListener(ToggleAction);
             _entry.gameObject.SetActive(true);
             _contentGroup = _content.GetComponent<CanvasGroup>();
-            _template = _content.FindChecked<ScrollRect>("shortcuts").content.FindChecked<Button>("shortcut");
-            _template.gameObject.SetActive(false);
+            var scrollContent = _content.FindChecked<ScrollRect>("shortcuts").content;
+            _templateShortcut = scrollContent.FindChecked<Button>("layout_shortcut/shortcut");
+            _templateShortcut.gameObject.SetActive(false);
+            _templateSlider = scrollContent.FindChecked<RectTransform>("layout_slider/slider");
+            _templateSlider.gameObject.SetActive(false);
+            _templateWatch = scrollContent.FindChecked<RectTransform>("layout_watch/watch");
+            _templateWatch.gameObject.SetActive(false);
+            _shortcutButton = new Dictionary<string, Button>(32);
+            _valueSlider = new Dictionary<string, Slider>(32);
+            _watchList = new List<(Text, Func<string>)>(32);
             _fps = _entry.transform.FindChecked<Text>("fps");
-            _speedup = _content.FindChecked<Slider>("speedup");
-            _speeddown = _content.FindChecked<Slider>("speeddown");
-            _speedup.value = Time.timeScale;
-            _speedup.minValue = 1;
-            _speedup.maxValue = TIME_MAX_VALUE;
-            _speedup.onValueChanged.AddListener(v => { Time.timeScale = v; _speeddown.value = _speeddown.maxValue; });
-            _speeddown.value = Time.timeScale;
-            _speeddown.maxValue = 1;
-            _speeddown.minValue = TIME_MIN_VALUE;
-            _speeddown.onValueChanged.AddListener(v => { Time.timeScale = v; _speedup.value = _speedup.minValue; });
-            _contentAlpha = _content.FindChecked<Slider>("content_alpha");
-            _contentAlpha.minValue = 0.05f;
-            _contentAlpha.maxValue = 1;
-            _contentAlpha.onValueChanged.AddListener(v => _contentGroup.alpha = v);
             _params = _content.FindChecked<InputField>("params");
         }
 
@@ -276,6 +269,17 @@ namespace Transient.Development {
             else if(fpsIndex < 0)
                 fpsIndex = 0;
             _fps.text = _fpsNumbers[fpsIndex];
+            if (!_content.gameObject.activeSelf) {
+                return;
+            }
+            const float WatchRefreshInterval = 0.2f;
+            _watchRefreshTime += Time.deltaTime;
+            if (_watchRefreshTime >= WatchRefreshInterval) {
+                _watchRefreshTime -= WatchRefreshInterval;
+                foreach (var (text, FetchValue) in _watchList) {
+                    text.text = FetchValue();
+                }
+            }
         }
 
         private void ToggleAction() {
@@ -288,11 +292,10 @@ namespace Transient.Development {
             if(_content == null)
                 return;
             _content.gameObject.SetActive(value_.Value);
-            _speedup.value = Time.timeScale;
-            _speeddown.value = Time.timeScale;
             _contentGroup.alpha = Mathf.Max(0.5f, _contentGroup.alpha);
-            _contentAlpha.value = _contentGroup.alpha;
         }
+
+        #region shortcut
 
         public static void ColorByState(Button aButton, bool aState) {
             ColorByState(aButton, aState, ToggleEnableColor, ToggleDisableColor);
@@ -318,7 +321,7 @@ namespace Transient.Development {
                         action_(p);
                         button.targetGraphic.color = color_();
                     }
-                    catch(System.Exception e) {
+                    catch(Exception e) {
                         Debug.LogException(e);
                     }
                 else
@@ -373,19 +376,76 @@ namespace Transient.Development {
 
         private static Button AddShortcutUnity(string text_) {
             var buttons = Instance._shortcutButton;
-            var template = Instance._template;
-            if (!buttons.TryGetValue(text_, out Button s)) {
+            if (!buttons.TryGetValue(text_, out var s)) {
+                var template = Instance._templateShortcut;
                 s = Instantiate(template.gameObject).GetComponent<Button>();
                 s.transform.SetParent(template.transform.parent, false);
+                s.gameObject.SetActive(true);
                 buttons.Add(text_, s);
             }
             else {
                 s.onClick.RemoveAllListeners();
             }
             s.transform.FindChecked<Text>("text").text = text_;
-            s.gameObject.SetActive(true);
             return s;
         }
+
+        #endregion shortcut
+
+        #region value
+
+        public static void AddSlider(string name_,
+            float value_, float min_, float max_,
+            bool integer_ = false, Func<float, string> WhenValueChange_ = null) {
+            if (Instance == null) {
+                return;
+            }
+            var sliders = Instance._valueSlider;
+            if (!sliders.TryGetValue(name_, out var s)) {
+                var template = Instance._templateSlider;
+                var obj = Instantiate(template.gameObject);
+                obj.transform.SetParent(template.transform.parent, false);
+                obj.SetActive(true);
+                s = obj.FindChecked<Slider>("slider");
+                sliders.Add(name_, s);
+            }
+            else {
+                s.onValueChanged.RemoveAllListeners();
+            }
+            s.minValue = min_;
+            s.maxValue = max_;
+            s.wholeNumbers = integer_;
+            s.FindChecked<Text>("title").text = name_;
+            var value = s.FindChecked<Text>("value");
+            s.value = value_;
+            UnityAction<float> eventValueChange = v => {
+                if (WhenValueChange_ != null) {
+                    value.text = WhenValueChange_(v);
+                }
+                else {
+                    value.text = v.ToString();
+                }
+            };
+            s.onValueChanged.AddListener(eventValueChange);
+            eventValueChange(value_);
+        }
+
+        public static void AddWatch(string name_, Func<string> FetchValue) {
+            if (Instance == null) {
+                return;
+            }
+            var watchList = Instance._watchList;
+            var template = Instance._templateWatch;
+            var obj = Instantiate(template.gameObject);
+            obj.transform.SetParent(template.transform.parent, false);
+            obj.SetActive(true);
+            obj.FindChecked<Text>("title").text = name_;
+            var value = obj.FindChecked<Text>("value");
+            value.text = FetchValue();
+            watchList.Add((value, FetchValue));
+        }
+
+        #endregion value
 
         private void OnDestroy() {
             if (Instance != null) {

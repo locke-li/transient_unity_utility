@@ -28,6 +28,8 @@ namespace Transient.Development {
             AddShortcut("Clear Log", t => Instance.ClearLog(), closeConsole_ : false);
             AddShortcut("Snapshot", t => TakeSnapshot(int.TryParse(t, out var v) ? v : 1080));
             AddShortcut("Load Scene", name => SceneManager.LoadScene(name), checkInput_ : true);
+            AddSlider("time scale", 0, -1, 1, WhenValueChange_: TimeScale);
+            AddSlider("alpha", 1.0f, 0.2f, 1, WhenValueChange_: v => { Instance._contentGroup.alpha = v; return v.ToString("F1"); });
         }
 
 #if UNITY_EDITOR
@@ -46,6 +48,20 @@ namespace Transient.Development {
             var scale = Mathf.CeilToInt((float)height / Screen.height);
             ScreenCapture.CaptureScreenshot(path, scale);
             Debug.Log(path);
+        }
+
+        private static string TimeScale(float v) {
+            if (Mathf.Abs(v) < 0.08f) {
+                v = 1;
+            }
+            else if (v < 0) {
+                v += 1;
+            }
+            else {
+                v = Mathf.Max(1, v * 10);
+            }
+            Time.timeScale = v;
+            return $"{v:F2}";
         }
     }
 }
