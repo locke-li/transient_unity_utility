@@ -20,15 +20,16 @@ namespace Transient.ControlFlow {
         public void Pop() {
             var (graph, state, token) = _stacked.Pop();
             _active.Init(graph, token);
-            _active.TransitTo(state);
+            _active.Reset(state);
         }
     }
 
     public class SimpleFSM {
         public FSMGraph Graph { get; set; }
         public State CurrentState { get; private set; }
-        internal object[] Token { get; private set; }
+        public object[] Token { get; private set; }
         private bool _isDone;
+        public State ErrorState { get; private set; }
         public Action<int, int, int> WhenTransit { get; set; }
         private int transitDepth = 0;
         public static int MaxTransitDepth = 16;
@@ -36,7 +37,12 @@ namespace Transient.ControlFlow {
 
         public bool IsInState(int id_) => CurrentState.Id == id_;
 
+        public SimpleFSM() {
+            ErrorState = new State(-200, StateTransitMode.Manual);
+        }
+
         public void Init(FSMGraph graph_, params object[] token_) {
+            Log.Assert(graph_ != null, "invalid fsm graph");
             Graph = graph_;
             Token = token_ ?? Token ?? DefaultToken;
         }
@@ -44,7 +50,9 @@ namespace Transient.ControlFlow {
         public void Reset(State state_ = null) {
             try {
                 transitDepth = 0;
-                TransitTo(state_??Graph[0]);
+                state_ = state_ ?? Graph[0];
+                WhenTransit?.Invoke(-1, state_.Id, transitDepth);
+                TransitTo(state_);
             }
             catch (Exception e) {
                 Error(e);
@@ -60,9 +68,14 @@ namespace Transient.ControlFlow {
             _isDone = CurrentState.ShouldSkipTick;
         }
 
+        public void WhenError(Action<object> Enter_, Func<object, float, bool> Tick_) {
+            ErrorState.WhenEnter(Enter_);
+            ErrorState.WhenTick(Tick_);
+        }
+
         private void Error(Exception e_) {
             Log.Error($"{e_.Message}\n{e_.StackTrace}");
-            CurrentState = FSMGraph.ErrorState;
+            CurrentState = ErrorState;
             CurrentState.OnEnter(this, false);
         }
 
@@ -94,7 +107,7 @@ namespace Transient.ControlFlow {
             --transitDepth;
         }
 
-        internal void TransitTo(State state_) {
+        private void TransitTo(State state_) {
             _isDone = state_.ShouldSkipTick;
             CurrentState = state_;
             CurrentState.OnEnter(this, _isDone);
@@ -121,19 +134,12 @@ namespace Transient.ControlFlow {
         private readonly List<State> _states;
         internal State this[int index] => _states[index];
         public static State AnyState { get; private set; }
-        public static State ErrorState { get; private set; }
 
         public FSMGraph() {
             if (AnyState == null) {
                 AnyState = new State(-1, StateTransitMode.Manual);
-                ErrorState = new State(-2, StateTransitMode.Manual);
             }
             _states = new List<State>(16);
-        }
-
-        public void WhenError(Action<object> Enter_, Func<object, float, bool> Tick_) {
-            ErrorState.WhenEnter(Enter_);
-            ErrorState.WhenTick(Tick_);
         }
 
         public State AddState(StateTransitMode mode_ = StateTransitMode.Automatic) {
