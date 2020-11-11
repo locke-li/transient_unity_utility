@@ -7,6 +7,7 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Collections.Generic;
 using Transient;
 
 namespace UnityEngine {
@@ -202,6 +203,13 @@ namespace UnityEngine {
             child_.sizeDelta = new Vector2(0, 0);
             child_.pivot = new Vector2(0.5f, 0.5f);
             return child_;
+        }
+
+        public static void GetChildren(this Transform transform_, List<Transform> cache_) {
+            cache_.Clear();
+            for(int k = 0; k < transform_.childCount; ++k) {
+                cache_.Add(transform_.GetChild(k));
+            }
         }
 
         public static Transform Duplicate(this Transform transform_) {
