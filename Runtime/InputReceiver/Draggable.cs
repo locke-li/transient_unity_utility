@@ -29,11 +29,8 @@ namespace Transient {
             var y = Mathf.Clamp(eventData.position.y, 0, Screen.height);
             var eventPos = canvasOffset ? new Vector2(x - Screen.width * 0.5f, y - Screen.height * 0.5f) : new Vector2(x, y);
             //screen position from event data (2019.3.14)
-#if UNITY_2019_1_OR_NEWER
-            ((RectTransform)transform).anchoredPosition = eventPos / _canvas.scaleFactor;
-#else
+            //((RectTransform)transform).anchoredPosition = eventPos / _canvas.scaleFactor;
             transform.position = eventPos;
-#endif
         }
 
         public void OnEndDrag(PointerEventData eventData) {

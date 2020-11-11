@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using Transient.SimpleContainer;
 
 namespace Transient.UI {
-    public sealed class ScrollDataView : UnityEngine.UI.ScrollRect {
+    public sealed class ScrollDataView : ScrollRect {
         ScrollData data { get; set; }
         public void Reset(ScrollData data_) => data = data_;
 
