@@ -141,9 +141,11 @@ namespace Transient {
 #if !SkipPerformance
             Performance.RecordProfiler(nameof(LogStream));
 #endif
-            Cache.Log(string.Format(msg_, arg0_, arg1_, arg2_), skipStacktrace[assert] ? null : new StackTrace(1, true).ToString(), assert, new EntrySource(member_, filePath_, lineNumber_));
+            var message = string.Format(msg_, arg0_, arg1_, arg2_);
+            Cache.Log(message, skipStacktrace[assert] ? null : new StackTrace(1, true).ToString(), assert, new EntrySource(member_, filePath_, lineNumber_));
 #if !SkipPerformance
             Performance.End(nameof(LogStream));
+            throw new Exception($"assert failed: {message}");
 #endif
         }
 
