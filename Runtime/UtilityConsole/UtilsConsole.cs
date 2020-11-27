@@ -63,7 +63,7 @@ namespace Transient.Development {
         private float _watchRefreshTime;
         private Dictionary<string, Button> _shortcutButton;
         private Dictionary<string, Slider> _valueSlider;
-        private List<(Text, Func<string>)> _watchList;
+        private List<(string name, Text text, Func<string>)> _watchList;
         private CanvasGroup _contentGroup;
 
         public static bool LogEnabled;
@@ -139,7 +139,7 @@ namespace Transient.Development {
             _templateWatch.gameObject.SetActive(false);
             _shortcutButton = new Dictionary<string, Button>(32);
             _valueSlider = new Dictionary<string, Slider>(32);
-            _watchList = new List<(Text, Func<string>)>(32);
+            _watchList = new List<(string, Text, Func<string>)>(32);
             _fps = _entry.transform.FindChecked<Text>("fps");
             _params = _content.FindChecked<InputField>("params");
         }
@@ -276,7 +276,7 @@ namespace Transient.Development {
             _watchRefreshTime += Time.deltaTime;
             if (_watchRefreshTime >= WatchRefreshInterval) {
                 _watchRefreshTime -= WatchRefreshInterval;
-                foreach (var (text, FetchValue) in _watchList) {
+                foreach (var (_, text, FetchValue) in _watchList) {
                     text.text = FetchValue();
                 }
             }
@@ -435,6 +435,13 @@ namespace Transient.Development {
                 return;
             }
             var watchList = Instance._watchList;
+            for(int i = 0; i < watchList.Count; ++i) {
+                var (name, text, _) = watchList[i];
+                if (name_ == name) {
+                    watchList[i] = (name, text, FetchValue);
+                    return;
+                }
+            }
             var template = Instance._templateWatch;
             var obj = Instantiate(template.gameObject);
             obj.transform.SetParent(template.transform.parent, false);
@@ -442,7 +449,7 @@ namespace Transient.Development {
             obj.FindChecked<Text>("title").text = name_;
             var value = obj.FindChecked<Text>("value");
             value.text = FetchValue();
-            watchList.Add((value, FetchValue));
+            watchList.Add((name_, value, FetchValue));
         }
 
         #endregion value
