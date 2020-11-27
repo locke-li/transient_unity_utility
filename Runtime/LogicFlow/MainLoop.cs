@@ -19,19 +19,25 @@ namespace Transient {
 
         public static void InitCoroutine() {
             Log.Assert(Instance != null, "MainLoop is not initialized yet!");
-            Coroutine = new GeneratorCoroutine(Instance.OnUpdate);
+            Coroutine = new GeneratorCoroutine(OnUpdate);
         }
 
         private void Awake() {
             Instance = this;
+            OnUpdate = new ActionList<float>(16);
             Debug.Log("MainLoop initialized");
         }
 
-        public ActionList<float> OnUpdate { get; private set; } = new ActionList<float>(16);
+        public static ActionList<float> OnUpdate { get; private set; }
 
         private void Update() {
             float deltaTime = Time.deltaTime;
             OnUpdate.Invoke(deltaTime);
+        }
+
+        public static void Clear() {
+            OnUpdate?.Clear();
+            //TODO stop & clear coroutine
         }
     }
 }
