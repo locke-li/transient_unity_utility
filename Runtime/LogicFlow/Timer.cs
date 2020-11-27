@@ -29,7 +29,7 @@ namespace Transient {
         private static List<Timer> _reusable = new List<Timer>(32, 4);
 
         private static Timer Use(ActionList<float> invoker) {
-            Timer ret = _reusable.Count > 0 ? _reusable.Pop() : new Timer();
+            var ret = _reusable.Count > 0 ? _reusable.Pop() : new Timer();
             ret.RegisterTo(invoker);
             return ret;
         }
@@ -40,7 +40,7 @@ namespace Transient {
         }
 
         public static void Clear() {
-            foreach(Timer timer in _timers) {
+            foreach(var timer in _timers) {
                 timer.Cancel();
             }
             _reusable.Clear();
@@ -69,8 +69,8 @@ namespace Transient {
                 Log.Warning("executing null action with Timer!");
                 return null;
             }
-            invoker = invoker ?? MainLoop.Instance.OnUpdate;
-            Timer ret = Use(invoker);
+            invoker = invoker ?? MainLoop.OnUpdate;
+            var ret = Use(invoker);
             ret.OnTrigger = TimerAction;
             ret.Active = true;
             ret.mInterCount = -1;
