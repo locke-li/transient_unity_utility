@@ -22,11 +22,11 @@ namespace Transient {
         private Vector2 _positionBoth;
         private Vector2 _positionSingle;
 
-        public static MessagePopup<M> TryCreate(string asset_, Transform parent_) {
+        public static MessagePopup<M> TryCreate(string asset_) {
             try {
                 var obj = AssetMapping.View.TakePersistent<GameObject>(null, asset_);
                 var trans = obj.transform;
-                trans.SetParent(parent_, false);
+                trans.SetParent(ViewEnv.MessageContent, false);
                 RectTransform content = trans.FindChecked<RectTransform>(nameof(content));
                 var message = new M();
                 message.Init(content.gameObject);

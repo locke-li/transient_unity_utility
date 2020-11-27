@@ -21,6 +21,7 @@ namespace Transient {
         public static Camera UICamera { get; private set; }
         public static Canvas MainCanvas { get; private set; }
         public static RectTransform CanvasContent { get; private set; }
+        public static RectTransform MessageContent { get; private set; }
 
         public static float RatioXY { get; private set; }
         public static float RatioYX { get; private set; }
@@ -66,6 +67,19 @@ namespace Transient {
             InitViewport();
             ResetCoordinateSystem();
             CanvasContent = MainCanvas.transform.AddChildRect("content");
+            MessageContent = MainCanvas.transform.AddChildRect("message");
+        }
+
+        public static void Clear() {
+            OnDrag.Clear();
+            OnZoom.Clear();
+            for(int i = 0; i < MainCanvas.transform.childCount; ++i) {
+                var child = MainCanvas.transform.GetChild(i);
+                if (child == MessageContent) continue;
+                GameObject.Destroy(child.gameObject);
+            }
+            CanvasContent = MainCanvas.transform.AddChildRect("content");
+            CanvasContent.SetAsFirstSibling();
         }
 
         public static void Message(string m, Action Confirm_, Action Cancel_, bool blockIsCancel = false, Action<RectTransform> Modify_ = null)

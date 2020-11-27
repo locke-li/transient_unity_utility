@@ -13,25 +13,23 @@ namespace Transient {
 
     public class MessageFade<M> : IMessageFade where M : struct, IMessageText {
         private readonly Queue<M> _message;
-        private readonly Transform _parent;
         public Vector3 StartPos { get; set; } = new Vector3(0, -50, 0);
         public Vector3 EndPos { get; set; } = new Vector3(0, 550f, 0);
         public Vector3 Velocity { get; set; } = new Vector3(0, 240f, 0);
         private string Asset { get; set; }
 
-        public MessageFade(Transform parent_) {
-            _parent = parent_;
+        public MessageFade() {
             _message = new Queue<M>(64, 4);
         }
 
-        public static MessageFade<M> TryCreate(string asset_, Transform parent_) {
+        public static MessageFade<M> TryCreate(string asset_) {
             var obj = AssetMapping.View.Take<GameObject>(null, asset_, false);
             var message = new M();
             if(!message.Init(obj)) {
                 Log.Warning($"{nameof(MessageFade<M>)} create failed.");
                 return null;
             }
-            return new MessageFade<M>(parent_) {
+            return new MessageFade<M>() {
                 Asset = asset_
             };
         }
@@ -39,7 +37,7 @@ namespace Transient {
         public void Create(string m, Color c) {
             Performance.RecordProfiler(nameof(MessageFade<M>));
             var obj = AssetMapping.View.TakeActive(null, Asset);
-            obj.transform.SetParent(_parent, false);
+            obj.transform.SetParent(ViewEnv.MessageContent, false);
             obj.transform.localPosition = StartPos;
             var message = new M();
             message.Init(obj);
