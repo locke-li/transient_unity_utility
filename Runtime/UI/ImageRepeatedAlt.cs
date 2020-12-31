@@ -1,13 +1,13 @@
 ﻿using UnityEngine.Sprites;
 using UnityEngine;
 using UnityEngine.UI;
-using Transient.SimpleContainer;
 
 namespace Transient.UI {
     public class ImageRepeatedAlt : Graphic {
         //NOTE must be on the same texture
         public Sprite sprite;
         public Sprite option = null;
+        public Vector2 direction = new Vector2(1, 0);
         public float spacing;
         public int count;
         public int value;
@@ -30,21 +30,21 @@ namespace Transient.UI {
         protected override void OnPopulateMesh(VertexHelper vh) {
             vh.Clear();
             if (sprite == null) return;
-            var width = rectTransform.sizeDelta.x;
-            var height = rectTransform.sizeDelta.y * 0.5f;
-            var size = new Vector4(0, -height, width, height);
+            var rect = rectTransform.rect;
+            var rectSize = new Vector2(rect.width, rect.height);
+            var size = new Vector4(0, 0, rectSize.x, rectSize.y);
             var uv = DataUtility.GetOuterUV(sprite);
-            width = rectTransform.sizeDelta.x + spacing;
-            var basePos = TransformUtility.CheckOffsetBiased(rectTransform, spacing, value);
+            var pivotSize = Vector2.Dot(rectSize, direction) + spacing;
+            var basePos = TransformUtility.CheckOffsetBiased(rectTransform, direction, spacing, count);
             int e = 0;
             for (; e < Mathf.Min(value, count); ++e) {
-                var pos = basePos + new Vector2(e * width, 0f);
+                var pos = basePos + e * pivotSize * direction;
                 MeshUtility.AddSimple(vh, Color.white, pos, size, uv);
             }
             if (option == null) return;
             uv = DataUtility.GetOuterUV(option);
             for (; e < count; ++e) {
-                var pos = basePos + new Vector2(e * width, 0f);
+                var pos = basePos + e * pivotSize * direction;
                 MeshUtility.AddSimple(vh, Color.white, pos, size, uv);
             }
         }

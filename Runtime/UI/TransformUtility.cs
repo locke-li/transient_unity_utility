@@ -9,21 +9,27 @@ public static class TransformUtility {
         return new Vector2((0.5f - pivot.x) * rect.width, (0.5f - pivot.y) * rect.height);
     }
 
-    public static Vector2 CheckOffsetBiased(RectTransform root, float spacing, float count) {
+    public static Vector2 CheckOffsetBiased(RectTransform root, Vector2 direction, float spacing, float count) {
         var pivot = root.pivot;
         var rect = root.rect;
-        var y = (0.5f - pivot.y) * rect.height;
-        if (pivot.x == 0) {
-            return new Vector2(0, y);
+        var normal = new Vector2(direction.y, direction.x);
+        var pivotValue = Vector2.Dot(pivot, direction);
+        var orthoSize = rect.width * direction.y + rect.height * direction.x;
+        var orthoValue = Vector2.Dot(pivot, normal);
+        if (orthoValue == 1) {
+            orthoValue = -orthoSize;
         }
-        var size = root.sizeDelta.x;
-        size = spacing * (count - 1) + size * count;
-        if (pivot.x == 1) {
-            return new Vector2(-size, y);
+        else {
+            orthoValue = -orthoValue * orthoSize;
         }
-        return new Vector2(
-            (0.5f - pivot.x) * rect.width - size * 0.5f,
-            y
-        );
+        if (pivotValue == 0) {
+            return pivotValue * rect.width * direction + orthoValue * normal;
+        }
+        var pivotSize = rect.width * direction.x + rect.height * direction.y;
+        var length = spacing * (count - 1) + pivotSize * count;
+        if (pivotValue == 1) {
+            return -length * direction + orthoValue * normal;
+        }
+        return ((0.5f - pivotValue) * pivotSize - length * 0.5f) * direction + orthoValue * normal;
     }
 }
