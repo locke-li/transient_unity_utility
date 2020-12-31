@@ -64,13 +64,13 @@ namespace Transient.ControlFlow {
 
         public void Init(FSMGraph graph_, params object[] token_) {
             Log.Assert(graph_ != null, "invalid fsm graph");
+            transitDepth = 0;
             Graph = graph_;
             Token = token_ ?? Token ?? DefaultToken;
         }
 
         public void Reset(State state_ = null) {
             try {
-                transitDepth = 0;
                 state_ = state_ ?? Graph[0];
                 WhenTransit?.Invoke(-1, state_.Id, transitDepth);
                 TransitTo(state_);
@@ -136,6 +136,7 @@ namespace Transient.ControlFlow {
             ActingState = ActingState ?? state_;
             _isDone = ActingState.ShouldSkipTick;
             ActingState.OnEnter(this, _isDone, CurrentState);
+            ActingState.ExitIfDeadEnd(this, _isDone, CurrentState);
 #if FSMTimeoutCheck
             lastTransitTime = UnityEngine.Time.time;
 #endif
@@ -258,10 +259,11 @@ namespace Transient.ControlFlow {
             const string key = "State.OnTick";
             Performance.RecordProfiler(key);
             if (!isDone_) {
-                Log.Assert(_OnTick != null, $"{Id} invalid OnTick");
+                Log.Assert(_OnTick != null, "{0} invalid OnTick", this);
                 isDone_ = _OnTick(fsm_.Token[_tokenOnTick], dt_);
                 if (isDone_) {
                     _OnTickDone?.Invoke(fsm_.Token[_tokenOnTickDone]);
+                    ExitIfDeadEnd(fsm_, true, TransitionTarget);
                 }
                 else {
                     goto end;
@@ -277,15 +279,20 @@ namespace Transient.ControlFlow {
         }
 
         private void CheckTransition(SimpleFSM fsm_, bool isDone_) {
-            //give OnExit a change to execute, for dead-end states
-            if (_transitions.Count == 0 && isDone_) {
-                OnExit(fsm_);
-                return;
-            }
             foreach (var trans in _transitions) {
                 if (trans.TryTransit(fsm_, isDone_)) {
                     return;
                 }
+            }
+        }
+
+        //give OnExit a change to execute, for dead-end states
+        internal void ExitIfDeadEnd(SimpleFSM fsm_, bool isDone_, State TransitionTarget) {
+            if (TransitionTarget._transitions.Count == 0
+             && TransitionTarget._mode != StateTransitMode.Manual
+             && fsm_.CurrentState == TransitionTarget
+             && isDone_) {
+                OnExit(fsm_);
             }
         }
 
@@ -294,6 +301,10 @@ namespace Transient.ControlFlow {
             Performance.RecordProfiler(key);
             _OnExit?.Invoke(fsm_.Token[_tokenOnExit]);
             Performance.End(key);
+        }
+
+        public override string ToString() {
+            return $"State {Id}";
         }
     }
 
