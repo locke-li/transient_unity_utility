@@ -71,11 +71,12 @@ namespace Transient.SimpleContainer {
         }
 
         public void Clear() {
+            if (Count <= 0) return;
             Array.Clear(data, 0, Count);
             Count = 0;
         }
 
-        public bool Contains(E e) => Array.IndexOf(data, e) > 0;
+        public bool Contains(E e) => Array.IndexOf(data, e, 0, Count) >= 0;
 
         public void Add(E e) {
             int sz = Count++;
