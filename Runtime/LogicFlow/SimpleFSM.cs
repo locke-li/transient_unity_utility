@@ -46,6 +46,11 @@ namespace Transient.ControlFlow {
         private bool _isDone;
         public State ErrorState { get; private set; }
         public Action<int, int, int> WhenTransit { get; set; }
+#if FSMTimeoutCheck
+        private Action<int> WhenTimeout { get; set; }
+        private float timeout;
+        private float lastTransitTime;
+#endif
         private int transitDepth = 0;
         public static int MaxTransitDepth = 16;
         private static readonly object[] DefaultToken = new object[1];
@@ -80,6 +85,13 @@ namespace Transient.ControlFlow {
             TransitTo(ErrorState);
         }
 
+#if FSMTimeoutCheck
+        public void TimeoutCheck(float timeout_, Action<int> WhenTimeout_) {
+            timeout = timeout_;
+            WhenTimeout = WhenTimeout_;
+        }
+#endif
+
         public void OverrideState(State origin, State target) {
             StateOverrideRule = StateOverrideRule ?? new Dictionary<State, State>(4);
             StateOverrideRule[origin] = target;
@@ -92,6 +104,11 @@ namespace Transient.ControlFlow {
             catch (Exception e) {
                 Error(e);
             }
+#if FSMTimeoutCheck
+            if (timeout > 0 && UnityEngine.Time.time - lastTransitTime > timeout) {
+                WhenTimeout(CurrentState.Id);
+            }
+#endif
         }
 
         private void Transit(State target_) {
@@ -119,6 +136,9 @@ namespace Transient.ControlFlow {
             ActingState = ActingState ?? state_;
             _isDone = ActingState.ShouldSkipTick;
             ActingState.OnEnter(this, _isDone, CurrentState);
+#if FSMTimeoutCheck
+            lastTransitTime = UnityEngine.Time.time;
+#endif
         }
 
         public void SelfTransit() {
