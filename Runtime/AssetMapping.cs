@@ -78,7 +78,10 @@ namespace Transient.DataAccess {
             else if (!TryGetRecycle(resi, out retv)) {//look for reusable fails, load pool prototype
                 retv = resi.Instantiate();
             }
-            Log.Assert(retv != null, "load failed {0}_{1}", c, i);
+            if (retv == null) {
+                Log.Warning($"load failed {c}_{i}");
+                return null;
+            }
             if (ins) ActivateObject(retv, resi);
             Performance.End(nameof(Take));
             return retv as T;
