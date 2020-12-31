@@ -2,7 +2,6 @@ using UnityEngine;
 using Transient.DataAccess;
 using Transient.UI;
 using System;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Transient {
@@ -14,6 +13,7 @@ namespace Transient {
         public bool spring;
         public float springStep;
         public float springTolerance;//TODO: make a smooth implementation
+        public Action<Camera, AbstractCoordinateSystem, float> CustomeProcess;
     }
 
     public sealed class ViewEnv : MonoBehaviour {
@@ -52,9 +52,11 @@ namespace Transient {
         private static ZoomSetting _zoomSetting;
         private static float _zoomTarget;
         public static float Zoom { get; private set; }
-        public static float ZoomPercent => (Zoom - _zoomSetting.min) / (_zoomSetting.max - _zoomSetting.min);
+        public static float ZoomPercent => (Zoom - _zoomSetting.min) / ZoomRange;
         public static float ZoomRatio => _zoomSetting.max / _zoomSetting.min;
+        public static float ZoomRange => _zoomSetting.max - _zoomSetting.min;
         public static ActionList<float> OnZoom { get; } = new ActionList<float>(8, nameof(OnZoom));
+        public static Action<Camera, AbstractCoordinateSystem, float> ProcessZoom { get; set; }
 
         public static void Init(Camera main_, Camera ui_, Canvas canvas_) {
             MainCamera = main_;
@@ -97,10 +99,15 @@ namespace Transient {
             FocusStep = step <= 0 ? FocusStep : step;
         }
 
-        public static void MoveTo(Vector2 pos) {
+        public static void MoveToSystemPos(Vector2 pos) {
             CameraSystem.X = pos.x;
             CameraSystem.Y = pos.y;
             MainCamera.transform.position = CameraSystem.WorldPosition;
+        }
+
+        public static void MoveToWorldPos(Vector3 pos) {
+            CameraSystem.WorldPosition = pos;
+            MainCamera.transform.position = pos;
         }
 
         public static void TryLimitPosition() {
@@ -196,7 +203,8 @@ namespace Transient {
                 CameraSystem.WorldPosition = MainCamera.transform.position;
             };
             _drag.WhenPinch = (d, start, distance) => {
-                TargetZoom(_zoomTarget * start / distance);
+                var diff = (distance - start) * ZoomRange * _screenHeightInverse * 0.5f;
+                TargetZoom(_zoomTarget - diff);
             };
             ViewportControl(true);
         }
@@ -210,25 +218,36 @@ namespace Transient {
 #if UNITY_EDITOR_WIN
             _zoomSetting.scrollStep *= 4f;
 #endif
-            if (!MainCamera.orthographic) {
+            if (MainCamera.orthographic) {
+                ProcessZoom = setting_.CustomeProcess ?? ZoomOrthographic;
+            }
+            else {
+                ProcessZoom = setting_.CustomeProcess ?? ZoomPerspective;
                 MainCamera.farClipPlane = setting_.max + 1;
             }
             ZoomTo(setting_.rest);
         }
 
         private static void ZoomValue(float v_) {
-            if (MainCamera.orthographic)
-                MainCamera.orthographicSize = v_;
-            else {
-                MainCamera.transform.position = CameraSystem.SystemToWorld(
-                    CameraSystem.X,
-                    CameraSystem.Y,
-                    -v_ * _perspectiveProjectionFactor);
-            }
+            ProcessZoom?.Invoke(MainCamera, CameraSystem, v_);
             Zoom = v_;
-            UnitPerPixel = v_ * 2 * _screenHeightInverse;
             OnZoom.Invoke(v_);
             ViewportLimit?.OnZoom(v_);
+        }
+
+        public static void ZoomOrthographic(Camera camera_, AbstractCoordinateSystem _, float v_) {
+            camera_.orthographicSize = v_;
+            UpdateViewHeight(v_);
+        }
+
+        public static void ZoomPerspective(Camera camera_, AbstractCoordinateSystem system_, float v_) {
+            system_.Z = -v_ * _perspectiveProjectionFactor;
+            camera_.transform.position = system_.WorldPosition;
+            //TODO UnitPerPixel at a designated plane (z)
+        }
+
+        public static void UpdateViewHeight(float v_) {
+            UnitPerPixel = v_ * 2 * _screenHeightInverse;
         }
 
         public static bool SpringZoomSwitch() {
@@ -295,7 +314,6 @@ namespace Transient {
             if (Input.mouseScrollDelta.y != 0) {
                 TargetZoom(_zoomTarget - Input.mouseScrollDelta.y * _zoomSetting.scrollStep);
             }
-            //TODO touch zoom
             if (_zoomTarget != Zoom) {
                 if (_zoomSetting.spring) {
                     if (_zoomTarget > Zoom) {
