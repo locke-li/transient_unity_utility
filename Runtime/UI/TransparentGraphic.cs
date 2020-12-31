@@ -2,9 +2,14 @@
 using UnityEngine;
 
 namespace Transient.UI {
-    public sealed class TransparentGraphic : Graphic {
+    //NOTE not working with CanvasGroup.BlocksRaycasts
+    public sealed class TransparentGraphic : Graphic, ICanvasRaycastFilter {
 
         public override bool Raycast(Vector2 sp, Camera eventCamera) {
+            return true;
+        }
+
+        public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera) {
             return true;
         }
 

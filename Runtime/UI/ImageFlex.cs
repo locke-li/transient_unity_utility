@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace Transient.UI {
     public class ImageFlex : Image {
-        private bool hidden;
+        public bool hidden;
 
         public void Hide(bool value) {
             if (hidden == value) return;
