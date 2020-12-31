@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using Transient.SimpleContainer;
 
 namespace Transient.UI {
-    public class ImageRepeated : Graphic {
+    public class ImageRepeated : MaskableGraphic {
         public Sprite sprite;
         public float spacing;
         public float count;
