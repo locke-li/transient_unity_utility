@@ -11,16 +11,30 @@ namespace Transient.ControlFlow {
             _stacked = new List<(FSMGraph, State, object[])>(4);
         }
 
-        public void Push(FSMGraph graph_, State entry_, State exit_, object[] token_) {
+        public void Push(FSMGraph graph_, State entry_, State exit_, object[] token_, bool skip_ = false) {
+            #if DEBUG
+            if (_active.Graph == graph_) {
+                throw new Exception("pushing duplicate fsm graph");
+            }
+            #endif
             _stacked.Push((_active.Graph, exit_ ?? _active.CurrentState, _active.Token));
             _active.Init(graph_, token_);
-            _active.Reset(entry_);
+            if (!skip_) {
+                _active.Reset(entry_);
+            }
         }
 
         public void Pop() {
             var (graph, state, token) = _stacked.Pop();
             _active.Init(graph, token);
             _active.Reset(state);
+        }
+
+        public void Clear() {
+            if (_stacked.Count == 0) return;
+            var (graph, _, token) = _stacked[0];
+            _active.Init(graph, token);
+            _stacked.Clear();
         }
     }
 
