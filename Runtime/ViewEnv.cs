@@ -37,11 +37,11 @@ namespace Transient {
         public static ClickVisual ClickVisual { get; set; }
         public static AbstractCoordinateSystem CameraSystem { get; private set; }
 
-        public static Transform Focus { get; set; } = null;
-        public static Vector2 FocusOffset { get; set; }
         private static bool _manualFocus = false;
+        public static Transform Focus;
+        public static Vector2 FocusOffset;
         private static bool _focusOnce = false;
-        private static float FocusStep { get; set; } = 2f;
+        private static float _focusStep = 2f;
 
         private static DragReceiver _drag;
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
@@ -94,9 +94,10 @@ namespace Transient {
 
         public static void InitFocus(Transform location, Vector2 offset, bool once = false, float step = 0f) {
             Focus = location;
+            if (location == null) return;
             FocusOffset = offset - OffsetFromRelativeY(location.position.y);
             _focusOnce = once;
-            FocusStep = step <= 0 ? FocusStep : step;
+            _focusStep = step <= 0 ? _focusStep : step;
         }
 
         public static void MoveToSystemPos(Vector2 pos) {
@@ -294,12 +295,14 @@ namespace Transient {
                 var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
                 var dir = focus - CameraSystem.PositionXY;
                 var dist = dir.magnitude;
-                var move = FocusStep * Time.deltaTime;
+                var move = _focusStep * Time.deltaTime;
                 if (move >= dist) {
                     CameraSystem.PositionXY = focus;
-                    if (_focusOnce) Focus = null;
+                    if (_focusOnce) {
+                        Focus = null;
+                    }
                 }
-                else CameraSystem.PositionXY += dir / Mathf.Min(dist, 1f) * FocusStep * Time.deltaTime;
+                else CameraSystem.PositionXY += dir / Mathf.Min(dist, 1f) * _focusStep * Time.deltaTime;
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             if (PositionLimit != null && PositionLimit.Unstable && !Input.anyKey) {
