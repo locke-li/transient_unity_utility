@@ -8,7 +8,9 @@ namespace Transient {
     public struct ZoomSetting {
         public float max;
         public float min;
+        public float range;
         public float rest;
+        public float dragFactor;
         public float scrollStep;
         public bool spring;
         public float springStep;
@@ -50,12 +52,10 @@ namespace Transient {
         public static ViewportLimit ViewportLimit { get; set; }
         public static PositionLimit PositionLimit { get; set; }
 
-        private static ZoomSetting _zoomSetting;
+        public static ZoomSetting zoomSetting;
         private static float _zoomTarget;
         public static float Zoom { get; private set; }
-        public static float ZoomPercent => (Zoom - _zoomSetting.min) / ZoomRange;
-        public static float ZoomRatio => _zoomSetting.max / _zoomSetting.min;
-        public static float ZoomRange => _zoomSetting.max - _zoomSetting.min;
+        public static float ZoomPercent => (Zoom - zoomSetting.min) / zoomSetting.range;
         public static ActionList<float> OnZoom { get; } = new ActionList<float>(8, nameof(OnZoom));
         public static Action<Camera, AbstractCoordinateSystem, float> ProcessZoom { get; set; }
 
@@ -236,7 +236,7 @@ namespace Transient {
                 CameraSystem.WorldPosition = MainCamera.transform.position;
             };
             _drag.WhenPinch = (d, start, distance) => {
-                var diff = (distance - start) * ZoomRange * _screenHeightInverse * 0.5f;
+                var diff = (distance - start) * zoomSetting.dragFactor * zoomSetting.range * _screenHeightInverse;
                 TargetZoom(_zoomTarget - diff);
             };
             ViewportControl(true);
@@ -247,9 +247,10 @@ namespace Transient {
         }
 
         public static void InitZoom(ZoomSetting setting_) {
-            _zoomSetting = setting_;
+            zoomSetting = setting_;
+            zoomSetting.range = zoomSetting.max - zoomSetting.min;
 #if UNITY_EDITOR_WIN
-            _zoomSetting.scrollStep *= 4f;
+            zoomSetting.scrollStep *= 4f;
 #endif
             if (MainCamera.orthographic) {
                 ProcessZoom = setting_.CustomeProcess ?? ZoomOrthographic;
@@ -283,12 +284,8 @@ namespace Transient {
             UnitPerPixel = v_ * 2 * _screenHeightInverse;
         }
 
-        public static bool SpringZoomSwitch() {
-            return _zoomSetting.spring = !_zoomSetting.spring;
-        }
-
         public static float TargetZoom(float v) {
-            return _zoomTarget = v > _zoomSetting.max ? _zoomSetting.max : v < _zoomSetting.min ? _zoomSetting.min : v;
+            return _zoomTarget = v > zoomSetting.max ? zoomSetting.max : v < zoomSetting.min ? zoomSetting.min : v;
         }
 
         public static void ZoomTo(float v) {
@@ -317,11 +314,8 @@ namespace Transient {
             return pos.x > 0 && pos.x < 1 && pos.y > 0 && pos.y < 1;
         }
 
-        private void FixedUpdate() {
-            CheckScreenSize();
-        }
-
         private void Update() {
+            CheckScreenSize();
             FadeMessage?.Fade();
             if (Focus != null && !_manualFocus) {
                 var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
@@ -346,16 +340,16 @@ namespace Transient {
             if (Input.GetMouseButtonDown(0)) {
                 ClickVisual?.EmitAt(UICamera.ScreenToWorldPoint(mp), UIViewScale);
             }
-            if (Input.mouseScrollDelta.y != 0) {
-                TargetZoom(_zoomTarget - Input.mouseScrollDelta.y * _zoomSetting.scrollStep);
+            if (Input.mouseScrollDelta.y != 0 && _drag.interactable) {
+                TargetZoom(_zoomTarget - Input.mouseScrollDelta.y * zoomSetting.scrollStep);
             }
             if (_zoomTarget != Zoom) {
-                if (_zoomSetting.spring) {
+                if (zoomSetting.spring) {
                     if (_zoomTarget > Zoom) {
-                        Zoom = Mathf.Min(_zoomTarget, Zoom + _zoomSetting.springStep);
+                        Zoom = Mathf.Min(_zoomTarget, Zoom + zoomSetting.springStep);
                     }
                     else {
-                        Zoom = Mathf.Max(_zoomTarget, Zoom - _zoomSetting.springStep);
+                        Zoom = Mathf.Max(_zoomTarget, Zoom - zoomSetting.springStep);
                     }
                 }
                 else {
