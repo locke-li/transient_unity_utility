@@ -41,7 +41,7 @@ namespace Transient.UI {
     public class DragReceiver : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler {
         public Action<DragReceiver> WhenDragBegin { get; set; } = d => { };
         public Action<DragReceiver, Vector2, Vector2> WhenDrag { get; set; } = (d, v, p) => { };
-        public Action<DragReceiver> WhenDragEnd { get; set; } = d => { };
+        public Action<DragReceiver, Vector2> WhenDragEnd { get; set; } = (d, v) => { };
         public Action<DragReceiver> WhenPinchBegin { get; set; } = d => { };
         public Action<DragReceiver, float, float> WhenPinch { get; set; } = (d, b, v) => { };
         public Action<DragReceiver> WhenPinchEnd { get; set; } = d => { };
@@ -78,7 +78,7 @@ namespace Transient.UI {
                     WhenPinchEnd(this);
                 }
                 else if (touchCount == 1) {
-                    WhenDragEnd(this);
+                    WhenDragEnd(this, Vector2.zero);
                 }
                 touchCount = Input.touchCount;
             }
@@ -130,14 +130,14 @@ namespace Transient.UI {
         public void OnEndDrag(PointerEventData eventData) {
             //Log.Debug("end drag");
             if (!Input.touchSupported) {
-                WhenDragEnd(this);
+                WhenDragEnd(this, eventData.delta);
                 return;
             }
             if (touchCount == 2) {
                 WhenPinchEnd(this);
             }
             else if (touchCount == 1) {
-                WhenDragEnd(this);
+                WhenDragEnd(this, eventData.delta);
             }
             touchCount = 0;
         }

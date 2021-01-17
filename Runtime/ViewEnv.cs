@@ -40,13 +40,19 @@ namespace Transient {
         public static ClickVisual ClickVisual { get; set; }
         public static AbstractCoordinateSystem CameraSystem { get; private set; }
 
-        private static bool _manualFocus = false;
         public static Transform Focus;
         public static Vector2 FocusOffset;
+        private static bool _focusOverride = false;
         private static bool _focusOnce = false;
         private static float _focusStep = 2f;
 
         private static DragReceiver _drag;
+        private static bool _dragFocusOverride = false;
+        private static bool _dragInertia;
+        private static float _dragInertiaValue;
+        private static Vector2 _dragInertiaDelta;
+        private static float _dragInertiaThreshold = 0.05f;
+        private static float _dragInertiaDamping = 0.85f;
         public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
 
         public static ViewportLimit ViewportLimit { get; set; }
@@ -216,7 +222,8 @@ namespace Transient {
         public static void InitViewportControl(DragReceiver drag_) {
             _drag = drag_;
             _drag.WhenDragBegin = d => {
-                _manualFocus = true;
+                _focusOverride = _dragFocusOverride;
+                _dragInertiaValue = 0;
                 CameraSystem.WorldPosition = MainCamera.transform.position;
             };
             _drag.WhenDrag = (d, offset, pos) => {
@@ -231,8 +238,10 @@ namespace Transient {
                     CameraSystem.Z);
                 OnDrag.Invoke(offset, new Vector3(targetX, targetY, CameraSystem.Z));
             };
-            _drag.WhenDragEnd = d => {
-                _manualFocus = false;
+            _drag.WhenDragEnd = (d, delta) => {
+                _focusOverride = false;
+                _dragInertiaValue = delta.magnitude;
+                _dragInertiaDelta = delta / _dragInertiaValue;
                 CameraSystem.WorldPosition = MainCamera.transform.position;
             };
             _drag.WhenPinch = (d, start, distance) => {
@@ -244,6 +253,12 @@ namespace Transient {
 
         public static void ViewportControl(bool v) {
             _drag.interactable = v;
+        }
+
+        public static void InitDragInertia(float damping_, float threshold_) {
+            _dragInertia = damping_ > 0;
+            _dragInertiaDamping = damping_;
+            _dragInertiaThreshold = threshold_;
         }
 
         public static void InitZoom(ZoomSetting setting_) {
@@ -317,7 +332,7 @@ namespace Transient {
         private void Update() {
             CheckScreenSize();
             FadeMessage?.Fade();
-            if (Focus != null && !_manualFocus) {
+            if (Focus != null && !_focusOverride) {
                 var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
                 var dir = focus - CameraSystem.PositionXY;
                 var dist = dir.magnitude;
@@ -330,6 +345,16 @@ namespace Transient {
                 }
                 else CameraSystem.PositionXY += dir / Mathf.Min(dist, 1f) * _focusStep * Time.deltaTime;
                 MainCamera.transform.position = CameraSystem.WorldPosition;
+            }
+            if (_dragInertia && _dragInertiaValue > _dragInertiaThreshold) {
+                _dragInertiaValue *= _dragInertiaDamping;
+                var inertia = _dragInertiaValue * _dragInertiaDelta * UnitPerPixel;
+                var targetX = CameraSystem.X - inertia.x;
+                var targetY = CameraSystem.Y - inertia.y;
+                if (PositionLimit != null) {
+                    (targetX, targetY) = PositionLimit.Limit(targetX, targetY);
+                }
+                MoveToSystemPos(new Vector2(targetX, targetY));
             }
             if (PositionLimit != null && PositionLimit.Unstable && !Input.anyKey) {
                 (CameraSystem.X, CameraSystem.Y) = PositionLimit.ElasticPull();
