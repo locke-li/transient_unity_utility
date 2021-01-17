@@ -56,7 +56,7 @@ namespace Transient.DataAccess {
 
         public GameObject TakeActive(string c, string i, bool ins = true) {
             var ret = Take<GameObject>(c, i, ins);
-            ret.SetActive(true);
+            ret?.SetActive(true);
             return ret;
         }
 
@@ -79,7 +79,6 @@ namespace Transient.DataAccess {
                 retv = resi.Instantiate();
             }
             if (retv == null) {
-                Log.Warning($"load failed {c}_{i}");
                 return null;
             }
             if (ins) ActivateObject(retv, resi);
@@ -177,7 +176,8 @@ namespace Transient.DataAccess {
         private static readonly Generic.Dictionary<Type, string> TypeToExtension = new Generic.Dictionary<Type, string>() {
             { typeof(GameObject), "prefab" },
             { typeof(Material), "mat" },
-            { typeof(Sprite), "png" },
+            { typeof(Sprite), "png" },//TODO tga, jpg
+            { typeof(AudioClip), "mp3" },//TODO ogg
         };
 #endif
 
@@ -267,6 +267,10 @@ namespace Transient.DataAccess {
                 Raw = AssetAdapter.Take(category, id, _type);
                 Mapped = Raw;
             }
+            if (Mapped == null) {
+                InstantiateI = InstantiateEmpty;
+                Log.Warning($"failed to load {category}_{id} {_type}");
+            }
         }
 
         internal void Preload(object o_) {
@@ -279,6 +283,8 @@ namespace Transient.DataAccess {
             retv = GameObject.Instantiate((UnityEngine.Object)o);
             return retv;
         };
+
+        private static readonly Func<string, object, object> InstantiateEmpty = (c, o) => null;
     }
 
     public sealed class AutoRecycler {
