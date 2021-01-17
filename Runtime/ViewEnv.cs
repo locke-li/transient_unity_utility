@@ -91,6 +91,8 @@ namespace Transient {
         public static void Message(string m, Color color) => FadeMessage?.Create(m, color);
 
         public static void ClearMessage() => FadeMessage?.Clear();
+        public static void CloseMessage() => PopupMessage?.Clear();
+
         public static void InitFocusViewport(Transform location, Vector2 viewOffset, bool once = false, float step = 0f) {
             var offset = new Vector2(
                 -viewOffset.x * _screenWidth * UnitPerPixel,

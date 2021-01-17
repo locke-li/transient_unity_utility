@@ -7,6 +7,7 @@ namespace Transient {
     public interface IMessagePopup {
         void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel, Action<RectTransform> Modify_);
         void Sync(Vector3 position);
+        void Clear();
     }
 
     public class MessagePopup<M> : IMessagePopup where M : IMessageText, new() {
