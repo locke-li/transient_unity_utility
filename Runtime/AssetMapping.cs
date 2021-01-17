@@ -29,11 +29,11 @@ namespace Transient.DataAccess {
             _recyclePool = new Dictionary<AssetIdentifier, List<object>>(recycle_, _comparer);
         }
 
-        public static void Init() {
+        public static void Init(string packedDir) {
             _comparer = new AssetMappingComparer();
             Default = new AssetMapping(16, 512, 512);
             View = new AssetMapping(8, 32, 64);
-            AssetAdapter.Redirect(null, null);
+            AssetAdapter.Redirect(packedDir);
             Default.AddInternal(AssetEmpty, new GameObject());
         }
 
@@ -170,14 +170,10 @@ namespace Transient.DataAccess {
     }
 
     public static class AssetAdapter {
-        public static string PackedDir { get; private set; } = "packed";
-        public static string StagingDir { get; private set; } = "resources_staging";
         public static string DeployPath { get; private set; }
         public static string PackedPath { get; private set; }
 
 #if UNITY_EDITOR
-        public static string PackedPathFromAssets { get; private set; }
-        public static string StagingPathFromAssets { get; private set; }
         private static readonly Generic.Dictionary<Type, string> TypeToExtension = new Generic.Dictionary<Type, string>() {
             { typeof(GameObject), "prefab" },
             { typeof(Material), "mat" },
@@ -192,15 +188,9 @@ namespace Transient.DataAccess {
         }
         private static readonly Dictionary<string, TypeCoalescing> TypeCoalescingByCategory = new Dictionary<string, TypeCoalescing>(16, StringComparer.Ordinal);
 
-        public static void Redirect(string stagingDir, string packedDir) {
-            PackedDir = packedDir ?? PackedDir;
-            StagingDir = stagingDir ?? StagingDir;
-            DeployPath = $"{Application.persistentDataPath}/{PackedDir}/";
-            PackedPath = $"{Application.streamingAssetsPath}/{PackedDir}/";
-#if UNITY_EDITOR
-            PackedPathFromAssets = $"Assets/StreamingAssets/{PackedDir}/";
-            StagingPathFromAssets = $"Assets/{StagingDir}/";
-#endif
+        public static void Redirect(string packedDir) {
+            DeployPath = $"{Application.persistentDataPath}/{packedDir}/";
+            PackedPath = $"{Application.streamingAssetsPath}/{packedDir}/";
         }
 
         public static void CategoryTypeCoalescing(string category_, Type type_, Func<string, object, object> mapping_, Func<string, object, object> inst_) {
@@ -214,29 +204,25 @@ namespace Transient.DataAccess {
         public static bool TryGetTypeCoalescing(string category_, out TypeCoalescing t_) =>
             TypeCoalescingByCategory.TryGetValue(category_, out t_);
 
-        public static Func<string, Type, object> ExtendedSearch { get; set; } = (p, t) => {
-            Debug.LogWarning($"{nameof(ExtendedSearch)} unavailable. requested:{p} ({t})");
-            return null;
-        };
+        public static Func<string, Type, object> ExtendedSearch { get; set; }
 
         public static object Take(string category_, string id_, Type type_, string ext_ = null) {
             var path = string.IsNullOrEmpty(category_) ? id_ : $"{category_}_{id_}";
-            var ret = SearchPacked(path, type_, ext_) ?? Resources.Load(path, type_) ?? ExtendedSearch?.Invoke(path, type_);
+            var ret = SearchPacked(path, type_, ext_);
             return ret;
         }
 
         private static object SearchPacked(string path_, Type type_, string ext_) {
+            //TODO check bundle manifest data
+            var ret = Resources.Load(path_, type_);
+            if (ret != null) return ret;
 #if UNITY_EDITOR
             if (ext_ == null && !TypeToExtension.TryGetValue(type_, out ext_)) {
                 return null;
             }
-            var file = $"{path_}.{ext_}";
-            return UnityEditor.AssetDatabase.LoadAssetAtPath($"{PackedPathFromAssets}{file}", type_)
-                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath($"{StagingPathFromAssets}{file}", type_)
-                    ?? UnityEditor.AssetDatabase.LoadAssetAtPath($"Assets/{file}", type_);
+            path_ = $"{path_}.{ext_}";
 #endif
-            //TODO
-            return null;
+            return ExtendedSearch?.Invoke(path_, type_);
 
         }
     }
