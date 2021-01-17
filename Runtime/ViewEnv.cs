@@ -193,6 +193,26 @@ namespace Transient {
             CameraSystem.WorldPosition = MainCamera.transform.position;
         }
 
+        public static void FitSafeArea(float l_, float r_, float t_, float b_) {
+            if (l_ < 0 && r_ < 0) {
+                var rect = Screen.safeArea;
+                CanvasContent.anchoredPosition = rect.position;
+                CanvasOverlay.anchoredPosition = rect.position;
+                var value = rect.size;
+                value = new Vector2(value.x - Screen.width, value.y - Screen.height);
+                CanvasContent.sizeDelta = value;
+                CanvasOverlay.sizeDelta = value;
+            }
+            else {
+                var value = new Vector2(l_ - r_, b_ - t_) * 0.5f;
+                CanvasContent.anchoredPosition = value;
+                CanvasOverlay.anchoredPosition = value;
+                value = new Vector2(-l_ - r_, -t_ - b_);
+                CanvasContent.sizeDelta = value;
+                CanvasOverlay.sizeDelta = value;
+            }
+        }
+
         public static void InitViewportControl(DragReceiver drag_) {
             _drag = drag_;
             _drag.WhenDragBegin = d => {
