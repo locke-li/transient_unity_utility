@@ -10,6 +10,7 @@ namespace Transient.UI {
         public void Hide(bool value) {
             if (hidden == value) return;
             hidden = value;
+            raycastTarget = !hidden;
             SetVerticesDirty();
         }
 
