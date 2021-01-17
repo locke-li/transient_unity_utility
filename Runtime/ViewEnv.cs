@@ -22,6 +22,7 @@ namespace Transient {
         public static Canvas MainCanvas { get; private set; }
         public static RectTransform CanvasContent { get; private set; }
         public static RectTransform MessageContent { get; private set; }
+        public static RectTransform CanvasOverlay { get; private set; }
 
         public static float RatioXY { get; private set; }
         public static float RatioYX { get; private set; }
@@ -70,6 +71,7 @@ namespace Transient {
             ResetCoordinateSystem();
             CanvasContent = MainCanvas.transform.AddChildRect("content");
             MessageContent = MainCanvas.transform.AddChildRect("message");
+            CanvasOverlay = MainCanvas.transform.AddChildRect("overlay");
         }
 
         public static void Clear() {
@@ -82,6 +84,7 @@ namespace Transient {
             }
             CanvasContent = MainCanvas.transform.AddChildRect("content");
             CanvasContent.SetAsFirstSibling();
+            CanvasOverlay = MainCanvas.transform.AddChildRect("overlay");
         }
 
         public static void Message(string m, Action Confirm_, Action Cancel_, bool blockIsCancel = false, Action<RectTransform> Modify_ = null)
