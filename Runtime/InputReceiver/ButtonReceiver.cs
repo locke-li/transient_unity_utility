@@ -1,6 +1,7 @@
 ﻿using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine;
+using Transient.Audio;
 
 namespace Transient.UI {
     [DisallowMultipleComponent, ExecuteInEditMode]
@@ -10,6 +11,7 @@ namespace Transient.UI {
         public int id { get; set; }
         public object CustomInfo { get; set; }
         public Image image;
+        public string audioEvent = "click";
 
         public Action<ButtonReceiver> WhenClick { get; set; } = b => { };
         public Action<ButtonReceiver> WhenClickDown { get; set; } = b => { };
@@ -67,6 +69,7 @@ namespace Transient.UI {
                 return;
             }
             //Log.Debug("button click");
+            SimpleAudio.Default.Event(audioEvent);
             WhenClick(this);
         }
 
