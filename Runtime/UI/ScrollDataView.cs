@@ -59,6 +59,7 @@ namespace Transient.UI {
     public abstract class ScrollData {
         public bool posFixed;
         public bool vertical = true;
+        public bool autoCenter = false;
 
         public abstract void Refresh();
         public abstract void Fill(float contentPos);
@@ -244,7 +245,12 @@ namespace Transient.UI {
         }
 
         private void RefreshContentSize() {
-            _scroll.content.sizeDelta = (headOffset + currentContentSize) * flexibleSize + fixedSize;
+            var size = headOffset + currentContentSize;
+            _scroll.content.sizeDelta = size * flexibleSize + fixedSize;
+            if (autoCenter) {
+                var viewSize = Vector2.Dot(_scroll.viewport.rect.size, flexibleSize);
+                _scroll.content.pivot = size > viewSize ? new Vector2(0, 1) : new Vector2(0.5f, 0.5f);
+            }
         }
 
         Vector2 RepositionDefault(int u_, int elementPerLine_, Vector2 elementOffset_) {
@@ -483,6 +489,14 @@ namespace Transient.UI {
             //TODO
         }
 
+        private void RefreshContentSize(float size) {
+            _scroll.content.sizeDelta = size * flexibleSize;
+            if (autoCenter) {
+                var viewSize = Vector2.Dot(_scroll.viewport.rect.size, flexibleSize);
+                _scroll.content.pivot = size > viewSize ? new Vector2(0, 1) : new Vector2(0.5f, 0.5f);
+            }
+        }
+
         Vector2 RepositionDefault(int u, int elementPerLine_, Vector2 lineOffset_, Vector2 elementOffset_) {
             return lineOffset_ * (u / elementPerLine_) + elementOffset_ * (u % elementPerLine_);
         }
@@ -507,7 +521,7 @@ namespace Transient.UI {
             //Debug.Log(lineCountContent + " " + lineCountViewport);
             posFixed = lineCountContent < lineCountViewport;
             LineScrollRange = lineCountContent - lineCountViewport;
-            _scroll.content.sizeDelta = flexibleSize * lineCountContent * elementSize;
+            RefreshContentSize(lineCountContent * elementSize);
             entryCount = lineCountViewport * elementPerLine;
             entryCount = entryCount < targetCount ? entryCount : targetCount;
             for(int r = 0;r < entry.Count;++r) {
