@@ -29,12 +29,24 @@ namespace Transient {
             _list = new List<ActionWithRef<AT>>(capacity);
         }
 
+        [System.Diagnostics.Conditional("DEBUG")]
+        private void CheckDuplicate(AT value_) {
+            foreach (var v in _list) {
+                if (ReferenceEquals(v.Value, value_)) {
+                    Log.Warning($"trying to add duplicate action to list({_name})!");
+                    return;
+                }
+            }
+        }
+
         //no effort is made to prevent duplicate add
         public void Add(AT add_, object token_) {
+            CheckDuplicate(add_);
             _list.Add(new ActionWithRef<AT>() { Value = add_, token = token_ });
             //Log.Debug($"Register {_name} from {(add as Delegate).Method.DeclaringType.Name}");
         }
         public void Add((AT, object) add_) {
+            CheckDuplicate(add_.Item1);
             _list.Add(new ActionWithRef<AT>() { Value = add_.Item1, token = add_.Item2 });
             //Log.Debug($"Register {_name} from {(add as Delegate).Method.DeclaringType.Name}");
         }
