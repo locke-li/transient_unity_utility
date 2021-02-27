@@ -36,6 +36,8 @@ namespace Transient {
         private static int _screenWidth = 0;
         private static int _screenHeight = 0;
         private static float _screenHeightInverse;
+        public static ActionList<int, int, float> OnScreenSizeChange { get; } = new ActionList<int, int, float>(4, nameof(OnScreenSizeChange));
+
         public static List<IMessagePopup> PopupMessage { get; } = new List<IMessagePopup>(2);
         public static List<IMessageFade> FadeMessage { get; set; } = new List<IMessageFade>(2);
         public static ClickVisual ClickVisual { get; set; }
@@ -66,9 +68,10 @@ namespace Transient {
         public static ActionList<float> OnZoom { get; } = new ActionList<float>(8, nameof(OnZoom));
         public static Action<Camera, AbstractCoordinateSystem, float> ProcessZoom { get; set; }
 
-        public static void Init(Camera main_, Camera ui_, Canvas canvas_) {
+        public static void Init(GameObject attachTo, Camera main_, Camera ui_, Canvas canvas_) {
+            Performance.RecordProfiler(nameof(ViewEnv));
             MainCamera = main_;
-            //TODO support for overlay canvas
+            //NOTE don't support overlay canvas, not quite controllable performance wise
             UICamera = ui_;
             MainCanvas = canvas_;
             _perspectiveProjectionFactor = (float)Math.Tan(MainCamera.fieldOfView * Mathf.Deg2Rad * 0.5f);
@@ -78,6 +81,8 @@ namespace Transient {
             ResetCoordinateSystem();
             CanvasContent = MainCanvas.transform.AddChildRect("content");
             CanvasOverlay = MainCanvas.transform.AddChildRect("overlay");
+            attachTo.AddComponent<ViewEnv>();
+            Performance.End(nameof(ViewEnv));
         }
 
         public static void Clear() {
@@ -127,9 +132,22 @@ namespace Transient {
             MainCamera.transform.position = CameraSystem.WorldPosition;
         }
 
+        public static void MoveToSystemPos(Vector2 pos, float z) {
+            //TODO temporary
+            pos -= OffsetFromRelativeY(MainCamera.transform.position.y - z);
+            CameraSystem.X = pos.x;
+            CameraSystem.Y = pos.y;
+            CameraSystem.Z = z;
+            MainCamera.transform.position = CameraSystem.WorldPosition;
+        }
+
         public static void MoveToWorldPos(Vector3 pos) {
+            var y = MainCamera.transform.position.y;
             CameraSystem.WorldPosition = pos;
             MainCamera.transform.position = pos;
+            if (y != pos.y) {
+                ViewportLimit?.CalculateOffset();
+            }
         }
 
         public static void TryLimitPosition() {
@@ -139,7 +157,7 @@ namespace Transient {
         }
 
         private static void CheckScreenSize() {
-            if (_screenWidth == Screen.width || _screenHeight == Screen.height)
+            if (_screenWidth == Screen.width && _screenHeight == Screen.height)
                 return;
             RatioXY = (float)Screen.width / Screen.height;
             RatioYX = 1f / RatioXY;
@@ -148,6 +166,7 @@ namespace Transient {
             _screenHeightInverse = 1f / Screen.height;
             UIViewScale = UICamera.orthographicSize * _screenHeightInverse * 2f;
             UnitPerPixel = Zoom * _screenHeightInverse * 2f;
+            OnScreenSizeChange.Invoke(_screenWidth, _screenHeight, RatioXY);
         }
 
         private static void CheckCanvas() {
@@ -333,6 +352,7 @@ namespace Transient {
         }
 
         private void Update() {
+            var deltaTime = Time.deltaTime;
             CheckScreenSize();
             foreach(var m in FadeMessage) {
                 m.Fade();
@@ -341,14 +361,14 @@ namespace Transient {
                 var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
                 var dir = focus - CameraSystem.PositionXY;
                 var dist = dir.magnitude;
-                var move = _focusStep * Time.deltaTime;
+                var move = _focusStep * deltaTime;
                 if (move >= dist) {
                     CameraSystem.PositionXY = focus;
                     if (_focusOnce) {
                         Focus = null;
                     }
                 }
-                else CameraSystem.PositionXY += dir / Mathf.Min(dist, 1f) * _focusStep * Time.deltaTime;
+                else CameraSystem.PositionXY += dir / Mathf.Min(dist, 1f) * _focusStep * deltaTime;
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             if (_dragInertia && _dragInertiaValue > _dragInertiaThreshold) {

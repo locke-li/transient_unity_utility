@@ -17,31 +17,48 @@ namespace Transient {
             Init(extent, offset + sprite.rect.center / sprite.pixelsPerUnit - extent);
         }
 
+        //TODO need to compensate view extent
+        public void InitWithCorner(Vector3 posTopLeft, Vector3 posBottomRight) {
+            var system = ViewEnv.CameraSystem;
+            var vTL = system.WorldToSystemXY(posTopLeft);
+            var vBR = system.WorldToSystemXY(posBottomRight);
+            var center = new Vector2(0.5f * (vTL.x + vBR.x), 0.5f * (vTL.y + vBR.y)) + ViewEnv.OffsetFromRelativeY(0);
+            var extent = new Vector2(0.5f * Mathf.Abs(vTL.x - vBR.x), 0.5f * Mathf.Abs(vTL.y - vBR.y));
+            Init(extent, center);
+        }
+
         public void Init(Vector2 extent, Vector2 center) {
             ViewEnv.ViewportLimit = this;
+            limit = new PositionLimit();
+            CalculateOffset();
             borderCenter = center;
             borderExtent = extent;
-            limit = new PositionLimit();
-            limit.OffsetY = ViewEnv.OffsetFromRelativeY(0).y;
             ViewEnv.PositionLimit = limit;
             OnZoom(ViewEnv.Zoom);
         }
 
-        void CalculateViewExtent(float size) {
+        internal void CalculateOffset() {
+            limit.OffsetY = ViewEnv.OffsetFromRelativeY(0).y;
+        }
+
+        void CalculateViewExtent() {
+            var size = ViewEnv.UnitPerPixel * Screen.height * 0.5f;
             viewExtent = new Vector2(ViewEnv.RatioXY * size, size);
             limit.MinX = borderCenter.x - borderExtent.x + viewExtent.x;
             limit.MaxX = borderCenter.x + borderExtent.x - viewExtent.x;
             limit.MinY = borderCenter.y - borderExtent.y + viewExtent.y;
             limit.MaxY = borderCenter.y + borderExtent.y - viewExtent.y;
-            //Debug.Log($"{limit.MinX} {limit.MaxX} {limit.MinY} {limit.MaxY}");
+            //Debug.Log($"{viewExtent} {limit.MinX} {limit.MaxX} {limit.MinY} {limit.MaxY}");
         }
 
         void CalculateViewExpand() {
-            limit.Expand = (1 - ViewEnv.ZoomPercent) * limitExpand;
+            //TODO need to improve
+            //(1 - ViewEnv.ZoomPercent) * limitExpand;
+            limit.Expand = limitExpand;
         }
 
-        public void OnZoom(float zoom_) {
-            CalculateViewExtent(zoom_);
+        public void OnZoom(float _) {
+            CalculateViewExtent();
             ViewEnv.TryLimitPosition();
         }
 
