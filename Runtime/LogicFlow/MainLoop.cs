@@ -9,12 +9,17 @@ using UnityEngine;
 namespace Transient {
     public sealed class MainLoop : MonoBehaviour {
         public static MainLoop Instance { get; private set; }
+        public static ActionList<float> OnUpdate { get; private set; }
         public static GeneratorCoroutine Coroutine { get; private set; }
 
         public static void Init() {
+            Performance.RecordProfiler(nameof(MainLoop));
             var go = new GameObject("MainLoop");
             DontDestroyOnLoad(go);
-            go.AddComponent<MainLoop>();
+            Instance = go.AddComponent<MainLoop>();
+            OnUpdate = new ActionList<float>(16);
+            Log.Info("MainLoop initialized");
+            Performance.End(nameof(MainLoop));
         }
 
         public static void InitCoroutine() {
@@ -22,16 +27,8 @@ namespace Transient {
             Coroutine = new GeneratorCoroutine(OnUpdate);
         }
 
-        private void Awake() {
-            Instance = this;
-            OnUpdate = new ActionList<float>(16);
-            Debug.Log("MainLoop initialized");
-        }
-
-        public static ActionList<float> OnUpdate { get; private set; }
-
         private void Update() {
-            float deltaTime = Time.deltaTime;
+            var deltaTime = Time.deltaTime;
             OnUpdate.Invoke(deltaTime);
         }
 
