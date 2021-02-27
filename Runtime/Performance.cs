@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using Transient.SimpleContainer;
 using UnityEngine.Profiling;
+using UnityEngine;
 
 namespace Transient {
     public static class Performance {
@@ -50,7 +51,7 @@ namespace Transient {
             if((method_ & Method.Log) != 0) {
                 s.sw.Restart();
                 if((method_ & Method.NoStartLog) == 0) {
-                    Log.Custom(logLevel, $"perf[{key_}|Start]",
+                    Log.Custom(logLevel, $"perf[{key_}|Start]|@{Time.realtimeSinceStartup}",
                         member_, filePath_, lineNumber_
                         );
                 }
@@ -66,7 +67,7 @@ namespace Transient {
                 _record[key_] = s = new Session() { sw = new Stopwatch(), method = Method.Log };
             }
             s.sw.Restart();
-            Log.Custom(logLevel, $"perf[{key_}|Start]",
+            Log.Custom(logLevel, $"perf[{key_}|Start]|@{Time.realtimeSinceStartup}",
                 member_, filePath_, lineNumber_
             );
         }
