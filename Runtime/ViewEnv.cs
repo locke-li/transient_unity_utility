@@ -1,4 +1,5 @@
 using UnityEngine;
+using Transient.SimpleContainer;
 using Transient.DataAccess;
 using Transient.UI;
 using System;
@@ -35,8 +36,8 @@ namespace Transient {
         private static int _screenWidth = 0;
         private static int _screenHeight = 0;
         private static float _screenHeightInverse;
-        public static IMessagePopup PopupMessage { get; set; }
-        public static IMessageFade FadeMessage { get; set; }
+        public static List<IMessagePopup> PopupMessage { get; } = new List<IMessagePopup>(2);
+        public static List<IMessageFade> FadeMessage { get; set; } = new List<IMessageFade>(2);
         public static ClickVisual ClickVisual { get; set; }
         public static AbstractCoordinateSystem CameraSystem { get; private set; }
 
@@ -76,7 +77,6 @@ namespace Transient {
             InitViewport();
             ResetCoordinateSystem();
             CanvasContent = MainCanvas.transform.AddChildRect("content");
-            MessageContent = MainCanvas.transform.AddChildRect("message");
             CanvasOverlay = MainCanvas.transform.AddChildRect("overlay");
         }
 
@@ -93,14 +93,17 @@ namespace Transient {
             CanvasOverlay = MainCanvas.transform.AddChildRect("overlay");
         }
 
-        public static void Message(string m, Action Confirm_, Action Cancel_, bool blockIsCancel = false, Action<RectTransform> Modify_ = null)
-            => PopupMessage?.Create(m, Confirm_, Cancel_, blockIsCancel, Modify_);
+        public static void ViewVisible(bool value_) {
+            MainCamera.enabled = value_;
+        }
 
-        public static void Message(string m) => FadeMessage?.Create(m, Color.white);
-        public static void Message(string m, Color color) => FadeMessage?.Create(m, color);
+        public static void Message(string m, Action Confirm_, Action Cancel_, PopupOption option_, int index_ = 0)
+            => PopupMessage[index_].Create(m, Confirm_, Cancel_, option_);
+        public static void CloseMessage(int index_ = 0) => PopupMessage[index_].Clear();
 
-        public static void ClearMessage() => FadeMessage?.Clear();
-        public static void CloseMessage() => PopupMessage?.Clear();
+        public static void Message(string m, int index_ = 0) => FadeMessage[index_].Create(m, Color.white);
+        public static void Message(string m, Color color, int index_ = 0) => FadeMessage[index_].Create(m, color);
+        public static void ClearMessage(int index_ = 0) => FadeMessage[index_].Clear();
 
         public static void InitFocusViewport(Transform location, Vector2 viewOffset, bool once = false, float step = 0f) {
             var offset = new Vector2(
@@ -331,7 +334,9 @@ namespace Transient {
 
         private void Update() {
             CheckScreenSize();
-            FadeMessage?.Fade();
+            foreach(var m in FadeMessage) {
+                m.Fade();
+            }
             if (Focus != null && !_focusOverride) {
                 var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
                 var dir = focus - CameraSystem.PositionXY;

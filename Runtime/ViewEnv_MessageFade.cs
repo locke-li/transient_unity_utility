@@ -23,12 +23,15 @@ namespace Transient {
         }
 
         public static MessageFade<M> TryCreate(string asset_) {
-            var obj = AssetMapping.View.Take<GameObject>(null, asset_, false);
+            var key = "MessageFade.Create";
+            Performance.RecordProfiler(key);
+            var obj = AssetMapping.View.TakePersistent<GameObject>(null, asset_);
             var message = new M();
             if(!message.Init(obj)) {
                 Log.Warning($"{nameof(MessageFade<M>)} create failed.");
                 return null;
             }
+            Performance.End(key);
             return new MessageFade<M>() {
                 Asset = asset_
             };
@@ -37,7 +40,7 @@ namespace Transient {
         public void Create(string m, Color c) {
             Performance.RecordProfiler(nameof(MessageFade<M>));
             var obj = AssetMapping.View.TakeActive(null, Asset);
-            obj.transform.SetParent(ViewEnv.MessageContent, false);
+            obj.transform.SetParent(ViewEnv.CanvasOverlay, false);
             obj.transform.localPosition = StartPos;
             var message = new M();
             message.Init(obj);

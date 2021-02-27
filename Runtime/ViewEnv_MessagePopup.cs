@@ -5,9 +5,14 @@ using System;
 
 namespace Transient {
     public interface IMessagePopup {
-        void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel, Action<RectTransform> Modify_);
-        void Sync(Vector3 position);
+        void Create(string m, Action Confirm_, Action Cancel_, PopupOption option);
         void Clear();
+    }
+
+    public struct PopupOption {
+        public bool blockIsCancel;
+        public Action<RectTransform> Modify;
+        public Transform sync;
     }
 
     public class MessagePopup<M> : IMessagePopup where M : IMessageText, new() {
@@ -15,6 +20,7 @@ namespace Transient {
         private RectTransform _content;
         private Vector2 _defaultPosition;
         private M _message;
+        private Transform _sync;
         private bool _blockIsCancel = false;
         private ButtonReceiver _confirm;
         private ButtonReceiver _cancel;
@@ -24,10 +30,13 @@ namespace Transient {
         private Vector2 _positionSingle;
 
         public static MessagePopup<M> TryCreate(string asset_) {
+            var key = "MessagePopup.Create";
+            Performance.RecordProfiler(key);
+            MessagePopup<M> ret;
             try {
                 var obj = AssetMapping.View.TakePersistent<GameObject>(null, asset_);
                 var trans = obj.transform;
-                trans.SetParent(ViewEnv.MessageContent, false);
+                trans.SetParent(ViewEnv.CanvasOverlay, false);
                 RectTransform content = trans.FindChecked<RectTransform>(nameof(content));
                 var message = new M();
                 message.Init(content.gameObject);
@@ -35,7 +44,7 @@ namespace Transient {
                 ButtonReceiver cancel = content.TryFind<ButtonReceiver>(nameof(cancel));
                 ButtonReceiver block = trans.FindChecked<ButtonReceiver>(nameof(block));
                 var confirmPos = confirm.transform.localPosition;
-                var ret = new MessagePopup<M>() {
+                ret = new MessagePopup<M>() {
                     _obj = obj,
                     _content = content,
                     _defaultPosition = content.anchoredPosition,
@@ -46,37 +55,38 @@ namespace Transient {
                     _positionSingle = confirmPos,
                 };
                 confirm.WhenClick = b => {
-                    ret._OnConfirm();
+                    ret._OnConfirm?.Invoke();
                     ret.Clear();
                 };
                 if(cancel != null) {
                     cancel.WhenClick = b => {
-                        ret._OnCancel();
+                        ret._OnCancel?.Invoke();
                         ret.Clear();
                     };
                     ret._positionSingle = (confirmPos + cancel.transform.localPosition) * 0.5f;
                 }
                 block.WhenClick = b => {
                     if (ret._blockIsCancel) {
-                        ret._OnCancel();
+                        ret._OnCancel?.Invoke();
                         ret.Clear();
                     }
                 };
-                
                 obj.SetActive(false);
-                return ret;
             }
             catch (Exception e) {
                 Log.Warning($"{nameof(MessagePopup<M>)} create failed. {e.Message}");
+                ret = null;
             }
-            return null;
+            Performance.End(key);
+            return ret;
         }
 
-        public void Create(string m, Action Confirm_, Action Cancel_, bool blockIsCancel, Action<RectTransform> Modify_) {
+        public void Create(string m, Action Confirm_, Action Cancel_, PopupOption option_) {
             Performance.RecordProfiler(nameof(MessagePopup<M>));
             _OnConfirm = Confirm_;
             _OnCancel = Cancel_;
-            _blockIsCancel = blockIsCancel;
+            _blockIsCancel = option_.blockIsCancel;
+            _sync = option_.sync;
             if (Cancel_ == null) {
                 UnityExtension.TrySetActive(_cancel, false);
                 _confirm.transform.localPosition = _positionSingle;
@@ -86,14 +96,19 @@ namespace Transient {
                 _confirm.transform.localPosition = _positionBoth;
             }
             _message.Text = m.Replace("\\n", "\n");
-            if (Modify_ != null) {
-                Modify_(_content);
-            }
+            option_.Modify?.Invoke(_content);
             _obj.SetActive(true);
+            if (_sync != null) {
+                MainLoop.OnUpdate.Add(_ => Sync(_sync.position), this);
+            }
             Performance.End(nameof(MessagePopup<M>));
         }
 
         public void Clear() {
+            if (_sync != null) {
+                MainLoop.OnUpdate.Remove(this);
+                _sync = null;
+            }
             _obj.SetActive(false);
             _content.anchoredPosition = _defaultPosition;
             _OnConfirm = null;
