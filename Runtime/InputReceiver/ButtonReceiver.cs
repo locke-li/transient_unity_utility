@@ -8,10 +8,13 @@ namespace Transient.UI {
     public sealed class ButtonReceiver : MonoBehaviour,
         IPointerDownHandler, IPointerUpHandler, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler,
         IBeginDragHandler, ISubmitHandler, IEventSystemHandler {
+        private static float LastResponseTime = 0;
+        public static float ResponseInterval = 0.1f;
+
         public int id { get; set; }
         public object CustomInfo { get; set; }
         public Image image;
-        public string audioEvent = "click";
+        public string audioEvent;
 
         public Action<ButtonReceiver> WhenClick { get; set; } = b => { };
         public Action<ButtonReceiver> WhenClickDown { get; set; } = b => { };
@@ -68,8 +71,12 @@ namespace Transient.UI {
                 _drag = false;
                 return;
             }
+            if (Time.realtimeSinceStartup - LastResponseTime < ResponseInterval) {
+                return;
+            }
+            LastResponseTime = Time.realtimeSinceStartup;
             //Log.Debug("button click");
-            SimpleAudio.Default.Event(audioEvent);
+            if(!string.IsNullOrEmpty(audioEvent)) SimpleAudio.Default.Event(audioEvent);
             WhenClick(this);
         }
 
