@@ -25,7 +25,7 @@ namespace Transient.Development {
             public Button bg;
             public string msg;
             public string stack;
-            public LogType type;
+            public int level;
             public int count;
         }
 
@@ -49,12 +49,14 @@ namespace Transient.Development {
         private RectTransform _logTemplate;
         private ScrollRect _logScroll;
         private readonly Color[] _logColors = new Color[] {
-            new Color(1, 0.2f, 0.2f),//Error = 0
-            new Color(0.75f, 0.75f, 0.75f),//Assert = 1
-            new Color(1f, 0.8f, 0f),//Warning = 2
-            Color.white,//Log = 3
-            new Color(0.9f, 0.5f, 0.5f)//Exception = 4
+            Color.white,//debug = 0
+            new Color(0.1f, 0.8f, 0.1f),//info = 1
+            new Color(1f, 0.8f, 0f),//warning = 2
+            new Color(1, 0.2f, 0.2f),//error = 3
+            new Color(1f, 0.6f, 0.6f),//assert = 4
+            new Color(0.55f, 0.65f, 1f),//custom = 5
         };
+        private static Canvas _before;
         private ScrollRect _logDetailScroll;
         private Text _logDetailText;
         private Text _logDetailStackText;
@@ -101,12 +103,13 @@ namespace Transient.Development {
         }
 #endif
 
-        public static void Init() {
+        public static void Init(Canvas before) {
             var go = Resources.Load<GameObject>(nameof(UtilsConsole));
             if(go == null)
                 return;
             go = Instantiate(go);
             DontDestroyOnLoad(go);
+            _before = before;
             go.AddComponent<UtilsConsole>();
         }
 
@@ -117,8 +120,12 @@ namespace Transient.Development {
             _last = -1;
             _fpsFactor = 1 / (_fpsLast.Length * FPS_SEGMENT);
             _logList = new Queue<Log>(LOG_LIMIT+1);
-            var canvas = transform.Find("canvas");
-            _content = canvas.Find("content").gameObject;
+            var canvas = transform.FindChecked<Canvas>("canvas");
+            if (_before != null) {
+                canvas.worldCamera = _before.worldCamera;
+                canvas.sortingOrder = _before.sortingOrder + 1000;
+            }
+            _content = canvas.FindChecked("content").gameObject;
             _content.SetActive(false);
             InitLogs();
             _fpsNumbers = new string[FPS_NUMBER_LIMIT];
@@ -151,36 +158,31 @@ namespace Transient.Development {
             _logDetailText = _logDetailScroll.content.GetChild(0).GetComponent<Text>();
             _logDetailStackText = _logDetailScroll.content.GetChild(1).GetComponent<Text>();
             _logCount = 0;
-            LogEnabled =
-#if UNITY_EDITOR
-            true;
-#else
-            false;
-#endif
-            Application.logMessageReceived += Instance.LogReceived;
+            Application.logMessageReceived += (m_, s_, t_) => LogReceived(m_, s_, LogCache.unityLogLevel[(int)t_]);
+            LogStream.Default.Cache.LogReceived.Add(e_ => LogReceived(e_.content, e_.stacktrace, Mathf.Min(LogStream.custom, e_.level)), this);
             LogTest();
         }
 
         //TODO move to unity test
         [System.Diagnostics.Conditional("LOG_TEST")]
         private void LogTest() {
-            LogReceived("test error", "test stack", LogType.Error);
-            LogReceived("test assert", "test stack", LogType.Assert);
-            LogReceived("test warning", "test stack", LogType.Warning);
-            LogReceived("test log", "test stack", LogType.Log);
-            LogReceived("test exception", "test stack", LogType.Exception);
+            LogReceived("test error", "test stack", LogStream.error);
+            LogReceived("test assert", "test stack", LogStream.assert);
+            LogReceived("test warning", "test stack", LogStream.warning);
+            LogReceived("test info", "test stack", LogStream.info);
+            LogReceived("test debug", "test stack", LogStream.debug);
             for (int i = 0; i < 10; ++i) {
-                LogReceived("test merged", "test stack", LogType.Log);
+                LogReceived("test merged", "test stack", LogStream.debug);
             }
         }
 
-        private void LogReceived(string condition_, string stacktrace_, LogType type_) {
-            if(!LogEnabled && type_ == LogType.Log)
+        private void LogReceived(string message_, string stacktrace_, int level_) {
+            if(!LogEnabled && level_ <= LogStream.info)
                 return;
             if (_lastLog != null
-                && _lastLog.msg == condition_
+                && _lastLog.msg == message_
                 && _lastLog.stack == stacktrace_
-                && _lastLog.type == type_) {
+                && _lastLog.level == level_) {
                 ++_lastLog.count;
                 _lastLog.textCount.text = _lastLog.count.ToString();
                 return;
@@ -206,21 +208,21 @@ namespace Transient.Development {
             _lastLog = cLog;
             cLog.tr.gameObject.SetActive(true);
             cLog.tr.SetAsLastSibling();
-            cLog.msg = condition_;
+            cLog.msg = message_;
             cLog.text.text = cLog.msg;
             cLog.stack = stacktrace_;
-            cLog.type = type_;
+            cLog.level = level_;
             cLog.count = 1;
             cLog.textCount.text = string.Empty;
             cLog.bg.onClick.RemoveAllListeners();
             cLog.bg.onClick.AddListener(() => Select(cLog));
-            cLog.bg.image.color = _logColors[(int)type_];
+            cLog.bg.image.color = _logColors[level_];
             _logList.Enqueue(cLog);
             ++_logCount;
             _logScroll.content.sizeDelta = new Vector2(0, _logCount * _logTemplate.sizeDelta.y);
             if(!_content.activeSelf)
                 _logScroll.normalizedPosition = Vector2.zero;
-            if(type_ != LogType.Warning && type_ != LogType.Log) {
+            if(level_ >= LogStream.warning && level_ <= LogStream.assert) {
                 //Time.timeScale = 0;
                 //Toggle(true);
                 Select(cLog);
@@ -456,7 +458,7 @@ namespace Transient.Development {
 
         private void OnDestroy() {
             if (Instance != null) {
-                Application.logMessageReceived -= Instance.LogReceived;
+                LogStream.Default.Cache.LogReceived.Remove(this);
             }
             foreach(var shortcut in _shortcutButton) {
                 shortcut.Value.onClick.RemoveAllListeners();

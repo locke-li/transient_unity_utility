@@ -110,7 +110,7 @@ namespace Transient.Development {
                     show = true,
                     tex = FillTexture(new Color(1f, 1f, 1f, 1f))
                 },
-                [LogStream.normal] = new LogPref() {
+                [LogStream.info] = new LogPref() {
                     show = true,
                     tex = FillTexture(new Color(0.2f, 0.7f, 0.1f, 1f))
                 },
@@ -137,7 +137,7 @@ namespace Transient.Development {
             };
             _showDirectLog = true;
             _showUnityLog = true;
-            _log.skipStacktrace[LogStream.normal] = true;
+            _log.skipStacktrace[LogStream.info] = true;
             var str = EditorPrefs.GetString(nameof(LogView), null);
             if(!string.IsNullOrEmpty(str)) {
                 try {
@@ -230,7 +230,7 @@ namespace Transient.Development {
 				_log.Cache.Log(nameof(LogStream.debug), null, LogStream.debug, sourceDirect);
 				_log.Cache.Log(nameof(LogStream.debug), null, LogStream.debug, sourceUnity);
 				_log.Cache.Log("1\n2\n3\n4\n", null, LogStream.debug, sourceDirect);
-				_log.Cache.Log(nameof(LogStream.normal), new System.Diagnostics.StackTrace(true).ToString(), LogStream.normal, sourceDirect);
+				_log.Cache.Log(nameof(LogStream.info), new System.Diagnostics.StackTrace(true).ToString(), LogStream.info, sourceDirect);
 				_log.Cache.Log("1\n2\n3\n4\n", null, LogStream.debug, sourceDirect);
                 _log.Cache.Log(nameof(LogStream.warning), "warning\n1\n2\n3\n4", LogStream.warning, sourceDirect);
 				_log.Cache.Log(nameof(LogStream.error), "error\n1\n2\n3\n4", LogStream.error, sourceDirect);
