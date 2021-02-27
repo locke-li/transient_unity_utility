@@ -10,6 +10,7 @@ namespace Transient.UI {
         public RectTransform obj;
         public float min;
         public float flex;
+        public float value;
 
         public void Init(Image image) {
             obj = image.rectTransform;
@@ -20,13 +21,11 @@ namespace Transient.UI {
         }
 
         public void Resize(float percent) {
+            value = percent;
             var current = obj.sizeDelta;
             obj.sizeDelta = new Vector2(min + flex * percent, current.y);
         }
 
-        public void Resize(float a, float b) {
-            var current = obj.sizeDelta;
-            obj.sizeDelta = new Vector2(min + flex * a / b, current.y);
-        }
+        public void Resize(float a, float b) => Resize(a / b);
     }
 }

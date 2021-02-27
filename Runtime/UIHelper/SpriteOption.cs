@@ -7,20 +7,22 @@ namespace Transient.UI {
     public class SpriteOption : MonoBehaviour {
         public Sprite[] option;
         public Image target;
+        public bool nativeSize;
 
 #if UNITY_EDITOR
-        public void OnValidate() {
+        internal void OnValidate() {
             target = GetComponent<Image>();
         }
 #endif
 
         public void Select(int index) {
             if (target == null) return;
-            target.sprite = option[index];
+            SelectFor(index, target);
         }
 
         public void SelectFor(int index, Image image) {
             image.sprite = option[index];
+            if (nativeSize) image.SetNativeSize();
         }
     }
 }
