@@ -8,11 +8,11 @@ namespace Transient {
     public static class Performance {
         [System.Flags]
         public enum Method : byte {
-            Log = 0x01,
-            Profiler = 0x02,
-            ProfilerThread = 0x04 | Profiler,
+            Log = 1,
+            Profiler = 1<<1,
+            ProfilerThread = 1<<2 | Profiler,
 
-            NoStartLog = 0x80,
+            NoStartLog = 1<<7,
 
             _LogExceptStart = Log | NoStartLog,
             _All = Log | Profiler
@@ -29,6 +29,18 @@ namespace Transient {
 
         static Performance() {
             Init();
+        }
+
+        public static void ExtendHeapMB(int mb_) {
+            Performance.Record(nameof(ExtendHeapMB));
+            var o = new object[mb_];
+            var unit = 1024 * 1024;
+            for (int b = 0; b < mb_; ++b) {
+                o[b] = new byte[unit];
+            }
+            Performance.End(nameof(ExtendHeapMB));
+            o = null;
+            System.GC.Collect(0);
         }
 
         [Conditional("PerformanceRecord")]
