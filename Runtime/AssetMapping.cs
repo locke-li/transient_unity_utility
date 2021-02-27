@@ -30,11 +30,13 @@ namespace Transient.DataAccess {
         }
 
         public static void Init(string packedDir) {
+            Performance.RecordProfiler(nameof(AssetMapping));
             _comparer = new AssetMappingComparer();
             Default = new AssetMapping(16, 512, 512);
             View = new AssetMapping(8, 32, 64);
             AssetAdapter.Redirect(packedDir);
             Default.AddInternal(AssetEmpty, new GameObject());
+            Performance.End(nameof(AssetMapping));
         }
 
         public static void RootObject(Transform active, Transform recycle) {
@@ -50,7 +52,13 @@ namespace Transient.DataAccess {
         }
 
         public T TakePersistent<T>(string c, string i) where T : UnityEngine.Object => UnityEngine.Object.Instantiate((T)AssetAdapter.Take(c, i, typeof(T)));
-        public T TakeDirect<T>(string c, string i, string ext_ = null) => (T)AssetAdapter.Take(c, i, typeof(T), ext_);
+        public T TakeDirect<T>(string c, string i, string ext_ = null) {
+            var ret = (T)AssetAdapter.Take(c, i, typeof(T), ext_);
+            if (ret == null) {
+                Log.Warning($"failed to directly take {c}_{i}.{ext_}");
+            }
+            return ret;
+        }
 
         public T TakeAs<T>(string c, string i, bool ins = true) where T : Component => TakeActive(c, i, ins).GetChecked<T>();
 
@@ -127,6 +135,7 @@ namespace Transient.DataAccess {
                 if (resObj_ is GameObject obj) {
                     GameObject.Destroy(obj);
                 }
+                goto end;
             }
             _activePool.Remove(resObj_);
             List<object> recyclables;
@@ -140,6 +149,7 @@ namespace Transient.DataAccess {
                 Log.Assert(recyclables != null, "empty entry in recycle pool");
                 recyclables.Push(resObj_);
             }
+            end:
             Performance.End(nameof(Recycle));
         }
 
@@ -173,11 +183,11 @@ namespace Transient.DataAccess {
         public static string PackedPath { get; private set; }
 
 #if UNITY_EDITOR
-        private static readonly Generic.Dictionary<Type, string> TypeToExtension = new Generic.Dictionary<Type, string>() {
-            { typeof(GameObject), "prefab" },
-            { typeof(Material), "mat" },
-            { typeof(Sprite), "png" },//TODO tga, jpg
-            { typeof(AudioClip), "mp3" },//TODO ogg
+        private static readonly Generic.Dictionary<Type, string[]> TypeToExtension = new Generic.Dictionary<Type, string[]>() {
+            { typeof(GameObject), new string[] { "prefab" } },
+            { typeof(Material), new string[] { "mat" } },
+            { typeof(Sprite), new string[] { "png", "jpg", "tga", "psd" } },
+            { typeof(AudioClip), new string[] { "mp3", "ogg", "wav" } },
         };
 #endif
 
@@ -204,25 +214,48 @@ namespace Transient.DataAccess {
         public static bool TryGetTypeCoalescing(string category_, out TypeCoalescing t_) =>
             TypeCoalescingByCategory.TryGetValue(category_, out t_);
 
-        public static Func<string, Type, object> ExtendedSearch { get; set; }
+        public static Func<string, string, Type, object> PackSearch { get; set; }
+        public static Func<string, string, Type, object> ExtendedSearch { get; set; }
 
         public static object Take(string category_, string id_, Type type_, string ext_ = null) {
+            string sub = null;
+            var separator = id_.LastIndexOf("#");
+            if (separator > 0) {
+                sub = id_.Substring(separator + 1);
+                id_ = id_.Substring(0, separator);
+            }
             var path = string.IsNullOrEmpty(category_) ? id_ : $"{category_}_{id_}";
-            var ret = SearchPacked(path, type_, ext_);
-            return ret;
+            return Search(path, sub, type_, ext_);
         }
 
-        private static object SearchPacked(string path_, Type type_, string ext_) {
-            //TODO check bundle manifest data
-            var ret = Resources.Load(path_, type_);
+        private static object Search(string path_, string sub_, Type type_, string ext_) {
+            //try AssetBundles
+            var ret = PackSearch?.Invoke(path_, sub_, type_);
             if (ret != null) return ret;
-#if UNITY_EDITOR
-            if (ext_ == null && !TypeToExtension.TryGetValue(type_, out ext_)) {
-                return null;
+            //try Resources
+            if (sub_ != null) {
+                var batch = Resources.LoadAll(path_, type_);
+                foreach (var r in batch) {
+                    if (r.name == sub_) return r;
+                }
             }
-            path_ = $"{path_}.{ext_}";
+            else {
+                ret = Resources.Load(path_, type_);
+                if (ret != null) return ret;
+            }
+#if UNITY_EDITOR
+            if (ext_ == null && ExtendedSearch != null && TypeToExtension.TryGetValue(type_, out var extList)) {
+                foreach (var ext in extList) {
+                    ret = ExtendedSearch($"{path_}.{ext}", sub_, type_);
+                    if (ret != null) return ret;
+                }
+            }
 #endif
-            return ExtendedSearch?.Invoke(path_, type_);
+            if (ext_ != null) {
+                path_ = $"{path_}.{ext_}";
+            }
+            //try extra/fail-safe
+            return ExtendedSearch?.Invoke(path_, sub_, type_);
 
         }
     }
