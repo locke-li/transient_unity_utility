@@ -19,12 +19,12 @@ namespace Transient.Development {
         public static Color ToggleEnableColor { get; private set; } = new Color(0.7f, 1f, 0.7f);
         public static Color ToggleDisableColor { get; private set; } = new Color(1f, 0.7f, 0.7f);
 
-        private static Color ColorByState(bool aState) => aState ? ToggleEnableColor : ToggleDisableColor;
+        public static Color DefaultColorToggle(bool aState) => aState ? ToggleEnableColor : ToggleDisableColor;
 
         public static void AddCommonShortcuts() {
             AddShortcut("Execute", null, () => SystemColor, closeConsole_ : false, checkInput_ : true);//to be filled
             AddShortcut("Continue", t => Time.timeScale = 1, () => SystemColor);
-            AddShortcut("Log Enabled", t => LogEnabled = !LogEnabled, () => ColorByState(LogEnabled), closeConsole_ : false);
+            AddShortcut("Log Enabled", t => LogEnabled = !LogEnabled, () => DefaultColorToggle(LogEnabled), closeConsole_ : false);
             AddShortcut("Clear Log", t => Instance.ClearLog(), closeConsole_ : false);
             AddShortcut("Snapshot", t => TakeSnapshot(int.TryParse(t, out var v) ? v : 1080));
             AddShortcut("Load Scene", name => SceneManager.LoadScene(name), checkInput_ : true);
