@@ -32,13 +32,13 @@ namespace Transient {
         }
 
         public static void ExtendHeapMB(int mb_) {
-            Performance.Record(nameof(ExtendHeapMB));
+            Record(nameof(ExtendHeapMB));
             var o = new object[mb_];
             var unit = 1024 * 1024;
             for (int b = 0; b < mb_; ++b) {
                 o[b] = new byte[unit];
             }
-            Performance.End(nameof(ExtendHeapMB));
+            End(nameof(ExtendHeapMB));
             o = null;
             System.GC.Collect(0);
         }
@@ -64,8 +64,7 @@ namespace Transient {
                 s.sw.Restart();
                 if((method_ & Method.NoStartLog) == 0) {
                     Log.Custom(logLevel, $"perf[{key_}|Start]|@{Time.realtimeSinceStartup}",
-                        member_, filePath_, lineNumber_
-                        );
+                        stack_: "", member_: member_, filePath_: filePath_, lineNumber_: lineNumber_);
                 }
             }
         }
@@ -80,8 +79,7 @@ namespace Transient {
             }
             s.sw.Restart();
             Log.Custom(logLevel, $"perf[{key_}|Start]|@{Time.realtimeSinceStartup}",
-                member_, filePath_, lineNumber_
-            );
+                stack_: "", member_: member_, filePath_: filePath_, lineNumber_: lineNumber_);
         }
 
         [Conditional("PerformanceRecord")]
@@ -115,8 +113,7 @@ namespace Transient {
             ref var s = ref _record.ValueRef(key_);
             if((s.method & Method.Log) != 0) {
                 Log.Custom(logLevel, $"perf[{key_}/{mark_}]{s.sw.ElapsedMilliseconds}ms|{s.sw.ElapsedTicks}ticks",
-                    member_, filePath_, lineNumber_
-                    );
+                    stack_: "", member_: member_, filePath_: filePath_, lineNumber_: lineNumber_);
             }
             if((s.method & Method.Profiler) != 0) {
                 if(s.markDepth > 0) Profiler.EndSample();
@@ -134,8 +131,7 @@ namespace Transient {
             if((s.method & Method.Log) != 0) {
                 s.sw.Stop();
                 Log.Custom(logLevel, $"perf[{key_}|{msg_}]{s.sw.ElapsedMilliseconds}ms|{s.sw.ElapsedTicks}ticks",
-                    member_, filePath_, lineNumber_
-                    );
+                    stack_: "", member_: member_, filePath_: filePath_, lineNumber_: lineNumber_);
             }
             if((s.method & Method.Profiler) != 0) {
                 for(int r=0;r<s.markDepth;++r) {

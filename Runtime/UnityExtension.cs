@@ -60,7 +60,7 @@ namespace UnityEngine {
                 arg0_:nameof(FindChecked), member_: member_, filePath_: file_, lineNumber_: line_);
             var ret = gameObject_.transform.Find(path_);
             Log.Assert(ret != null, LogNotFound,
-                arg0_:path_, arg1_:gameObject_.name, member_: member_, filePath_: file_, lineNumber_: line_);
+                arg0_:path_, arg1_:gameObject_.name, member_:member_, filePath_:file_, lineNumber_:line_);
             return ret;
         }
 
@@ -68,7 +68,8 @@ namespace UnityEngine {
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
             var t = FindChecked(comp_, path_);
-            Log.Assert(t != null, LogNotFound, path_, comp_.name, null, member_, file_, line_);
+            Log.Assert(t != null, LogNotFound,
+                arg0_:path_, arg1_:comp_.name, member_:member_, filePath_:file_, lineNumber_:line_);
             return GetChecked(t, type_, member_, file_, line_);
         }
 
@@ -86,7 +87,8 @@ namespace UnityEngine {
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
             var t = FindChecked(obj_, path_);
-            Log.Assert(t != null, LogNotFound, path_, obj_.name, null, member_, file_, line_);
+            Log.Assert(t != null, LogNotFound,
+                arg0_:path_, arg1_:obj_.name, member_:member_, filePath_:file_, lineNumber_:line_);
             return GetChecked(t, type_, member_, file_, line_);
         }
 
@@ -104,10 +106,10 @@ namespace UnityEngine {
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
             Log.Assert(comp_ != null, "{0} called on null object",
-                arg0_:nameof(AddChecked), member_: member_, filePath_: file_, lineNumber_: line_);
+                arg0_:nameof(AddChecked), member_:member_, filePath_:file_, lineNumber_:line_);
             var t = path_ == null ? comp_.transform : FindChecked(comp_, path_);
             Log.Assert(t != null, LogNotFound,
-                arg0_:path_, arg1_: comp_.name, member_: member_, filePath_: file_, lineNumber_: line_);
+                arg0_:path_, arg1_: comp_.name, member_:member_, filePath_:file_, lineNumber_:line_);
             var ret = t.GetComponent(type_);
             return ret ?? t.gameObject.AddComponent(type_);
         }
@@ -128,11 +130,11 @@ namespace UnityEngine {
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             )  {
             Log.Assert(comp_ != null, "{0} called on null object",
-                arg0_:nameof(GetChecked), member_: member_, filePath_: file_, lineNumber_: line_);
+                arg0_:nameof(GetChecked), member_:member_, filePath_:file_, lineNumber_:line_);
             var ret = comp_.GetComponent(type_);
             if(ret == null) {
                 Log.Warning($"Expected component of type {type_} not found on {comp_.name}!",
-                    member_, file_, line_);
+                    member_:member_, filePath_:file_, lineNumber_:line_);
                 ret = comp_.gameObject.AddComponent(type_);
             }
             return ret;
@@ -146,7 +148,7 @@ namespace UnityEngine {
             var ret = obj_.GetComponent(type_);
             if (ret == null) {
                 Log.Warning($"Expected component of type {type_} not found on {obj_.name}!",
-                    member_, file_, line_);
+                    member_: member_, filePath_: file_, lineNumber_: line_);
                 ret = obj_.AddComponent(type_);
             }
             return ret;
@@ -209,6 +211,13 @@ namespace UnityEngine {
             cache_.Clear();
             for(int k = 0; k < transform_.childCount; ++k) {
                 cache_.Add(transform_.GetChild(k));
+            }
+        }
+
+        public static void DestroyChildren(this Component comp_) {
+            var transform = comp_.transform;
+            for(int k = 0; k < transform.childCount; ++k) {
+                GameObject.Destroy(transform.GetChild(k).gameObject);
             }
         }
 
