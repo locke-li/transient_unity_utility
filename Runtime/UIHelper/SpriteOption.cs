@@ -20,6 +20,12 @@ namespace Transient.UI {
             SelectFor(index, target);
         }
 
+        public void SelectWithState(int index, bool interactable) {
+            if (target == null) return;
+            SelectFor(index, target);
+            target.raycastTarget = interactable;
+        }
+
         public void SelectFor(int index, Image image) {
             image.sprite = option[index];
             if (nativeSize) image.SetNativeSize();
