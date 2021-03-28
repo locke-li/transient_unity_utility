@@ -14,71 +14,87 @@ namespace Transient.DataAccess {
         const int ItemPerRecycleIncrement = 32;
         public Transform ActiveObjectRoot { get; set; }
         public Transform RecycleObjectRoot { get; set; }
+        private static List<AssetMapping> _mapping;
         public static AssetMapping Default { get; private set; }
         public static AssetMapping View { get; private set; }
-        public static (string, string) AssetEmpty = ("_internal_", "_empty_");
+        public static string AssetEmpty { get; private set; } = "_empty_";
         internal static AssetMappingComparer _comparer;
 
-        readonly Dictionary<(string, string), AssetIdentifier> _pool;
+        readonly Dictionary<string, AssetIdentifier> _pool;
         readonly Dictionary<object, AssetIdentifier> _activePool;//objects in the scene
         readonly Dictionary<AssetIdentifier, List<object>> _recyclePool;//recyclable(resetable) disabled objects
 
-        private AssetMapping(int category_, int active_, int recycle_) {
-            _pool = new Dictionary<(string, string), AssetIdentifier>(category_, _comparer);
+        private AssetMapping(int capacity_, int active_, int recycle_) {
+            _pool = new Dictionary<string, AssetIdentifier>(capacity_, _comparer);
             _activePool = new Dictionary<object, AssetIdentifier>(active_);
             _recyclePool = new Dictionary<AssetIdentifier, List<object>>(recycle_, _comparer);
         }
 
-        public static void Init(string packedDir) {
+        public static void Init() {
             Performance.RecordProfiler(nameof(AssetMapping));
+            _mapping = new List<AssetMapping>(4);
             _comparer = new AssetMappingComparer();
-            Default = new AssetMapping(16, 512, 512);
-            View = new AssetMapping(8, 32, 64);
-            AssetAdapter.Redirect(packedDir);
+            Default = Create(16, 512, 512);
+            View = Create(8, 32, 64);
             Default.AddInternal(AssetEmpty, new GameObject());
             Performance.End(nameof(AssetMapping));
         }
 
+        public static AssetMapping Create(int capacity_, int active_, int recycle_) {
+            var ret = new AssetMapping(capacity_, active_, recycle_);
+            _mapping.Add(ret);
+            return ret;
+        }
+
+        public static void Destroy() {
+            if (_mapping == null) return;
+            foreach(var m in _mapping) {
+                m.Clear();
+            }
+            _mapping = null;
+            AssetAdapter.PackSearch = null;
+        }
+
         public static void RootObject(Transform active, Transform recycle) {
-            Default.ActiveObjectRoot = active;
-            Default.RecycleObjectRoot = recycle;
-            View.ActiveObjectRoot = active;
-            View.RecycleObjectRoot = recycle;
+            foreach(var m in _mapping) {
+                m.ActiveObjectRoot = active;
+                m.RecycleObjectRoot = recycle;
+            }
         }
 
-        public void AddInternal((string, string) AssetId, GameObject obj) {
+        public void AddInternal(string id, GameObject obj) {
             obj.hideFlags = HideFlags.HideAndDontSave;
-            Default._pool.Add(AssetId, new AssetIdentifier(obj));
+            _pool.Add(id, new AssetIdentifier(obj));
         }
 
-        public T TakePersistent<T>(string c, string i) where T : UnityEngine.Object => UnityEngine.Object.Instantiate((T)AssetAdapter.Take(c, i, typeof(T)));
-        public T TakeDirect<T>(string c, string i, string ext_ = null) {
-            var ret = (T)AssetAdapter.Take(c, i, typeof(T), ext_);
+        public T TakePersistent<T>(string id) where T : UnityEngine.Object => UnityEngine.Object.Instantiate((T)AssetAdapter.Take(id, typeof(T)));
+        public T TakeDirect<T>(string id, string ext_ = null) {
+            var ret = (T)AssetAdapter.Take(id, typeof(T), ext_);
             if (ret == null) {
-                Log.Warning($"failed to directly take {c}_{i}.{ext_}");
+                Log.Warning($"failed to directly take {id}.{ext_}");
             }
             return ret;
         }
 
-        public T TakeAs<T>(string c, string i, bool ins = true) where T : Component => TakeActive(c, i, ins).GetChecked<T>();
+        public T TakeAs<T>(string id, bool ins = true) where T : Component => TakeActive(id, ins).GetChecked<T>();
 
-        public GameObject TakeActive(string c, string i, bool ins = true) {
-            var ret = Take<GameObject>(c, i, ins);
+        public GameObject TakeActive(string id, bool ins = true) {
+            var ret = Take<GameObject>(id, ins);
             ret?.SetActive(true);
             return ret;
         }
 
-        public GameObject TakeEmpty() => Take<GameObject>(AssetEmpty.Item1, AssetEmpty.Item2, true);
+        public GameObject TakeEmpty() => Take<GameObject>(AssetEmpty, true);
 
-        public T Take<T>(string c, string i, bool ins = true) where T : class {
+        public T Take<T>(string id, bool ins = true) where T : class {
             Performance.RecordProfiler(nameof(Take));
             object retv;
-            if (!_pool.TryGetValue((c, i), out var resi)) {
+            if (!_pool.TryGetValue(id, out var resi)) {
                 Performance.RecordProfiler(nameof(AssetIdentifier));
-                resi = new AssetIdentifier(c, i, typeof(T));
+                resi = new AssetIdentifier(id, typeof(T));
                 resi.Load();//load for the first time
-                _pool.Add((c, i), resi);//add to pool
-                Performance.End(nameof(AssetIdentifier), true, $"first load:{c}_{i}");
+                _pool.Add(id, resi);//add to pool
+                Performance.End(nameof(AssetIdentifier), true, $"first load:{id}");
             }
             if (!ins) {
                 retv = resi.Mapped;
@@ -120,21 +136,26 @@ namespace Transient.DataAccess {
             Recycle(resObj_);
         }
 
-        public void Recycle(GameObject resObj_) {
-            resObj_.SetActive(false);
-            resObj_.transform.SetParent(RecycleObjectRoot, false);
-            Recycle((object)resObj_);
-        }
-
-        public void Recycle(object resObj_) {
+        public bool Recycle(object resObj_) {
             Performance.RecordProfiler(nameof(Recycle));
-            var registeredActiveObj = _activePool.TryGetValue(resObj_, out var resId);
-            if (!registeredActiveObj) {
-                Log.Error($"recycling un-registered object {resObj_}");
-                //properly? handle un-registered object
-                if (resObj_ is GameObject obj) {
-                    GameObject.Destroy(obj);
+            if (resObj_ == null) {
+                Log.Warning("trying to recycle null object");
+                return false;
+            }
+            var recognized = _activePool.TryGetValue(resObj_, out var resId);
+            if (resObj_ is GameObject obj) {
+                if (recognized) {
+                    obj.SetActive(false);
+                    obj.transform.SetParent(RecycleObjectRoot, false);
                 }
+                else {
+                    Log.Error($"recycling un-registered object {resObj_} {obj.transform.parent?.name}");
+                    GameObject.Destroy(obj);
+                    goto end;
+                }
+            }
+            else if(!recognized) {
+                Log.Error($"recycling un-registered object {resObj_}");
                 goto end;
             }
             _activePool.Remove(resObj_);
@@ -149,8 +170,9 @@ namespace Transient.DataAccess {
                 Log.Assert(recyclables != null, "empty entry in recycle pool");
                 recyclables.Push(resObj_);
             }
-            end:
+        end:
             Performance.End(nameof(Recycle));
+            return recognized;
         }
 
         public void Clear() {
@@ -164,26 +186,25 @@ namespace Transient.DataAccess {
                 if (key is GameObject obj) GameObject.Destroy(obj);
             }
             _activePool.Clear();
+            GameObject.Destroy(ActiveObjectRoot?.gameObject);
+            GameObject.Destroy(RecycleObjectRoot?.gameObject);
         }
     }
 
     internal sealed class AssetMappingComparer :
         Generic.IEqualityComparer<AssetIdentifier>,
-        Generic.IEqualityComparer<(string, string)>
+        Generic.IEqualityComparer<string>
         {
-        public bool Equals(AssetIdentifier a, AssetIdentifier b) => a.category == b.category && a.id == b.id;
-        public int GetHashCode(AssetIdentifier i) => i.category.GetHashCode() ^ i.id.GetHashCode();
+        public bool Equals(AssetIdentifier a, AssetIdentifier b) => a.id == b.id;
+        public int GetHashCode(AssetIdentifier i) => i.id.GetHashCode();
 
-        public bool Equals((string, string) a, (string, string) b) => a.Item1 == b.Item1 && a.Item2 == b.Item2;
-        public int GetHashCode((string, string) i) => i.GetHashCode();
+        public bool Equals(string a, string b) => a == b;
+        public int GetHashCode(string i) => i.GetHashCode();
     }
 
     public static class AssetAdapter {
-        public static string DeployPath { get; private set; }
-        public static string PackedPath { get; private set; }
-
 #if UNITY_EDITOR
-        private static readonly Generic.Dictionary<Type, string[]> TypeToExtension = new Generic.Dictionary<Type, string[]>() {
+        public static readonly Generic.Dictionary<Type, string[]> TypeToExtension = new Generic.Dictionary<Type, string[]>() {
             { typeof(GameObject), new string[] { "prefab" } },
             { typeof(Material), new string[] { "mat" } },
             { typeof(Sprite), new string[] { "png", "jpg", "tga", "psd" } },
@@ -192,18 +213,14 @@ namespace Transient.DataAccess {
 #endif
 
         public struct TypeCoalescing {
-            public Func<string, object, object> Mapping;
+            public Func<object, object> Mapping;
             public Type targetType;
-            public Func<string, object, object> Inst;
+            public Func<object, object> Inst;
         }
         private static readonly Dictionary<string, TypeCoalescing> TypeCoalescingByCategory = new Dictionary<string, TypeCoalescing>(16, StringComparer.Ordinal);
+        public static Func<string, string> Id2Category { get; set; } = id => id;
 
-        public static void Redirect(string packedDir) {
-            DeployPath = $"{Application.persistentDataPath}/{packedDir}/";
-            PackedPath = $"{Application.streamingAssetsPath}/{packedDir}/";
-        }
-
-        public static void CategoryTypeCoalescing(string category_, Type type_, Func<string, object, object> mapping_, Func<string, object, object> inst_) {
+        public static void CategoryTypeCoalescing(string category_, Type type_, Func<object, object> mapping_, Func<object, object> inst_) {
             TypeCoalescingByCategory.Add(category_, new TypeCoalescing {
                 Mapping = mapping_,
                 targetType = type_,
@@ -211,77 +228,60 @@ namespace Transient.DataAccess {
             });
         }
 
-        public static bool TryGetTypeCoalescing(string category_, out TypeCoalescing t_) =>
-            TypeCoalescingByCategory.TryGetValue(category_, out t_);
+        public static bool TryGetTypeCoalescing(string id, out TypeCoalescing t_) =>
+            TypeCoalescingByCategory.TryGetValue(Id2Category(id), out t_);
 
-        public static Func<string, string, Type, object> PackSearch { get; set; }
-        public static Func<string, string, Type, object> ExtendedSearch { get; set; }
-
-        public static object Take(string category_, string id_, Type type_, string ext_ = null) {
+        public static Func<string, string, Type, string, object> PackSearch { get; set; }
+        public static Func<string, string, Type, string, object> ExtendedSearch { get; set; }
+        public static Func<string, (string, string)> ExtractSubId { get; set; } = id_ => {
             string sub = null;
             var separator = id_.LastIndexOf("#");
             if (separator > 0) {
                 sub = id_.Substring(separator + 1);
                 id_ = id_.Substring(0, separator);
             }
-            var path = string.IsNullOrEmpty(category_) ? id_ : $"{category_}_{id_}";
-            return Search(path, sub, type_, ext_);
-        }
+            return (id_, sub);
+        };
 
-        private static object Search(string path_, string sub_, Type type_, string ext_) {
+        public static object Take(string id_, Type type_, string ext_ = null) {
+            var (id, sub) = ExtractSubId(id_);
             //try AssetBundles
-            var ret = PackSearch?.Invoke(path_, sub_, type_);
+            var ret = PackSearch?.Invoke(id, sub, type_, ext_);
             if (ret != null) return ret;
             //try Resources
-            if (sub_ != null) {
-                var batch = Resources.LoadAll(path_, type_);
+            if (sub != null) {
+                var batch = Resources.LoadAll(id, type_);
                 foreach (var r in batch) {
-                    if (r.name == sub_) return r;
+                    if (r.name == sub) return r;
                 }
             }
             else {
-                ret = Resources.Load(path_, type_);
+                ret = Resources.Load(id, type_);
                 if (ret != null) return ret;
             }
-#if UNITY_EDITOR
-            if (ext_ == null && ExtendedSearch != null && TypeToExtension.TryGetValue(type_, out var extList)) {
-                foreach (var ext in extList) {
-                    ret = ExtendedSearch($"{path_}.{ext}", sub_, type_);
-                    if (ret != null) return ret;
-                }
-            }
-#endif
-            if (ext_ != null) {
-                path_ = $"{path_}.{ext_}";
-            }
             //try extra/fail-safe
-            return ExtendedSearch?.Invoke(path_, sub_, type_);
-
+            return ExtendedSearch?.Invoke(id, sub, type_, ext_);
         }
     }
 
     public struct AssetIdentifier {
         //non-null
-        public readonly string category;
-        //non-null
         public readonly string id;
         public object Mapped { get; private set; }
         public object Raw { get; private set; }
         private readonly Type _type;
-        Func<string, object, object> InstantiateI;
+        Func<object, object> InstantiateI;
 
-        public object Instantiate() => InstantiateI(category, Mapped);
+        public object Instantiate() => InstantiateI(Mapped);
 
         public AssetIdentifier(UnityEngine.Object obj) {
-            category = string.Empty;
             id = string.Empty;
             _type = obj.GetType();
             Raw = Mapped = obj;
             InstantiateI = InstantiateUnityObject;
         }
 
-        public AssetIdentifier(string category_, string id_, Type type_) {
-            category = category_ ?? string.Empty;
+        public AssetIdentifier(string id_, Type type_) {
             id = id_;
             _type = type_;
             Mapped = null;
@@ -290,19 +290,19 @@ namespace Transient.DataAccess {
         }
 
         internal void Load() {
-            if (AssetAdapter.TryGetTypeCoalescing(category, out var lt)) {
+            if (AssetAdapter.TryGetTypeCoalescing(id, out var lt)) {
                 InstantiateI = lt.Inst;
-                Raw = AssetAdapter.Take(category, id, lt.targetType);
-                if (Raw != null) Mapped = lt.Mapping(category, Raw);
+                Raw = AssetAdapter.Take(id, lt.targetType);
+                if (Raw != null) Mapped = lt.Mapping(Raw);
             }
             else {
                 InstantiateI = InstantiateUnityObject;
-                Raw = AssetAdapter.Take(category, id, _type);
+                Raw = AssetAdapter.Take(id, _type);
                 Mapped = Raw;
             }
             if (Mapped == null) {
                 InstantiateI = InstantiateEmpty;
-                Log.Warning($"failed to load {category}_{id} {_type}");
+                Log.Warning($"failed to load {id} {_type}");
             }
         }
 
@@ -311,13 +311,10 @@ namespace Transient.DataAccess {
             InstantiateI = InstantiateUnityObject;
         }
 
-        private static readonly Func<string, object, object> InstantiateUnityObject = (c, o) => {
-            object retv = null;
-            retv = GameObject.Instantiate((UnityEngine.Object)o);
-            return retv;
-        };
+        private static readonly Func<object, object> InstantiateUnityObject =
+            o => GameObject.Instantiate((UnityEngine.Object)o);
 
-        private static readonly Func<string, object, object> InstantiateEmpty = (c, o) => null;
+        private static readonly Func<object, object> InstantiateEmpty = o => null;
     }
 
     public sealed class AutoRecycler {
