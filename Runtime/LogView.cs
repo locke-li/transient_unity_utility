@@ -35,8 +35,6 @@ namespace Transient.Development {
         private bool _snapToLastOnReceive;
         private LogStream _log;
         Dictionary<int, LogPref> _logPref;
-        bool _showDirectLog = true;
-        bool _showUnityLog = true;
         bool _fullLogPreview;
         string _filterStr;
         readonly List<string> _filterKeep = new List<string>(8);
@@ -135,8 +133,6 @@ namespace Transient.Development {
                     tex = FillTexture(new Color(0.3f, 0.6f, 0.8f, 1f))
                 },
             };
-            _showDirectLog = true;
-            _showUnityLog = true;
             var str = EditorPrefs.GetString(nameof(LogView), null);
             if(!string.IsNullOrEmpty(str)) {
                 try {
@@ -146,8 +142,6 @@ namespace Transient.Development {
                         if(sg[k] == "#") break;
                         _logPref[int.Parse(sg[k])].show = bool.Parse(sg[++k]);
                     }
-                    _showDirectLog = bool.Parse(sg[++k]);
-                    _showUnityLog = bool.Parse(sg[++k]);
                     _fullLogPreview = bool.Parse(sg[++k]);
                 }
                 catch(Exception e) { Debug.LogError(e.Message); }
@@ -166,8 +160,6 @@ namespace Transient.Development {
                 sb.Append(",");
             }
             sb.Append("#,");
-            sb.Append(_showDirectLog).Append(",");
-            sb.Append(_showUnityLog).Append(",");
             sb.Append(_fullLogPreview);
             EditorPrefs.SetString(nameof(LogView), sb.ToString());
         }
@@ -222,21 +214,6 @@ namespace Transient.Development {
 
         private void Toolbar() {
             const float toolbarButtonSize = 60;
- 		    if(Button("Test", _styleToolbarButton, Width(toolbarButtonSize))) {
-				var sourceUnity = new EntrySource() { logger = LogStream.sourceUnity };
-				var sourceDirect = new EntrySource() { logger = LogStream.sourceDirect };
-				_log.Cache.Log(nameof(LogStream.debug), new System.Diagnostics.StackTrace(true).ToString(), LogStream.debug, sourceDirect);
-				_log.Cache.Log(nameof(LogStream.debug), null, LogStream.debug, sourceDirect);
-				_log.Cache.Log(nameof(LogStream.debug), null, LogStream.debug, sourceUnity);
-				_log.Cache.Log("1\n2\n3\n4\n", null, LogStream.debug, sourceDirect);
-				_log.Cache.Log(nameof(LogStream.info), new System.Diagnostics.StackTrace(true).ToString(), LogStream.info, sourceDirect);
-				_log.Cache.Log("1\n2\n3\n4\n", null, LogStream.debug, sourceDirect);
-                _log.Cache.Log(nameof(LogStream.warning), "warning\n1\n2\n3\n4", LogStream.warning, sourceDirect);
-				_log.Cache.Log(nameof(LogStream.error), "error\n1\n2\n3\n4", LogStream.error, sourceDirect);
-				_log.Cache.Log(nameof(LogStream.assert), "assert\n1\n2\n3\n4", LogStream.assert, sourceDirect);
-				_log.Cache.Log(nameof(LogStream.error), "error long stack \n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16", LogStream.error, sourceDirect);
-				_log.Cache.Log(nameof(LogStream.custom), null, LogStream.custom, sourceDirect);
-			}
 			if(Button("Refresh", _styleToolbarButton, Width(toolbarButtonSize))) {
 				RefreshStyle();
 				RefreshConfig();
@@ -250,8 +227,6 @@ namespace Transient.Development {
             }
             Label(string.Empty, _styleToolbarButton, MaxWidth(2000));
             EditorGUI.BeginChangeCheck();
-			_showDirectLog = Toggle(_showDirectLog, "D", _styleToolbarButton, Width(toolbarSize));
-			_showUnityLog = Toggle(_showUnityLog, "U", _styleToolbarButton, Width(toolbarSize));
             Label(string.Empty, _styleToolbarButton, Width(8));
 			for(int k = 0;k <= LogStream.custom;++k) {
 				LogSwitch(_logPref[k]);
@@ -286,8 +261,6 @@ namespace Transient.Development {
         private void PreviewLog(int r_, LogEntry entry_) {
             var pref = _logPref[entry_.level];
             if (!pref.show
-                || (!_showUnityLog && (entry_.source.logger == LogStream.sourceUnity))
-                || (!_showDirectLog && (entry_.source.logger == LogStream.sourceDirect))
                 || (_filterKeep.Count > 0 && _filterKeep.All(s=>!entry_.content.Contains(s)))
                 || (_filterRemove.Count > 0 && _filterRemove.Any(s=>entry_.content.Contains(s)))
                 )

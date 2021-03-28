@@ -6,7 +6,10 @@ using System.Text;
 
 namespace Transient {
     public static class Log {
-        [Conditional("LogEnabled")]
+        public static void Init(int capacity_) {
+            LogStream.Default.Cache.Init(capacity_);
+        }
+
         public static void Debug(
             string msg_, string stack_ = "",
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
@@ -14,7 +17,6 @@ namespace Transient {
             LogStream.Default.Message(LogStream.debug, msg_, stack_, member_, filePath_, lineNumber_);
         }
 
-        [Conditional("LogEnabled")]
         public static void Info(
             string msg_, string stack_ = "",
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
@@ -22,7 +24,6 @@ namespace Transient {
             LogStream.Default.Message(LogStream.info, msg_, stack_, member_, filePath_, lineNumber_);
         }
 
-        [Conditional("LogEnabled")]
         public static void Warning(
             string msg_, string stack_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
@@ -30,7 +31,6 @@ namespace Transient {
             LogStream.Default.Message(LogStream.warning, msg_, stack_, member_, filePath_, lineNumber_);
         }
 
-        [Conditional("LogEnabled")]
         public static void Error(
             string msg_, string stack_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
@@ -38,7 +38,6 @@ namespace Transient {
             LogStream.Default.Message(LogStream.error, msg_, stack_, member_, filePath_, lineNumber_);
         }
 
-        [Conditional("LogEnabled")]
         public static void Assert(
             bool condition_, string msg_,
             object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null, string stack_ = null,
@@ -47,7 +46,6 @@ namespace Transient {
             LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_, member_, filePath_, lineNumber_);
         }
 
-        [Conditional("LogEnabled")]
         public static void Custom(
             int level_, string msg_, string stack_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
@@ -65,11 +63,8 @@ namespace Transient {
         public const int error = 3;
         public const int assert = 4;
         public const int custom = 5;
-        public const byte sourceDirect = byte.MaxValue;
-        public const byte sourceUnity = 9;
-        public LogCache Cache { get; } = new LogCache();
+        public LogCache Cache { get; set; } = new LogCache();
 
-        [Conditional("LogEnabled")]
         public void Message(
             int level_, string msg_, string stack_ = "",
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
@@ -79,7 +74,6 @@ namespace Transient {
             Performance.End(nameof(LogStream));
         }
 
-        [Conditional("LogEnabled")]
         public void Assert(
             bool condition_, string msg_,
             object arg0_, object arg1_, object arg2_, object arg3_, string stack_ = null,
@@ -103,32 +97,34 @@ namespace Transient {
     }
 
     public struct EntrySource {
-        public byte logger;
         public string member;
         public string file;
         public int line;
 
-        public EntrySource(string member_, string file_, int line_, byte logger_ = LogStream.sourceDirect) {
-            logger = logger_;
+        public EntrySource(string member_, string file_, int line_) {
             member = member_;
             file = file_;
             line = line_;
         }
     }
 
-#if LogEnabled
     public sealed class LogCache {
-        private const int EntryLimit = 10000;
-        private readonly LogEntry[] logs = new LogEntry[EntryLimit];
+        private LogEntry[] logs;
         private int head = 0, last = -1, tail = 0;
-        private LogEntry defaultLog = new LogEntry();
-        public ActionList<LogEntry> LogReceived { get; } = new ActionList<LogEntry>(4);
-        //Error/Assert/Warning/Log/Exception
-        public static readonly int[] unityLogLevel = new int[] {
-            LogStream.error, LogStream.assert, LogStream.warning, LogStream.debug, LogStream.error
-        };
+        private LogEntry defaultLog;
+        public bool RedirectUnity { get; set; } = true;
+        public ActionList<LogEntry> LogReceived { get; private set; }
 
-        internal LogCache() {
+        public LogCache() {
+#if UNITY_EDITOR
+            Init(2000);
+#endif
+        } 
+
+        public void Init(int capacity_) {
+            logs = new LogEntry[capacity_];
+            defaultLog = new LogEntry();
+            LogReceived = new ActionList<LogEntry>(4);
         }
 
         public void Log(string log_, string stacktrace_, int level_, EntrySource source_) {
@@ -150,39 +146,34 @@ namespace Transient {
             };
             last = ++last % logs.Length;
             tail = ++tail % logs.Length;
-            if (!LogToUnity(log_, level_)) {
+            if (!RedirectUnity || !LogToUnity(log_, level_)) {
                 LogReceived.Invoke(log);
             }
             Performance.End(nameof(LogCache));
         }
 
-        //TODO use LogCache in UtilsConsole, then re-enable this condition
-        //[Conditional("UNITY_EDITOR")]
         private bool LogToUnity(string log_, int level_) {
-            if (level_ == unityLogLevel[0]) {//Error
+            if (level_ == LogStream.error) {//Error
                 UnityEngine.Debug.LogError(log_);
                 return true;
             }
-            if (level_ == unityLogLevel[1]) {//Assert
+            if (level_ == LogStream.assert) {//Assert
                 UnityEngine.Debug.LogAssertion(log_);
                 return true;
             }
-            if (level_ == unityLogLevel[2]) {//Warning
+            if (level_ == LogStream.warning) {//Warning
                 UnityEngine.Debug.LogWarning(log_);
                 return true;
             }
-            if (level_ == unityLogLevel[3]) {//Log
+            if (level_ == LogStream.debug) {//Log
                 UnityEngine.Debug.Log(log_);
-                return true;
-            }
-            if (level_ == unityLogLevel[4]) {//Exception
-                UnityEngine.Debug.LogError(log_);
                 return true;
             }
             return false;
         }
 
-        public void ForEach(Action<int, LogEntry> Process, int max_ = EntryLimit) {
+        public void ForEach(Action<int, LogEntry> Process) => ForEach(Process, logs.Length);
+        public void ForEach(Action<int, LogEntry> Process, int max_) {
             int tailV = tail, headV = head;
             if(tailV < headV) {
                 for(int r = headV;r < max_;++r) {
@@ -231,17 +222,4 @@ namespace Transient {
             tail = 0;
         }
     }
-#else
-    public class LogCache {
-        private LogEntry defaultLog = new LogEntry();
-        
-        [Conditional("DEBUG")]
-        public void Log(string log_, string stacktrace_, int level_, EntrySource source_) {}
-        [Conditional("DEBUG")]
-        public void ForEach(Action<int, LogEntry> Process) {}
-        public int Offset(int n, int f) { return n+f; }
-        public LogEntry EntryAt(int n) { return defaultLog; }
-        public void Clear() {}
-    }
-#endif
 }

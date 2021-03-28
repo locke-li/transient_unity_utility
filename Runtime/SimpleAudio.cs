@@ -132,12 +132,10 @@ namespace Transient.Audio {
         }
 
         //TODO preload
-        [Conditional("AudioEnabled")]
         public void RegisterEvent(string event_, string clip_, string ch_) {
             eventList[event_] = (clip_, ch_);
         }
 
-        [Conditional("AudioEnabled")]
         public void Event(string event_) {
             if (!string.IsNullOrEmpty(event_) && eventList.TryGetValue(event_, out var info)) {
                 Sound(info.name, info.channel);
@@ -191,7 +189,6 @@ namespace Transient.Audio {
             source_.outputAudioMixerGroup = ch.outputAudioMixerGroup;
         }
 
-        [Conditional("AudioEnabled")]
         public void Play(string name_, string ch_, bool loop_) {
             AudioClip clip = GetClip(name_);
             AudioSource ch = Channel(ch_);
@@ -202,7 +199,6 @@ namespace Transient.Audio {
             Play(clip, ch, loop_);
         }
 
-        [Conditional("AudioEnabled")]
         public void Play(string name_, AudioSource ch_, bool loop_) {
             AudioClip clip = GetClip(name_);
             if (clip == null || ch_ == null) {
@@ -212,7 +208,6 @@ namespace Transient.Audio {
             Play(clip, ch_, loop_);
         }
 
-        [Conditional("AudioEnabled")]
         public void Play(AudioClip clip, AudioSource ch, bool loop) {
             if (clip == null || ch == null || !Enabled) return;
             ch.loop = loop;
@@ -220,7 +215,6 @@ namespace Transient.Audio {
             ch.Play();
         }
 
-        [Conditional("AudioEnabled")]
         public void Sound(string name_, string ch_) {
             AudioClip clip = GetClip(name_);
             AudioSource ch = Channel(ch_);
@@ -231,7 +225,6 @@ namespace Transient.Audio {
             Sound(clip, ch);
         }
 
-        [Conditional("AudioEnabled")]
         public void Sound(string name_, AudioSource ch_) {
             AudioClip clip = GetClip(name_);
             if (clip == null || ch_ == null) {
@@ -241,7 +234,6 @@ namespace Transient.Audio {
             Sound(clip, ch_);
         }
 
-        [Conditional("AudioEnabled")]
         public void SoundAt(string name_, string ch_, Vector3 target_, float min_, float max_) {
             AudioClip clip = GetClip(name_);
             AudioSource ch = Channel(ch_);
@@ -255,23 +247,19 @@ namespace Transient.Audio {
             Sound(clip, ch);
         }
 
-        [Conditional("AudioEnabled")]
         public void Sound(AudioClip clip, AudioSource ch) {
             if (clip == null || ch == null || !Enabled) return;
             ch.PlayOneShot(clip);
         }
 
-        [Conditional("AudioEnabled")]
         public void Stop(string ch_) {
             var ch = Channel(ch_);
             if (ch == null || !Enabled) return;
             ch.Stop();
         }
 
-        [Conditional("AudioEnabled")]
         public void SkipTo(string ch, float time_) => SkipTo(Channel(ch), time_);
 
-        [Conditional("AudioEnabled")]
         public void SkipTo(AudioSource ch, float time_) {
             if (ch == null || !Enabled) return;
             ch.time = time_;
