@@ -46,6 +46,7 @@ namespace Transient.Development {
         private int _logCount = 0;
         private Log _lastLog;
         private const int LOG_LIMIT = 999;
+        private Application.LogCallback _unityLogReceiver;
         private RectTransform _logTemplate;
         private ScrollRect _logScroll;
         private readonly Color[] _logColors = new Color[] {
@@ -72,15 +73,11 @@ namespace Transient.Development {
         private const int FPS_NUMBER_LIMIT = 140;
 
 #if UNITY_EDITOR
-        public static bool ConsoleEnabled {
-            get {
-                return EditorPrefs.GetBool(nameof(ConsoleEnabled), true);
-            }
-            private set {
-                EditorPrefs.SetBool(nameof(ConsoleEnabled), value);
-            }
-        }
         private const string EnabledMenuPath = "Tools/Misc: ConsoleEnabled";
+        public static bool ConsoleEnabled {
+            get => EditorPrefs.GetBool(nameof(ConsoleEnabled), true);
+            private set => EditorPrefs.SetBool(nameof(ConsoleEnabled), value);
+        }
 
         [MenuItem(EnabledMenuPath, false, 14010)]
         public static void ToggleEnabled() {
@@ -104,18 +101,21 @@ namespace Transient.Development {
 #endif
 
         public static void Init(Canvas before) {
+            if (Instance != null) {
+                GameObject.Destroy(Instance.gameObject);
+            }
             var go = Resources.Load<GameObject>(nameof(UtilsConsole));
             if(go == null)
                 return;
             go = Instantiate(go);
             DontDestroyOnLoad(go);
             _before = before;
-            go.AddComponent<UtilsConsole>();
+            Instance = go.AddComponent<UtilsConsole>();
+            Instance.Init();
         }
 
-        private void Awake() {
+        private void Init() {
             const float FPS_SEGMENT = 0.5f;
-            Instance = this;
             _fpsLast = new float[4];
             _last = -1;
             _fpsFactor = 1 / (_fpsLast.Length * FPS_SEGMENT);
@@ -158,7 +158,8 @@ namespace Transient.Development {
             _logDetailText = _logDetailScroll.content.GetChild(0).GetComponent<Text>();
             _logDetailStackText = _logDetailScroll.content.GetChild(1).GetComponent<Text>();
             _logCount = 0;
-            Application.logMessageReceived += (m_, s_, t_) => LogReceived(m_, s_, LogCache.unityLogLevel[(int)t_]);
+            _unityLogReceiver = (m_, s_, t_) => LogReceived(m_, s_, LogCache.unityLogLevel[(int)t_]);
+            Application.logMessageReceived += _unityLogReceiver;
             LogStream.Default.Cache.LogReceived.Add(e_ => LogReceived(e_.content, e_.stacktrace, Mathf.Min(LogStream.custom, e_.level)), this);
             LogTest();
         }
@@ -320,6 +321,7 @@ namespace Transient.Development {
                 //mParams.text = string.Empty;
                 if(!(checkInput_ && string.IsNullOrEmpty(p)))
                     try {
+                        Debug.Log($"shortcut:{text_}");
                         action_(p);
                         button.targetGraphic.color = color_();
                     }
@@ -458,11 +460,14 @@ namespace Transient.Development {
 
         private void OnDestroy() {
             if (Instance != null) {
+                Application.logMessageReceived -= _unityLogReceiver;
                 LogStream.Default.Cache.LogReceived.Remove(this);
             }
             foreach(var shortcut in _shortcutButton) {
                 shortcut.Value.onClick.RemoveAllListeners();
             }
+            _valueSlider.Clear();
+            _watchList.Clear();
         }
     }
 }

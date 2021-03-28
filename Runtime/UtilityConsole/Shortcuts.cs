@@ -34,6 +34,7 @@ namespace Transient.Development {
 
 #if UNITY_EDITOR
         [MenuItem("Tools/Snapshot", priority = 1200)]
+        [ExtendableTool("Snapshot", "Tool")]
         public static void TakeSnapshotDefault() {
             TakeSnapshot(1080);
         }
