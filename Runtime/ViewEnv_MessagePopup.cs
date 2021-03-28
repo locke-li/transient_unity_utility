@@ -34,7 +34,7 @@ namespace Transient {
             Performance.RecordProfiler(key);
             MessagePopup<M> ret;
             try {
-                var obj = AssetMapping.View.TakePersistent<GameObject>(null, asset_);
+                var obj = AssetMapping.View.TakePersistent<GameObject>(asset_);
                 var trans = obj.transform;
                 trans.SetParent(ViewEnv.CanvasOverlay, false);
                 RectTransform content = trans.FindChecked<RectTransform>(nameof(content));
@@ -95,7 +95,7 @@ namespace Transient {
                 UnityExtension.TrySetActive(_cancel, true);
                 _confirm.transform.localPosition = _positionBoth;
             }
-            _message.Text = m.Replace("\\n", "\n");
+            _message.Text = string.IsNullOrEmpty(m) ? "<no message>" : m.Replace("\\n", "\n");
             option_.Modify?.Invoke(_content);
             _obj.SetActive(true);
             if (_sync != null) {

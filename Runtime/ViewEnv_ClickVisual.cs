@@ -9,7 +9,7 @@ namespace Transient {
 
         public static ClickVisual TryCreate(string asset_, Vector3 pos_, Action<ParticleSystem, Vector3, float> Emit_) {
             try {
-                var obj = AssetMapping.View.TakePersistent<GameObject>(null, asset_);
+                var obj = AssetMapping.View.TakePersistent<GameObject>(asset_);
                 if (obj is null || Emit_ is null) return null;
                 var ps = obj.GetComponent<ParticleSystem>();
                 if (ps == null) {
