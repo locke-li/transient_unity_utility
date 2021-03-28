@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -32,39 +34,28 @@ namespace Transient {
             return true;
         }
 
-        public static byte[] LoadBytesExtracted(string path, bool shouldUpdate, string sourceRoot, string targetRoot) {
-            //only extract on Android
-#if UNITY_ANDROID && !UNITY_EDITOR
-            var target = Path.Combine(targetRoot, path);
-            if (shouldUpdate && !DownloadTo(true, Path.Combine(sourceRoot, path), target)) {
-                return null;
-            }
-#else
-            var target = Path.Combine(sourceRoot, path);
-#endif
-            return File.ReadAllBytes(target);
-        }
-
-        public static byte[] LoadBytesIntegrated(string path) {
+        public static byte[] LoadBytes(string path) {
             Log.Info($"loading {path}");
             //only extract on Android
+            if (!File.Exists(path)) {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            var request = new UnityWebRequest(path);
-            var handler = new DownloadHandlerBuffer();
-            request.downloadHandler = handler;
-            request.SendWebRequest();
-            while (!request.isDone) { }
-            if (request.error != null) {
-                Log.Error(request.error);
-                return null;
-            }
-            while (!handler.isDone) {
-                Thread.Sleep(100);
-            }
-            return handler.data;
+                var request = new UnityWebRequest(path);
+                var handler = new DownloadHandlerBuffer();
+                request.downloadHandler = handler;
+                request.SendWebRequest();
+                while (!request.isDone) { }
+                if (request.error != null) {
+                    return null;
+                }
+                while (!handler.isDone) {
+                    Thread.Sleep(100);
+                }
+                return handler.data;
 #else
-            return File.ReadAllBytes(path);
+                return null;
 #endif
+            }
+            return File.ReadAllBytes(path);
         }
 
         public static string TryReadText(string path) {
@@ -97,6 +88,48 @@ namespace Transient {
             else {
                 File.WriteAllBytes(path, content);
             }
+        }
+
+        public static void Copy(string from, string to, StringBuilder builder, bool overwrite = false) {
+            builder.AppendLine($"copy: {from} -> {to}");
+            File.Copy(from, to, overwrite);
+        }
+
+        public static void Copy(FileInfo from, string to, StringBuilder builder, bool overwrite = false) {
+            builder.AppendLine($"copy: {from.Name} -> {to}");
+            from.CopyTo(to, overwrite);
+        }
+
+        public static void DeleteDirectory(string path, params string[] filter) {
+            if (!Directory.Exists(path)) return;
+            foreach (var sub in Directory.EnumerateDirectories(path)) {
+                Directory.Delete(sub, true);
+            }
+            foreach (var file in Directory.EnumerateFiles(path)) {
+                if (!filter.Any(v => file.EndsWith(v))) {
+                    File.Delete(file);
+                }
+            }
+        }
+
+        public static void CopyDirectory(string source, string destination, params string[] patternList) {
+            var dir = new DirectoryInfo(source);
+            Directory.CreateDirectory(destination);
+            foreach (var pattern in patternList) {
+                foreach (var file in dir.EnumerateFiles(pattern)) {
+                    File.Copy(Path.Combine(source, file.Name), Path.Combine(destination, file.Name));
+                }
+            }
+            foreach (var sub in dir.EnumerateDirectories()) {
+                CopyDirectory(sub.FullName, Path.Combine(destination, sub.Name), patternList);
+            }
+        }
+
+        public static void ClearDirectory(string dir) {
+            if (Directory.Exists(dir)) {
+                Directory.Delete(dir, true);
+            }
+            Directory.CreateDirectory(dir);
         }
     }
 }
