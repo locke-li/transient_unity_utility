@@ -137,7 +137,6 @@ namespace Transient.Development {
             };
             _showDirectLog = true;
             _showUnityLog = true;
-            _log.skipStacktrace[LogStream.info] = true;
             var str = EditorPrefs.GetString(nameof(LogView), null);
             if(!string.IsNullOrEmpty(str)) {
                 try {
