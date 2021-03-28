@@ -1,17 +1,52 @@
 ﻿#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
+using System;
 using System.IO;
 using Transient;
 
 public class TextureUtility {
-    [MenuItem("Tools/Resize/POT")]
-    [ExtendableTool("POT", "Texture Resize")]
-    public static void ResizePOT() {
-
+    private static Material _matCopy;
+    private static Material MatCopy {
+        get {
+            if (_matCopy == null) {
+                var shader = Shader.Find("Hidden/Transient/ColorCopy");
+                _matCopy = new Material(shader);
+            }
+            return _matCopy;
+        }
     }
 
-    [MenuItem("Tools/Resize/4 Multiple")]
+    private static int[] NextPoTLookup = new int[] {
+        1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384
+    };
+    public static int NextPoT(int value_) {
+        for(int i = 2; i < NextPoTLookup.Length; ++i) {
+            if (value_ <= NextPoTLookup[i]) {
+                return NextPoTLookup[i];
+            }
+        }
+        var pot = (int)Math.Ceiling(Math.Sqrt(value_));
+        pot *= pot;
+        Debug.LogWarning($"Next PoT exceeding maximum texture size {value_} {pot}");
+        return pot;
+    }
+
+    //[MenuItem("Tools/Resize/POT")]
+    [ExtendableTool("PoT", "Texture Resize")]
+    public static void ResizePOT() {
+        AssetDatabase.StartAssetEditing();
+        foreach(var tex in Selection.GetFiltered<Texture2D>(SelectionMode.DeepAssets)) {
+            int xr = NextPoT(tex.width);
+            int yr = NextPoT(tex.height);
+            if(xr == tex.width && yr == tex.height)
+                continue;
+            SaveResized(tex, xr, yr, (xr - tex.width)/2, (yr - tex.height)/2);
+        }
+        AssetDatabase.StopAssetEditing();
+    }
+
+    //[MenuItem("Tools/Resize/4 Multiple")]
     [ExtendableTool("4 Multiple", "Texture Resize")]
     public static void Resize4Multiple() {
         AssetDatabase.StartAssetEditing();
@@ -26,7 +61,7 @@ public class TextureUtility {
         AssetDatabase.StopAssetEditing();
     }
 
-    [MenuItem("Tools/Resize/Square")]
+    //[MenuItem("Tools/Resize/Square")]
     [ExtendableTool("Square", "Texture Resize")]
     public static void ResizeSquare() {
         AssetDatabase.StartAssetEditing();
@@ -47,7 +82,7 @@ public class TextureUtility {
         AssetDatabase.StopAssetEditing();
     }
 
-    [MenuItem("Tools/Resize/Preview 128")]
+    //[MenuItem("Tools/Resize/Preview 128")]
     [ExtendableTool("Preview\n128", "Texture Resize")]
     public static void CreatePreview128() {
         AssetDatabase.StartAssetEditing();
@@ -66,13 +101,13 @@ public class TextureUtility {
                 drawRect = new Rect(0, (float)yr / size, 1, (float)tex.width / size);
             }
             int tsize = 128;
-            Texture2D target = new Texture2D(tsize, tsize, TextureFormat.ARGB32, false);
+            Texture2D target = new Texture2D(tsize, tsize, TextureFormat.RGBA32, false);
             RenderTexture rt = RenderTexture.GetTemporary(tsize, tsize);
             RenderTexture rta = RenderTexture.active;
             RenderTexture.active = rt;
             GL.Clear(false, true, Color.clear);
             GL.LoadPixelMatrix(0, 1, 1, 0);
-            Graphics.DrawTexture(drawRect, tex);
+            Graphics.DrawTexture(drawRect, tex, MatCopy, 1);//bilinear copy
             target.ReadPixels(new Rect(0, 0, tsize, tsize), 0, 0);
             RenderTexture.active = rta;
             RenderTexture.ReleaseTemporary(rt);
@@ -85,15 +120,41 @@ public class TextureUtility {
     }
 
     private static void SaveResized(Texture2D tex, int width, int height, int x, int y) {
-        Texture2D target = new Texture2D(width, height, TextureFormat.ARGB32, false);
-        Graphics.CopyTexture(tex, 0, 0, 0, 0, tex.width, tex.height, target, 0, 0, x, y);
+        var target = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        var targetData = target.GetRawTextureData<Color32>();
+        Color32 clearColor = Color.clear;
+        for(int l = 0; l < height; ++l) {
+            for(int k = 0; k < x; ++k) {//left border
+                targetData[l * width + k] = clearColor;
+            }
+            for(int k = tex.width - x; k < width; ++k) {//right border
+                targetData[l * width + k] = clearColor;
+            }
+        }
+        for(int k = x; k < width - x; ++k) {
+            for(int l = 0; l < y; ++l) {//bottom border
+                targetData[l * width + k] = clearColor;
+            }
+            for(int l = tex.height - y; l < height; ++l) {//top border
+                targetData[l * width + k] = clearColor;
+            }
+        }
+        var rt = RenderTexture.GetTemporary(tex.width, tex.height);
+        var rta = RenderTexture.active;
+        RenderTexture.active = rt;
+        GL.Clear(false, true, Color.clear);
+        GL.LoadPixelMatrix(0, 1, 1, 0);
+        Graphics.DrawTexture(new Rect(0, 0, 1, 1), tex, MatCopy, 0);//point copy
+        target.ReadPixels(new Rect(0, 0, tex.width, tex.height), x, y);
+        RenderTexture.active = rta;
+        RenderTexture.ReleaseTemporary(rt);
         string projectPath = Application.dataPath.Replace("/Assets", "/");
         string path = AssetDatabase.GetAssetPath(tex);
         File.WriteAllBytes(projectPath + path, target.EncodeToPNG());
         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
     }
 
-    [MenuItem("Tools/Resize/Split 1024 4n")]
+    //[MenuItem("Tools/Resize/Split 1024 4n")]
     [ExtendableTool("Split 1024 4n", "Texture Resize")]
     private static void Split4n() {
         const int MAX_SIZE = 1024;
@@ -159,7 +220,7 @@ public class TextureUtility {
 
     private static void SaveSplitted(string suffix, Texture2D tex, int xSrc, int ySrc, int width, int height,
         int xOffset, int yOffset, int x, int y) {
-        Texture2D target = new Texture2D(width, height, TextureFormat.ARGB32, false);
+        Texture2D target = new Texture2D(width, height, TextureFormat.RGBA32, false);
         var widthSrc = width-xOffset;
         var heightSrc = height-yOffset;
         Graphics.CopyTexture(tex, 0, 0, xSrc, ySrc, widthSrc, heightSrc, target, 0, 0, x, y);
