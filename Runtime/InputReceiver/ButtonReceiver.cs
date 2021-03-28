@@ -64,6 +64,10 @@ namespace Transient.UI {
         public bool InvalidInput(PointerEventData eventData)
             => eventData.button != PointerEventData.InputButton.Left || Input.touchCount > 1;
 
+        public void Click() {
+            WhenClick(this);
+        }
+
         public void OnPointerClick(PointerEventData eventData) {
             if (InvalidInput(eventData))
                 return;
@@ -76,7 +80,7 @@ namespace Transient.UI {
             }
             LastResponseTime = Time.realtimeSinceStartup;
             //Log.Debug("button click");
-            if(!string.IsNullOrEmpty(audioEvent)) SimpleAudio.Default.Event(audioEvent);
+            if(!string.IsNullOrEmpty(audioEvent)) SimpleAudio.Instance?.Event(audioEvent);
             WhenClick(this);
         }
 

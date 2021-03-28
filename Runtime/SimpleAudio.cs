@@ -6,7 +6,7 @@ using UnityEngine.Audio;
 
 namespace Transient.Audio {
     public sealed class SimpleAudio {
-        public static SimpleAudio Default { get; private set; } = new SimpleAudio();
+        public static SimpleAudio Instance { get; private set; }
 
         public static float DefaultVolume = 0.8f;
         private AudioMixer _mixer;
@@ -14,17 +14,16 @@ namespace Transient.Audio {
         Dictionary<string, AudioSource> channel;
         Dictionary<string, (string name, string channel)> eventList;
         List<AudioSource> copyList;
-        public bool Mute { get; set; }
-        private static readonly string KeyMute = "audio_mute";
+        public bool Enabled { get; set; }
+        private static readonly string KeyEnabled = "audio_enabled";
         private static readonly string KeyChannelPrefix = "audio_volume";
         public GameObject Asset { get; private set; }
         public AudioListener Listener { get; set; }
         public Func<string, AudioClip> LoadClip = s => Resources.Load<AudioClip>(s);
 
-        [Conditional("AudioEnabled")]
-        public void Init(GameObject root_, AudioMixer mixer_, AudioListener listener_ = null) {
-            Performance.RecordProfiler(nameof(SimpleAudio));
+        private SimpleAudio(GameObject root_, AudioMixer mixer_, AudioListener listener_) {
             Log.Assert(root_ is object, "root is null");
+            Performance.RecordProfiler(nameof(SimpleAudio));
             Asset = root_;
             if (listener_ == null) {
                 var obj = Asset.transform.AddChild("listener");
@@ -37,27 +36,45 @@ namespace Transient.Audio {
             Performance.End(nameof(SimpleAudio));
         }
 
+        public static void Init(GameObject root_, AudioMixer mixer_, AudioListener listener_ = null) {
+            Instance = new SimpleAudio(root_, mixer_, listener_);
+        }
+
+        public static void Destroy() {
+            GameObject.Destroy(Instance?.Asset);
+            Instance = null;
+        }
+
 #if UNITY_EDITOR
         const string MenuPath = "DevShortcut/Audio Enabled";
+        internal static bool AudioEnabled {
+            get => UnityEditor.EditorPrefs.GetBool(KeyEnabled, true);
+            private set => UnityEditor.EditorPrefs.SetBool(KeyEnabled, value);
+        }
 
         [UnityEditor.MenuItem(MenuPath, priority = 1000)]
         private static void ToggleAudio() {
-            var value = UnityEditor.EditorPrefs.GetInt(KeyMute, 0);
-            UnityEditor.EditorPrefs.SetInt(KeyMute, 1 - value);
+            AudioEnabled = !AudioEnabled;
         }
 
         [UnityEditor.MenuItem(MenuPath, priority = 1000, validate = true)]
         private static bool ToggleAudioValidate() {
-            UnityEditor.Menu.SetChecked(MenuPath, UnityEditor.EditorPrefs.GetInt(KeyMute, 0) == 0);
+            UnityEditor.Menu.SetChecked(MenuPath, AudioEnabled);
             return true;
+        }
+
+        [ExtendableTool("Audio", "Enable")]
+        private static bool ToggleEnabled(bool? value) {
+            if (value.HasValue) AudioEnabled = value.Value;
+            return AudioEnabled;
         }
 #endif
 
         private void Reset(AudioMixer mixer_) {
             _mixer = mixer_;
-            Mute = PlayerPrefs.GetInt(KeyMute, 0) > 0;
+            Enabled = PlayerPrefs.GetInt(KeyEnabled, 1) > 0;
 #if UNITY_EDITOR
-            Mute = UnityEditor.EditorPrefs.GetInt(KeyMute, 1) > 0;
+            Enabled = AudioEnabled;
 #endif
             eventList = new Dictionary<string, (string, string)>(32);
             copyList = new List<AudioSource>(16);
@@ -97,7 +114,7 @@ namespace Transient.Audio {
         }
 
         public void VolumePersist() {
-            PlayerPrefs.SetInt(KeyMute, Mute ? 1 : 0);
+            PlayerPrefs.SetInt(KeyEnabled, Enabled ? 1 : 0);
             foreach(var k in groupKey) {
                 if (!_mixer.GetFloat(k, out var v)) {
                     Log.Warning($"key {k} not found on mixer");
@@ -114,6 +131,8 @@ namespace Transient.Audio {
             return volume;
         }
 
+        //TODO preload
+        [Conditional("AudioEnabled")]
         public void RegisterEvent(string event_, string clip_, string ch_) {
             eventList[event_] = (clip_, ch_);
         }
@@ -195,7 +214,7 @@ namespace Transient.Audio {
 
         [Conditional("AudioEnabled")]
         public void Play(AudioClip clip, AudioSource ch, bool loop) {
-            if (clip == null || ch == null || Mute) return;
+            if (clip == null || ch == null || !Enabled) return;
             ch.loop = loop;
             ch.clip = clip;
             ch.Play();
@@ -238,8 +257,15 @@ namespace Transient.Audio {
 
         [Conditional("AudioEnabled")]
         public void Sound(AudioClip clip, AudioSource ch) {
-            if (clip == null || ch == null || Mute) return;
+            if (clip == null || ch == null || !Enabled) return;
             ch.PlayOneShot(clip);
+        }
+
+        [Conditional("AudioEnabled")]
+        public void Stop(string ch_) {
+            var ch = Channel(ch_);
+            if (ch == null || !Enabled) return;
+            ch.Stop();
         }
 
         [Conditional("AudioEnabled")]
@@ -247,7 +273,7 @@ namespace Transient.Audio {
 
         [Conditional("AudioEnabled")]
         public void SkipTo(AudioSource ch, float time_) {
-            if (ch == null || Mute) return;
+            if (ch == null || !Enabled) return;
             ch.time = time_;
         }
     }
