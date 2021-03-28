@@ -7,16 +7,17 @@ using UnityEngine.UI;
 namespace Transient {
     public interface IMessageFade {
         void Create(string m, Color c);
-        void Fade();
+        void Fade(float deltaTime);
         void Clear();
     }
 
     public class MessageFade<M> : IMessageFade where M : struct, IMessageText {
         private readonly Queue<M> _message;
-        public Vector3 StartPos { get; set; } = new Vector3(0, -50, 0);
-        public Vector3 EndPos { get; set; } = new Vector3(0, 550f, 0);
-        public Vector3 Velocity { get; set; } = new Vector3(0, 240f, 0);
+        private Vector3 _startPos;
         private string Asset { get; set; }
+        private Color _templateColor;
+        public Func<int, float, float, float> AnimateFade { get; set; }
+        public Func<M, bool> RecycleCheck { get; set; }
 
         public MessageFade() {
             _message = new Queue<M>(64, 4);
@@ -25,49 +26,80 @@ namespace Transient {
         public static MessageFade<M> TryCreate(string asset_) {
             var key = "MessageFade.Create";
             Performance.RecordProfiler(key);
-            var obj = AssetMapping.View.TakePersistent<GameObject>(null, asset_);
+            var obj = AssetMapping.View.TakeActive(asset_);
             var message = new M();
             if(!message.Init(obj)) {
                 Log.Warning($"{nameof(MessageFade<M>)} create failed.");
+                AssetMapping.View.Recycle(obj);
                 return null;
             }
+            AssetMapping.View.Recycle(obj);
             Performance.End(key);
             return new MessageFade<M>() {
-                Asset = asset_
+                Asset = asset_,
+                _templateColor = message.Color,
             };
         }
 
         public void Create(string m, Color c) {
             Performance.RecordProfiler(nameof(MessageFade<M>));
-            var obj = AssetMapping.View.TakeActive(null, Asset);
+            var obj = AssetMapping.View.TakeActive(Asset);
             obj.transform.SetParent(ViewEnv.CanvasOverlay, false);
-            obj.transform.localPosition = StartPos;
             var message = new M();
             message.Init(obj);
             message.Text = m;
-            message.Color = c;
+            message.Color = c == Color.clear ? _templateColor : c;
+            message.Root.localPosition = _startPos;
             _message.Enqueue(message);
             Performance.End(nameof(MessageFade<M>), true);
         }
 
-        public void Fade() {
-            float start, end = float.MinValue;
-            for (int k = _message.Count - 1; k >= 0; --k) {
-                var l = _message.RawIndex(k);
-                var transform = (RectTransform)_message.Data[l].Root;
-                transform.localPosition += Velocity * Time.deltaTime;
-                var height = transform.sizeDelta.y * 0.5f;
-                start = transform.anchoredPosition.y - height;
-                if (start < end) {
-                    transform.anchoredPosition += new Vector2(0f, end - start);
-                }
-                end = transform.anchoredPosition.y + height;
-                float p = (transform.localPosition.y - StartPos.y) / (EndPos.y - StartPos.y);
-                var color = _message.Data[l].Color;
-                color.a = 1.25f - p;
-                _message.Data[l].Color = color;
+        private float CheckOverlap(RectTransform transform, float end_) {
+            var height = transform.sizeDelta.y * 0.5f;
+            var start_ = transform.anchoredPosition.y - height;
+            if (start_ < end_) {
+                transform.anchoredPosition += new Vector2(0f, end_ - start_);
             }
-            while (_message.Count > 0 && _message.Peek().Root.localPosition.y >= EndPos.y) {
+            end_ = transform.anchoredPosition.y + height;
+            return end_;
+        }
+
+        public MessageFade<M> FadeLinearUp() {
+            return FadeLinearMove(
+                new Vector3(0, -50, 0),
+                new Vector3(0, 550f, 0),
+                new Vector3(0, 240f, 0),
+                2
+            );
+        }
+
+        public MessageFade<M> FadeLinearMove(Vector3 start_, Vector3 end_, Vector3 velocity_, float delay_) {
+            _startPos = start_;
+            AnimateFade = (k_, deltaTime_, elementEnd_) => {
+                k_ = _message.RawIndex(k_);
+                var data = _message.Data[k_];
+                var transform = (RectTransform)data.Root;
+                if (data.Time < delay_) {
+                    _message.Data[k_].Time = data.Time + deltaTime_;
+                    return CheckOverlap(transform, elementEnd_);
+                }
+                transform.localPosition += velocity_ * deltaTime_;
+                var p = (transform.localPosition.y - start_.y) / (end_.y - start_.y);
+                var c = data.Color;
+                c.a = 1.25f - p;
+                data.Color = c;
+                return CheckOverlap(transform, elementEnd_);
+            };
+            RecycleCheck = m => m.Root.localPosition.y >= end_.y;
+            return this;
+        }
+
+        public void Fade(float deltaTime_) {
+            var end = float.MinValue;
+            for (int k = _message.Count - 1; k >= 0; --k) {
+                end = AnimateFade(k, deltaTime_, end);
+            }
+            while (_message.Count > 0 && RecycleCheck(_message.Peek())) {
                 var m = _message.Dequeue();
                 AssetMapping.View.Recycle(m.Root.gameObject);
                 m.Recycle();
