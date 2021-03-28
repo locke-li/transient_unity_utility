@@ -34,8 +34,11 @@ namespace Transient {
         public static int ButtonWidth => 50;
         public static int ButtonHeight => 30;
         private GUIStyle styleButton;
+        private GUIStyle styleBox;
         private UnityEngine.Object activeObject;
         private GameObject activeGameObject;
+        private float groupPadding = 8;
+        private float contentPadding = 10;
 
         [MenuItem("Window/"+ DisplayName)]
         private static void Open() {
@@ -65,6 +68,10 @@ namespace Transient {
             styleButton = new GUIStyle("button") {
                 fontSize = 11,
                 wordWrap = true,
+            };
+            styleBox = new GUIStyle("box") {
+                fontSize = 12,
+                wordWrap = false,
             };
         }
 
@@ -113,29 +120,33 @@ namespace Transient {
             entryScrollPos = GUILayout.BeginScrollView(entryScrollPos);
             GUILayout.BeginHorizontal();
             string group = null;
-            const float padding = 4;
-            float lineWidth = 0;
-            var widthLimit = position.width - 2;
+            var padding = contentPadding * 2;
+            var lineWidth = padding;
+            var widthLimit = position.width;
             var guiOption = new GUILayoutOption[2];
             var parameters = new object[1];
             foreach (var (method, attr) in Entry) {
                 if (attr.Group != group) {
                     group = attr.Group;
                     GUILayout.EndHorizontal();
-                    GUILayout.Label(group);
+                    GUILayout.Space(groupPadding);
+                    GUILayout.Label(group, styleBox);
+                    GUILayout.Space(2);
                     GUILayout.BeginHorizontal();
-                    lineWidth = 0;
+                    GUILayout.Space(contentPadding);
+                    lineWidth = padding;
                 }
                 var name = attr.Name ?? method.Name;
                 var content = new GUIContent(name);
-                var size = styleButton.CalcSize(content);
-                if (lineWidth + size.x > widthLimit) {
+                var size = styleButton.CalcSize(content).x + 2;
+                if (lineWidth + size + contentPadding > widthLimit) {
                     GUILayout.EndHorizontal();
                     GUILayout.BeginHorizontal();
-                    lineWidth = 0;
+                    GUILayout.Space(contentPadding);
+                    lineWidth = padding;
                 }
-                lineWidth += size.x + padding;
-                guiOption[0] = GUILayout.Width(size.x);
+                lineWidth += size;
+                guiOption[0] = GUILayout.Width(size);
                 guiOption[1] =  GUILayout.MinHeight(ButtonHeight);
                 if (attr.IsToggle) {
                     parameters[0] = null;
