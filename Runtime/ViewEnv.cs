@@ -19,12 +19,12 @@ namespace Transient {
         public Action<Camera, AbstractCoordinateSystem, float> CustomeProcess;
     }
 
-    public sealed class ViewEnv : MonoBehaviour {
+    public sealed class ViewEnv {
+        public static ViewEnv Instance { get; private set; }
         public static Camera MainCamera { get; private set; }
         public static Camera UICamera { get; private set; }
         public static Canvas MainCanvas { get; private set; }
         public static RectTransform CanvasContent { get; private set; }
-        public static RectTransform MessageContent { get; private set; }
         public static RectTransform CanvasOverlay { get; private set; }
 
         public static float RatioXY { get; private set; }
@@ -36,10 +36,10 @@ namespace Transient {
         private static int _screenWidth = 0;
         private static int _screenHeight = 0;
         private static float _screenHeightInverse;
-        public static ActionList<int, int, float> OnScreenSizeChange { get; } = new ActionList<int, int, float>(4, nameof(OnScreenSizeChange));
+        public static ActionList<int, int, float> OnScreenSizeChange { get; private set; }
 
-        public static List<IMessagePopup> PopupMessage { get; } = new List<IMessagePopup>(2);
-        public static List<IMessageFade> FadeMessage { get; set; } = new List<IMessageFade>(2);
+        private static List<IMessagePopup> _popupMessage;
+        private static List<IMessageFade> _fadeMessage;
         public static ClickVisual ClickVisual { get; set; }
         public static AbstractCoordinateSystem CameraSystem { get; private set; }
 
@@ -56,20 +56,27 @@ namespace Transient {
         private static Vector2 _dragInertiaDelta;
         private static float _dragInertiaThreshold = 0.05f;
         private static float _dragInertiaDamping = 0.85f;
-        public static ActionList<Vector3, Vector3> OnDrag { get; } = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
+        public static ActionList<Vector3, Vector3> OnDrag { get; private set; }
 
         public static ViewportLimit ViewportLimit { get; set; }
         public static PositionLimit PositionLimit { get; set; }
 
         public static ZoomSetting zoomSetting;
         private static float _zoomTarget;
+        private static float _zoomStart;
+        private static float _zoomTransitTime;
+        private static float _zoomTransitDuration;
         public static float Zoom { get; private set; }
         public static float ZoomPercent => (Zoom - zoomSetting.min) / zoomSetting.range;
-        public static ActionList<float> OnZoom { get; } = new ActionList<float>(8, nameof(OnZoom));
+        public static ActionList<float> OnZoom { get; private set; }
         public static Action<Camera, AbstractCoordinateSystem, float> ProcessZoom { get; set; }
 
-        public static void Init(GameObject attachTo, Camera main_, Camera ui_, Canvas canvas_) {
+        public static void Init(ActionList<float> updater, Camera main_, Camera ui_, Canvas canvas_) {
             Performance.RecordProfiler(nameof(ViewEnv));
+            Instance = new ViewEnv();
+            OnScreenSizeChange = new ActionList<int, int, float>(4, nameof(OnScreenSizeChange));
+            OnDrag = new ActionList<Vector3, Vector3>(8, nameof(OnDrag));
+            OnZoom = new ActionList<float>(8, nameof(OnZoom));
             MainCamera = main_;
             //NOTE don't support overlay canvas, not quite controllable performance wise
             UICamera = ui_;
@@ -81,39 +88,44 @@ namespace Transient {
             ResetCoordinateSystem();
             CanvasContent = MainCanvas.transform.AddChildRect("content");
             CanvasOverlay = MainCanvas.transform.AddChildRect("overlay");
-            attachTo.AddComponent<ViewEnv>();
+            updater.Add(Instance.Update, Instance);
             Performance.End(nameof(ViewEnv));
         }
 
         public static void Clear() {
             OnDrag.Clear();
             OnZoom.Clear();
-            for(int i = 0; i < MainCanvas.transform.childCount; ++i) {
-                var child = MainCanvas.transform.GetChild(i);
-                if (child == MessageContent) continue;
-                GameObject.Destroy(child.gameObject);
-            }
-            CanvasContent = MainCanvas.transform.AddChildRect("content");
-            CanvasContent.SetAsFirstSibling();
-            CanvasOverlay = MainCanvas.transform.AddChildRect("overlay");
+            _popupMessage?.Clear();
+            _fadeMessage?.Clear();
+            MainCanvas.DestroyChildren();
         }
 
         public static void ViewVisible(bool value_) {
             MainCamera.enabled = value_;
         }
 
-        public static void Message(string m, Action Confirm_, Action Cancel_, PopupOption option_, int index_ = 0)
-            => PopupMessage[index_].Create(m, Confirm_, Cancel_, option_);
-        public static void CloseMessage(int index_ = 0) => PopupMessage[index_].Clear();
+        public static void AddMessage(IMessagePopup popup) {
+            _popupMessage = _popupMessage ?? new List<IMessagePopup>(2);
+            _popupMessage.Add(popup);
+        }
+        public static void AddMessage(IMessageFade fade) {
+            _fadeMessage = _fadeMessage ?? new List<IMessageFade>(2);
+            _fadeMessage.Add(fade);
+        }
 
-        public static void Message(string m, int index_ = 0) => FadeMessage[index_].Create(m, Color.white);
-        public static void Message(string m, Color color, int index_ = 0) => FadeMessage[index_].Create(m, color);
-        public static void ClearMessage(int index_ = 0) => FadeMessage[index_].Clear();
+        public static void Message(string m, Action Confirm_, Action Cancel_, PopupOption option_ = new PopupOption(), int index_ = 0)
+            => _popupMessage[index_].Create(m, Confirm_, Cancel_, option_);
+        public static void CloseMessage(int index_ = 0) => _popupMessage[index_].Clear();
+
+        public static void Message(string m, int index_ = 0) => _fadeMessage[index_].Create(m, Color.clear);
+        public static void Message(string m, Color color, int index_ = 0) => _fadeMessage[index_].Create(m, color);
+        public static void ClearMessage(int index_ = 0) => _fadeMessage[index_].Clear();
 
         public static void InitFocusViewport(Transform location, Vector2 viewOffset, bool once = false, float step = 0f) {
+            var unitPerPixel = CalculateUnitPerPixel(_zoomTarget);
             var offset = new Vector2(
-                -viewOffset.x * _screenWidth * UnitPerPixel,
-                -viewOffset.y * _screenHeight * UnitPerPixel
+                -viewOffset.x * _screenWidth * unitPerPixel,
+                -viewOffset.y * _screenHeight * unitPerPixel
             );
             InitFocus(location, offset, once, step);
         }
@@ -317,21 +329,29 @@ namespace Transient {
             //TODO UnitPerPixel at a designated plane (z)
         }
 
-        public static void UpdateViewHeight(float v_) {
-            UnitPerPixel = v_ * 2 * _screenHeightInverse;
-        }
+        private static float CalculateUnitPerPixel(float v_) => v_ * 2 * _screenHeightInverse;
+        public static void UpdateViewHeight(float v_) => UnitPerPixel = CalculateUnitPerPixel(v_);
 
         public static float TargetZoom(float v) {
             return _zoomTarget = v > zoomSetting.max ? zoomSetting.max : v < zoomSetting.min ? zoomSetting.min : v;
         }
 
-        public static void ZoomTo(float v) {
-            ZoomValue(TargetZoom(v));
+        public static void ZoomTo(float v, float duration = 0) {
+            _zoomStart = Zoom;
+            v = TargetZoom(v);
+            _zoomTransitDuration = duration;
+            _zoomTransitTime = duration;
+            if (duration == 0) ZoomValue(v);
         }
 
         public static Vector2 WorldToCanvasSpace(Vector3 position) {
             //TODO persist screen offset
             return (MainCamera.WorldToScreenPoint(position) - new Vector3(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
+        }
+
+        public static Vector2 ScreenToCanvasSpace(Vector2 position) {
+            //TODO persist screen offset
+            return (position - new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
         }
 
         //TODO should be in CoordinateSystem
@@ -351,11 +371,12 @@ namespace Transient {
             return pos.x > 0 && pos.x < 1 && pos.y > 0 && pos.y < 1;
         }
 
-        private void Update() {
-            var deltaTime = Time.deltaTime;
+        private void Update(float deltaTime) {
             CheckScreenSize();
-            foreach(var m in FadeMessage) {
-                m.Fade();
+            if (_fadeMessage != null) {
+                foreach(var m in _fadeMessage) {
+                    m.Fade(deltaTime);
+                }
             }
             if (Focus != null && !_focusOverride) {
                 var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
@@ -368,7 +389,7 @@ namespace Transient {
                         Focus = null;
                     }
                 }
-                else CameraSystem.PositionXY += dir / Mathf.Min(dist, 1f) * _focusStep * deltaTime;
+                else CameraSystem.PositionXY += dir / dist * Mathf.Lerp(0.5f, 2f, dist) * _focusStep * deltaTime;
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             if (_dragInertia && _dragInertiaValue > _dragInertiaThreshold) {
@@ -385,27 +406,23 @@ namespace Transient {
                 (CameraSystem.X, CameraSystem.Y) = PositionLimit.ElasticPull();
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
+            if (_zoomTarget != Zoom) {
+                if (_zoomTransitTime > 0) {
+                    _zoomTransitTime -= deltaTime;
+                    ZoomValue(Mathf.SmoothStep(_zoomTarget, _zoomStart, _zoomTransitTime / _zoomTransitDuration));
+                }
+                else {
+                    ZoomValue(_zoomTarget);
+                }
+            }
             Vector2 mp = Input.mousePosition;
             if (mp.x < 0 || mp.y < 0 || mp.x > Screen.width || mp.y > Screen.height) return;
             if (Input.GetMouseButtonDown(0)) {
                 ClickVisual?.EmitAt(UICamera.ScreenToWorldPoint(mp), UIViewScale);
             }
-            if (Input.mouseScrollDelta.y != 0 && _drag.interactable) {
+            if (_drag != null && _drag.interactable && Input.mouseScrollDelta.y != 0) {
+                _zoomTransitTime = 0;
                 TargetZoom(_zoomTarget - Input.mouseScrollDelta.y * zoomSetting.scrollStep);
-            }
-            if (_zoomTarget != Zoom) {
-                if (zoomSetting.spring) {
-                    if (_zoomTarget > Zoom) {
-                        Zoom = Mathf.Min(_zoomTarget, Zoom + zoomSetting.springStep);
-                    }
-                    else {
-                        Zoom = Mathf.Max(_zoomTarget, Zoom - zoomSetting.springStep);
-                    }
-                }
-                else {
-                    Zoom = _zoomTarget;
-                }
-                ZoomValue(Zoom);
             }
         }
     }
