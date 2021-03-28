@@ -24,8 +24,8 @@ internal struct CoroutineCache {
 public class GeneratorCoroutine {
     private List<CoroutineCache> CoroutineList { get; set; } = new List<CoroutineCache>(16);
 
-    public GeneratorCoroutine(ActionList<float> Owner) {
-        Owner.Add(Update, this);
+    public GeneratorCoroutine(ActionList<float> updater) {
+        updater.Add(Update, this);
     }
 
     public void Execute(Func<Enumerator> routine_) {
@@ -48,5 +48,9 @@ public class GeneratorCoroutine {
                 --r;
             }
         }
+    }
+
+    public void Clear() {
+        CoroutineList.Clear();
     }
 }

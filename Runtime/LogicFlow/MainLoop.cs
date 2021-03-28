@@ -12,19 +12,21 @@ namespace Transient {
         public static ActionList<float> OnUpdate { get; private set; }
         public static GeneratorCoroutine Coroutine { get; private set; }
 
-        public static void Init() {
+        public static void Init(bool coroutine = true) {
+            if (Instance != null) {
+                Clear();
+                return;
+            }
             Performance.RecordProfiler(nameof(MainLoop));
             var go = new GameObject("MainLoop");
             DontDestroyOnLoad(go);
             Instance = go.AddComponent<MainLoop>();
             OnUpdate = new ActionList<float>(16);
+            if (coroutine) {
+                Coroutine = new GeneratorCoroutine(OnUpdate);
+            }
             Log.Info("MainLoop initialized");
             Performance.End(nameof(MainLoop));
-        }
-
-        public static void InitCoroutine() {
-            Log.Assert(Instance != null, "MainLoop is not initialized yet!");
-            Coroutine = new GeneratorCoroutine(OnUpdate);
         }
 
         private void Update() {
@@ -34,7 +36,7 @@ namespace Transient {
 
         public static void Clear() {
             OnUpdate?.Clear();
-            //TODO stop & clear coroutine
+            Coroutine?.Clear();
         }
     }
 }
