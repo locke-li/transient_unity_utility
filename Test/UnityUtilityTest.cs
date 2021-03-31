@@ -14,7 +14,7 @@ namespace Tests
         public void UnityUtilityTestSimplePasses()
         {
             MainLoop.Init();
-            UtilsConsole.Init();
+            UtilsConsole.Init(null);
 
             Log.Debug("debug test");
             Log.Error("error test");
