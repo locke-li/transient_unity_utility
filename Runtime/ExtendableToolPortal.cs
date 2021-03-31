@@ -33,8 +33,8 @@ namespace Transient {
         Vector2 entryScrollPos;
         public static int ButtonWidth => 50;
         public static int ButtonHeight => 30;
-        private GUIStyle styleButton;
-        private GUIStyle styleBox;
+        private static GUIStyle styleButton;
+        private static GUIStyle styleBox;
         private UnityEngine.Object activeObject;
         private GameObject activeGameObject;
         private float groupPadding = 8;
@@ -43,6 +43,7 @@ namespace Transient {
         [MenuItem("Window/"+ DisplayName)]
         private static void Open() {
             RefreshEntry();
+            RefreshStyle();
             GetWindow<ExtendableToolPortal>(DisplayName);
         }
 
@@ -64,7 +65,7 @@ namespace Transient {
             }
         }
 
-        private void RefreshStyle() {
+        private static void RefreshStyle() {
             styleButton = new GUIStyle("button") {
                 fontSize = 11,
                 wordWrap = true,
