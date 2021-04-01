@@ -29,7 +29,7 @@ namespace Transient {
         public void OnDrag(PointerEventData eventData) {
             var x = Mathf.Clamp(eventData.position.x, 0, Screen.width);
             var y = Mathf.Clamp(eventData.position.y, 0, Screen.height);
-            Vector2 pos = new Vector2(x, y);
+            var pos = new Vector2(x, y);
             if (_canvas.worldCamera != null) {
                 pos = _canvas.worldCamera.ScreenToViewportPoint(pos);
                 pos.x = (pos.x - 0.5f) * _resolution.x;

@@ -20,6 +20,7 @@ namespace Transient.Mathematical {
             return z ^ (z >> 31);
         }
     }
+
     //http://xoroshiro.di.unimi.it/xorshift128plus.c
     public class RandomXorshift128plus {
         UInt64 s_0;
@@ -40,6 +41,7 @@ namespace Transient.Mathematical {
             return result;
         }
     }
+
     //http://xoroshiro.di.unimi.it/xoroshiro128plus.c
     public class RandomXoroshiro128plus {
         UInt64 s_0;

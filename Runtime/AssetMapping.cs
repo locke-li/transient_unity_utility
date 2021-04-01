@@ -47,12 +47,12 @@ namespace Transient.DataAccess {
         }
 
         public static void Destroy() {
+            AssetAdapter.PackSearch = null;
             if (_mapping == null) return;
             foreach(var m in _mapping) {
                 m.Clear();
             }
             _mapping = null;
-            AssetAdapter.PackSearch = null;
         }
 
         public static void RootObject(Transform active, Transform recycle) {

@@ -93,21 +93,14 @@ namespace Transient {
 
         private void OnGUI() {
             Toolbar();
-            if (Entry == null) {
-                RefreshEntry();
-            }
-            if (styleButton == null) {
-                RefreshStyle();
-            }
             EditorInfo();
             EntryList();
         }
 
         private void Toolbar() {
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Entry")) RefreshEntry();
-            if (GUILayout.Button("Style")) RefreshStyle();
-            GUILayout.EndHorizontal();
+            new GUILayout.HorizontalScope();
+            if (GUILayout.Button("Entry") || Entry == null) RefreshEntry();
+            if (GUILayout.Button("Style") || styleButton == null) RefreshStyle();
         }
 
         private void EditorInfo() {
