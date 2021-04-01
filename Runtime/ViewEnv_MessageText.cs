@@ -7,9 +7,7 @@ namespace Transient {
         Transform Root { get; }
         string Text { get; set; }
         Color Color { get; set; }
-        float Time { get; set; }
         bool Init(GameObject obj);
-        void Recycle();
     }
 
     public struct TextUGUI : IMessageText {
@@ -23,17 +21,12 @@ namespace Transient {
             get => Content.color;
             set => Content.color = value;
         }
-        public float Time { get; set; }
 
         public bool Init(GameObject obj) {
-            Root = obj?.transform;
-            Content = obj?.FindChecked<Text>("message");
+            if (obj == null) return false;
+            Root = obj.transform;
+            Content = obj.FindChecked<Text>("message");
             return Content != null;
-        }
-
-        public void Recycle() {
-            Root = null;
-            Content = null;
         }
     }
 
@@ -48,17 +41,12 @@ namespace Transient {
             get => Content.color;
             set => Content.color = value;
         }
-        public float Time { get; set; }
 
         public bool Init(GameObject obj) {
-            Root = obj?.transform;
-            Content = obj?.FindChecked<TextMeshProUGUI>("message");
+            if (obj == null) return false;
+            Root = obj.transform;
+            Content = obj.FindChecked<TextMeshProUGUI>("message");
             return Content != null;
-        }
-
-        public void Recycle() {
-            Root = null;
-            Content = null;
         }
     }
 }

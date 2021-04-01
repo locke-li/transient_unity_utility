@@ -1,8 +1,6 @@
 using UnityEngine;
 using Transient.DataAccess;
 using Transient.SimpleContainer;
-using TMPro;
-using UnityEngine.UI;
 
 namespace Transient {
     public interface IMessageFade {
@@ -12,15 +10,19 @@ namespace Transient {
     }
 
     public class MessageFade<M> : IMessageFade where M : struct, IMessageText {
-        private readonly Queue<M> _message;
+        public struct MessageText {
+            public M text;
+            public float time;
+        }
+        private readonly Queue<MessageText> _message;
         private Vector3 _startPos;
         private string Asset { get; set; }
         private Color _templateColor;
         public Func<int, float, float, float> AnimateFade { get; set; }
-        public Func<M, bool> RecycleCheck { get; set; }
+        public Func<MessageText, bool> RecycleCheck { get; set; }
 
         public MessageFade() {
-            _message = new Queue<M>(64, 4);
+            _message = new Queue<MessageText>(64, 4);
         }
 
         public static MessageFade<M> TryCreate(string asset_) {
@@ -50,7 +52,7 @@ namespace Transient {
             message.Text = m;
             message.Color = c == Color.clear ? _templateColor : c;
             message.Root.localPosition = _startPos;
-            _message.Enqueue(message);
+            _message.Enqueue(new MessageText() { text = message });
             Performance.End(nameof(MessageFade<M>), true);
         }
 
@@ -77,20 +79,20 @@ namespace Transient {
             _startPos = start_;
             AnimateFade = (k_, deltaTime_, elementEnd_) => {
                 k_ = _message.RawIndex(k_);
-                var data = _message.Data[k_];
-                var transform = (RectTransform)data.Root;
-                if (data.Time < delay_) {
-                    _message.Data[k_].Time = data.Time + deltaTime_;
+                ref var data = ref _message.Data[k_];
+                var transform = (RectTransform)data.text.Root;
+                data.time += deltaTime_;
+                if (data.time < delay_) {
                     return CheckOverlap(transform, elementEnd_);
                 }
                 transform.localPosition += velocity_ * deltaTime_;
                 var p = (transform.localPosition.y - start_.y) / (end_.y - start_.y);
-                var c = data.Color;
+                var c = data.text.Color;
                 c.a = 1.25f - p;
-                data.Color = c;
+                data.text.Color = c;
                 return CheckOverlap(transform, elementEnd_);
             };
-            RecycleCheck = m => m.Root.localPosition.y >= end_.y;
+            RecycleCheck = m => m.text.Root.localPosition.y >= end_.y;
             return this;
         }
 
@@ -100,15 +102,14 @@ namespace Transient {
                 end = AnimateFade(k, deltaTime_, end);
             }
             while (_message.Count > 0 && RecycleCheck(_message.Peek())) {
-                var m = _message.Dequeue();
+                var m = _message.Dequeue().text;
                 AssetMapping.View.Recycle(m.Root.gameObject);
-                m.Recycle();
             }
         }
 
         public void Clear() {
             foreach (var m in _message) {
-                AssetMapping.View.Recycle(m.Root.gameObject);
+                AssetMapping.View.Recycle(m.text.Root.gameObject);
             }
             _message.Clear();
         }
