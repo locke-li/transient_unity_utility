@@ -240,12 +240,14 @@ namespace Transient.SimpleContainer {
 
         public E Dequeue() {
             E rval = data[ps];
+            data[ps] = default;
             ps = (ps + 1) % data.Length;
             --Count;
             return rval;
         }
 
         public void Dequeue(int n) {
+            data[ps] = default;
             ps = (ps + n) % data.Length;
             Count -= n;
         }
