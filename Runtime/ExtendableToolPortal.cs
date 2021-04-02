@@ -98,9 +98,10 @@ namespace Transient {
         }
 
         private void Toolbar() {
-            new GUILayout.HorizontalScope();
-            if (GUILayout.Button("Entry") || Entry == null) RefreshEntry();
-            if (GUILayout.Button("Style") || styleButton == null) RefreshStyle();
+            using (new GUILayout.HorizontalScope()) {
+                if (GUILayout.Button("Entry") || Entry == null) RefreshEntry();
+                if (GUILayout.Button("Style") || styleButton == null) RefreshStyle();
+            }
         }
 
         private void EditorInfo() {
