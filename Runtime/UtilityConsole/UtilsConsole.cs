@@ -158,11 +158,6 @@ namespace Transient.Development {
             _logDetailText = _logDetailScroll.content.GetChild(0).GetComponent<Text>();
             _logDetailStackText = _logDetailScroll.content.GetChild(1).GetComponent<Text>();
             _logCount = 0;
-            var unityLogLevel = new int[] {
-                LogStream.error, LogStream.assert, LogStream.warning, LogStream.debug, LogStream.error
-            };
-            _unityLogReceiver = (m_, s_, t_) => LogReceived(m_, s_, unityLogLevel[(int)t_]);
-            Application.logMessageReceived += _unityLogReceiver;
             LogStream.Default.Cache.LogReceived.Add(e_ => LogReceived(e_.content, e_.stacktrace, Mathf.Min(LogStream.custom, e_.level)), this);
         }
 

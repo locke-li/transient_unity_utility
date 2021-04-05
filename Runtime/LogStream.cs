@@ -11,46 +11,47 @@ namespace Transient {
         }
 
         public static void Debug(
-            string msg_, string stack_ = "",
+            string msg_, string stack_ = "", string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.debug, msg_, stack_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.debug, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Info(
-            string msg_, string stack_ = "",
+            string msg_, string stack_ = "", string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.info, msg_, stack_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.info, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Warning(
-            string msg_, string stack_ = null,
+            string msg_, string stack_ = null, string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.warning, msg_, stack_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Error(
-            string msg_, string stack_ = null,
+            string msg_, string stack_ = null, string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.error, msg_, stack_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.error, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Assert(
             bool condition_, string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null, string stack_ = null,
+            object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null,
+            string stack_ = null, string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_, member_, filePath_, lineNumber_);
+            LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Custom(
-            int level_, string msg_, string stack_ = null,
+            int level_, string msg_, string stack_ = null, string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(level_, msg_, stack_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(level_, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
     }
 
@@ -66,23 +67,24 @@ namespace Transient {
         public LogCache Cache { get; set; } = new LogCache();
 
         public void Message(
-            int level_, string msg_, string stack_ = "",
+            int level_, string msg_, string stack_ = "", string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
             Performance.RecordProfiler(nameof(LogStream));
-            Cache.Log(msg_, stack_, level_, new EntrySource(member_, filePath_, lineNumber_));
+            Cache.Log(msg_, stack_, level_, source_, new EntrySite(member_, filePath_, lineNumber_));
             Performance.End(nameof(LogStream));
         }
 
         public void Assert(
             bool condition_, string msg_,
-            object arg0_, object arg1_, object arg2_, object arg3_, string stack_ = null,
+            object arg0_, object arg1_, object arg2_, object arg3_,
+            string stack_ = null, string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
             if(condition_) return;
             Performance.RecordProfiler(nameof(LogStream));
             var message = string.Format(msg_, arg0_, arg1_, arg2_, arg3_);
-            Cache.Log(message, stack_, assert, new EntrySource(member_, filePath_, lineNumber_));
+            Cache.Log(message, stack_, assert, source_, new EntrySite(member_, filePath_, lineNumber_));
             Performance.End(nameof(LogStream));
             throw new Exception($"assert failed: {message}");
         }
@@ -92,16 +94,17 @@ namespace Transient {
         public string content;
         public string stacktrace;
         public int level;
-        public EntrySource source;
+        public EntrySite site;
+        public string source;
         public ushort count;
     }
 
-    public struct EntrySource {
+    public struct EntrySite {
         public string member;
         public string file;
         public int line;
 
-        public EntrySource(string member_, string file_, int line_) {
+        public EntrySite(string member_, string file_, int line_) {
             member = member_;
             file = file_;
             line = line_;
@@ -111,8 +114,8 @@ namespace Transient {
     public sealed class LogCache {
         private LogEntry[] logs;
         private int head = 0, last = -1, tail = 0;
+        public static string sourceUnity = "unity";
         private LogEntry defaultLog;
-        public bool RedirectUnity { get; set; } = true;
         public ActionList<LogEntry> LogReceived { get; private set; }
 
         public LogCache() {
@@ -125,9 +128,14 @@ namespace Transient {
             logs = new LogEntry[capacity_];
             defaultLog = new LogEntry();
             LogReceived = new ActionList<LogEntry>(4);
+            var unityLogLevel = new int[] {
+                LogStream.error, LogStream.assert, LogStream.warning, LogStream.debug, LogStream.error
+            };
+            UnityEngine.Application.logMessageReceived += (m_, s_, t_) =>
+                Log(m_, s_, unityLogLevel[(int)t_], sourceUnity, new EntrySite());
         }
 
-        public void Log(string log_, string stacktrace_, int level_, EntrySource source_) {
+        public void Log(string log_, string stacktrace_, int level_, string source_, EntrySite site_) {
             Performance.RecordProfiler(nameof(LogCache));
             //merge consecutive logs with the same content
             //NOTE source ignored
@@ -143,12 +151,14 @@ namespace Transient {
                 stacktrace = stacktrace_,
                 level = level_,
                 source = source_,
+                site = site_,
             };
             last = ++last % logs.Length;
             tail = ++tail % logs.Length;
-            if (!RedirectUnity || !LogToUnity(log_, level_)) {
-                LogReceived.Invoke(log);
+            if (source_ != sourceUnity) {
+                LogToUnity(log_, level_);
             }
+            LogReceived.Invoke(log);
             Performance.End(nameof(LogCache));
         }
 

@@ -202,7 +202,7 @@ namespace Transient.Development {
             lineRect.height = 0.8f;
             GUI.DrawTexture(lineRect, _texLine);
             BeginHorizontal();
-            Label(currentLog.source.file == null ? string.Empty : $"{currentLog.source.file}:{currentLog.source.line}|{currentLog.source.member}");
+            Label(currentLog.site.file == null ? string.Empty : $"{currentLog.site.file}:{currentLog.site.line}|{currentLog.site.member}");
             Space(4);
             FlexibleSpace();
             Filter();
