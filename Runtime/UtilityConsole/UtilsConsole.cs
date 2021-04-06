@@ -46,7 +46,6 @@ namespace Transient.Development {
         private int _logCount = 0;
         private Log _lastLog;
         private const int LOG_LIMIT = 999;
-        private Application.LogCallback _unityLogReceiver;
         private RectTransform _logTemplate;
         private ScrollRect _logScroll;
         private readonly Color[] _logColors = new Color[] {
@@ -444,7 +443,6 @@ namespace Transient.Development {
 
         private void OnDestroy() {
             if (Instance != null) {
-                Application.logMessageReceived -= _unityLogReceiver;
                 LogStream.Default.Cache.LogReceived.Remove(this);
             }
             foreach(var shortcut in _shortcutButton) {

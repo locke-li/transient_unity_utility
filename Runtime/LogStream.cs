@@ -131,18 +131,25 @@ namespace Transient {
             var unityLogLevel = new int[] {
                 LogStream.error, LogStream.assert, LogStream.warning, LogStream.debug, LogStream.error
             };
-            UnityEngine.Application.logMessageReceived += (m_, s_, t_) =>
-                Log(m_, s_, unityLogLevel[(int)t_], sourceUnity, new EntrySite());
+            UnityEngine.Application.logMessageReceived += (m_, s_, t_) => {
+                var level = unityLogLevel[(int)t_];
+                if (last >= 0 && m_ == logs[last].content) return;
+                Log(m_, s_, level, sourceUnity, new EntrySite());
+            };
+        }
+
+        private bool SameAsLast(string log_, string stacktrace_, int level_) {
+            return last >= 0
+                && logs[last].content == log_
+                && logs[last].stacktrace == stacktrace_
+                && logs[last].level == level_;
         }
 
         public void Log(string log_, string stacktrace_, int level_, string source_, EntrySite site_) {
             Performance.RecordProfiler(nameof(LogCache));
             //merge consecutive logs with the same content
             //NOTE source ignored
-            if (last >= 0
-                && logs[last].content == log_
-                && logs[last].stacktrace == stacktrace_
-                && logs[last].level == level_) {
+            if (SameAsLast(log_, stacktrace_, level_)) {
                 ++logs[last].count;
                 return;
             }
