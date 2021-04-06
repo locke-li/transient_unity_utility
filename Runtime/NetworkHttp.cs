@@ -91,11 +91,8 @@ namespace Transient {
 
         public async Task SendQueued(CancellationToken token_) {
             while(queue.TryDequeue(out var info)) {
-                var request = new HttpRequestMessage(info.method, info.url) {
-                    Content = CompositeContent(info)
-                };
                 WhenRequestBegin?.Invoke();
-                var (response, error) = await SendAsync(request, token_);
+                var (response, error) = await SendAsync(info, token_);
                 WhenRequestEnd?.Invoke();
                 if (token_.IsCancellationRequested) {
                     break;
@@ -113,13 +110,16 @@ namespace Transient {
             }
         }
 
-        public async Task<(HttpResponseMessage, string)> SendAsync(HttpRequestMessage request_, CancellationToken token_) {
+        public async Task<(HttpResponseMessage, string)> SendAsync(HttpRequest info_, CancellationToken token_) {
             var retry = 0;
             HttpResponseMessage response = null;
             string error = null;
         send:
+            var request = new HttpRequestMessage(info_.method, info_.url) {
+                Content = CompositeContent(info_)
+            };
             try {
-                response = await Client.SendAsync(request_, HttpCompletionOption.ResponseHeadersRead, token_);
+                response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token_);
             }
             catch(TaskCanceledException) {
                 error = "timeout";
