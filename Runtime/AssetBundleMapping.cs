@@ -55,19 +55,19 @@ namespace Transient.DataAccess {
         }
 
 #if UNITY_EDITOR
-        private static string KeySimulation = $"{nameof(AssetBundleMapping)}.{nameof(Simulate)}";
-        public static bool Simulate {
-            get => UnityEditor.EditorPrefs.GetBool(KeySimulation, false);
-            set => UnityEditor.EditorPrefs.SetBool(KeySimulation, value);
+        private static string KeyEnabled = $"{nameof(AssetBundleMapping)}.{nameof(Enabled)}";
+        public static bool Enabled {
+            get => UnityEditor.EditorPrefs.GetBool(KeyEnabled, false);
+            set => UnityEditor.EditorPrefs.SetBool(KeyEnabled, value);
         }
 
         [ExtendableTool("AssetBundle", "Enable")]
         public static bool ToggleEnabled(bool? value) {
-            if (value.HasValue) Simulate = value.Value;
-            return Simulate;
+            if (value.HasValue) Enabled = value.Value;
+            return Enabled;
         }
 #else
-        public static bool Simulate { get; set; }
+        public static bool Enabled { get; set; } = true;
 #endif
 
         public void Clear(bool unload = false) {
@@ -219,21 +219,16 @@ namespace Transient.DataAccess {
         }
 
         public BundleIdentifier BundleByAny(string key) {
-            if((BundlePool.TryGetValue(key, out var identifier)
-                || Asset2Bundle.TryGetValue(key, out identifier))
-                && Ready(identifier)) {
-                return identifier;
-            }
-            return null;
+            return BundleByName(key) ?? BundleByAsset(key);
         }
         public BundleIdentifier BundleByName(string name) {
-            if(BundlePool.TryGetValue(name, out var identifier) && Ready(identifier)) {
+            if(BundlePool != null && BundlePool.TryGetValue(name, out var identifier) && Ready(identifier)) {
                 return identifier;
             }
             return null;
         }
         public BundleIdentifier BundleByAsset(string alias) {
-            if(Asset2Bundle.TryGetValue(alias, out var identifier) && Ready(identifier)) {
+            if(Asset2Bundle != null && Asset2Bundle.TryGetValue(alias, out var identifier) && Ready(identifier)) {
                 return identifier;
             }
             return null;
