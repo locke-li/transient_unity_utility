@@ -269,7 +269,7 @@ namespace Transient.DataAccess {
                 identifier = new BundleIdentifier() { name = bundle };
             }
             else if (!BundlePool.TryGetValue(bundle, out identifier)) {
-                identifier.name = bundle;
+                identifier = new BundleIdentifier() { name = bundle };
                 BundlePool.Add(bundle, identifier);
             }
             if (!Ready(identifier)) {
