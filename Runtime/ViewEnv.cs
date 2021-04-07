@@ -115,8 +115,9 @@ namespace Transient {
 
         public static void Message(string m, Action Confirm_, Action Cancel_, PopupOption option_ = new PopupOption(), int index_ = 0)
             => _popupMessage[index_].Create(m, Confirm_, Cancel_, option_);
-        public static void CloseMessage(int index_ = 0) => _popupMessage[index_].Clear();
+        public static void CloseMessage(int index_ = 0) => _popupMessage[index_].Clear(true);
 
+        public static void MessageModify(Action<RectTransform> Modify_, int index_ = 0) => _fadeMessage[index_].ModifyMessage = Modify_;
         public static void Message(string m, int index_ = 0) => _fadeMessage[index_].Create(m, Color.clear);
         public static void Message(string m, Color color, int index_ = 0) => _fadeMessage[index_].Create(m, color);
         public static void ClearMessage(int index_ = 0) => _fadeMessage[index_].Clear();

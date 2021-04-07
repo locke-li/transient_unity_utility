@@ -6,10 +6,11 @@ using System;
 namespace Transient {
     public interface IMessagePopup {
         void Create(string m, Action Confirm_, Action Cancel_, PopupOption option);
-        void Clear();
+        void Clear(bool manual_ = false);
     }
 
     public struct PopupOption {
+        public bool keepOpen;
         public bool blockIsCancel;
         public Action<RectTransform> Modify;
         public Transform sync;
@@ -20,8 +21,7 @@ namespace Transient {
         private RectTransform _content;
         private Vector2 _defaultPosition;
         private M _message;
-        private Transform _sync;
-        private bool _blockIsCancel = false;
+        private PopupOption _option;
         private ButtonReceiver _confirm;
         private ButtonReceiver _cancel;
         private Action _OnConfirm;
@@ -66,7 +66,7 @@ namespace Transient {
                     ret._positionSingle = (confirmPos + cancel.transform.localPosition) * 0.5f;
                 }
                 block.WhenClick = b => {
-                    if (ret._blockIsCancel) {
+                    if (ret._option.blockIsCancel) {
                         ret._OnCancel?.Invoke();
                         ret.Clear();
                     }
@@ -85,8 +85,6 @@ namespace Transient {
             Performance.RecordProfiler(nameof(MessagePopup<M>));
             _OnConfirm = Confirm_;
             _OnCancel = Cancel_;
-            _blockIsCancel = option_.blockIsCancel;
-            _sync = option_.sync;
             if (Cancel_ == null) {
                 UnityExtension.TrySetActive(_cancel, false);
                 _confirm.transform.localPosition = _positionSingle;
@@ -97,17 +95,19 @@ namespace Transient {
             }
             _message.Text = string.IsNullOrEmpty(m) ? "<no message>" : m.Replace("\\n", "\n");
             option_.Modify?.Invoke(_content);
+            option_.Modify = null;
             _obj.SetActive(true);
-            if (_sync != null) {
-                MainLoop.OnUpdate.Add(_ => Sync(_sync.position), this);
+            if (option_.sync != null) {
+                MainLoop.OnUpdate.Add(_ => Sync(option_.sync.position), this);
             }
+            _option = option_;
             Performance.End(nameof(MessagePopup<M>));
         }
 
-        public void Clear() {
-            if (_sync != null) {
+        public void Clear(bool manual_ = false) {
+            if (!manual_ && _option.keepOpen) return;
+            if (_option.sync != null) {
                 MainLoop.OnUpdate.Remove(this);
-                _sync = null;
             }
             _obj.SetActive(false);
             _content.anchoredPosition = _defaultPosition;

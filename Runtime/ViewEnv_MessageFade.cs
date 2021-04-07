@@ -4,6 +4,7 @@ using Transient.SimpleContainer;
 
 namespace Transient {
     public interface IMessageFade {
+        Action<RectTransform> ModifyMessage { get; set; }
         void Create(string m, Color c);
         void Fade(float deltaTime);
         void Clear();
@@ -20,6 +21,7 @@ namespace Transient {
         private Color _templateColor;
         public Func<int, float, float, float> AnimateFade { get; set; }
         public Func<MessageText, bool> RecycleCheck { get; set; }
+        public Action<RectTransform> ModifyMessage { get; set; }
 
         public MessageFade() {
             _message = new Queue<MessageText>(64, 4);
@@ -47,6 +49,7 @@ namespace Transient {
             Performance.RecordProfiler(nameof(MessageFade<M>));
             var obj = AssetMapping.View.TakeActive(Asset);
             obj.transform.SetParent(ViewEnv.CanvasOverlay, false);
+            ModifyMessage?.Invoke((RectTransform)obj.transform);
             var message = new M();
             message.Init(obj);
             message.Text = m;
