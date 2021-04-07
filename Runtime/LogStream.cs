@@ -240,6 +240,7 @@ namespace Transient {
 
         //assume no clearing while iterating
         public void Clear() {
+            LogReceived.Clear();
             Array.Clear(logs, 0, logs.Length);
             head = 0;
             tail = 0;
