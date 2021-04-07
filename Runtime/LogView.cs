@@ -259,7 +259,9 @@ namespace Transient.Development {
         }
 
         private void PreviewLog(int r_, LogEntry entry_) {
-            var pref = _logPref[entry_.level];
+            if(!_logPref.TryGetValue(entry_.level, out var pref)) {
+                pref = _logPref[LogStream.custom];
+            }
             if (!pref.show
                 || (_filterKeep.Count > 0 && _filterKeep.All(s=>!entry_.content.Contains(s)))
                 || (_filterRemove.Count > 0 && _filterRemove.Any(s=>entry_.content.Contains(s)))

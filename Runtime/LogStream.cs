@@ -14,28 +14,28 @@ namespace Transient {
             string msg_, string stack_ = "", string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.debug, msg_, stack_, source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.debug, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
         }
 
         public static void Info(
             string msg_, string stack_ = "", string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.info, msg_, stack_, source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.info, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
         }
 
         public static void Warning(
             string msg_, string stack_ = null, string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.warning, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
         }
 
         public static void Error(
             string msg_, string stack_ = null, string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.error, msg_, stack_, source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.error, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
         }
 
         public static void Assert(
@@ -44,14 +44,14 @@ namespace Transient {
             string stack_ = null, string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
         }
 
         public static void Custom(
             int level_, string msg_, string stack_ = null, string source_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(level_, msg_, stack_, source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(level_, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
         }
     }
 
@@ -115,7 +115,6 @@ namespace Transient {
         private LogEntry[] logs;
         private int head = 0, last = -1, tail = 0;
         public static string sourceUnity = "unity";
-        private LogEntry defaultLog;
         public ActionList<LogEntry> LogReceived { get; private set; }
 
         public LogCache() {
@@ -126,7 +125,6 @@ namespace Transient {
 
         public void Init(int capacity_) {
             logs = new LogEntry[capacity_];
-            defaultLog = new LogEntry();
             LogReceived = new ActionList<LogEntry>(4);
             var unityLogLevel = new int[] {
                 LogStream.error, LogStream.assert, LogStream.warning, LogStream.debug, LogStream.error
@@ -147,6 +145,11 @@ namespace Transient {
 
         public void Log(string log_, string stacktrace_, int level_, string source_, EntrySite site_) {
             Performance.RecordProfiler(nameof(LogCache));
+            if (log_ == null) {
+                log_ = "<null log>";
+                stacktrace_ = new StackTrace(2).ToString();
+                level_ = LogStream.error;
+            }
             //merge consecutive logs with the same content
             //NOTE source ignored
             if (SameAsLast(log_, stacktrace_, level_)) {
@@ -227,7 +230,7 @@ namespace Transient {
 
         public LogEntry EntryAt(int n) {
             if (n < 0 || n > logs.Length)
-                return defaultLog;
+                return default;
             return logs[n];
         }
 
