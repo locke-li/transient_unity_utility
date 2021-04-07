@@ -41,6 +41,7 @@ namespace Transient.DataAccess {
 
         public AssetBundleMapping() {
             Builder = new StringBuilder();
+            BundlePool = new Dictionary<string, BundleIdentifier>(128);
         }
 
         public static void Init(List<string> path, string extension) {
@@ -78,7 +79,7 @@ namespace Transient.DataAccess {
             }
             Alias2Name = null;
             Asset2Bundle = null;
-            BundlePool = null;
+            BundlePool.Clear();
             ToRelease = null;
             MainLoop.OnUpdate.Remove(this);
         }
@@ -127,14 +128,12 @@ namespace Transient.DataAccess {
             bool byName = false, bool byAlias = false, bool byPath = true) {
             if (ToRelease == null) {
                 Asset2Bundle = new Dictionary<string, BundleIdentifier>(512);
-                BundlePool = new Dictionary<string, BundleIdentifier>(128);
                 ToRelease = new Dictionary<BundleIdentifier, float>(64);
                 if (byAlias) Alias2Name = new Dictionary<string, string>(512);
                 MainLoop.OnUpdate.Add(DelayedRelease, this);
             }
             else {
                 Asset2Bundle.Clear();
-                BundlePool.Clear();
                 ToRelease.Clear();
                 if (byAlias) Alias2Name.Clear();
             }
@@ -222,7 +221,7 @@ namespace Transient.DataAccess {
             return BundleByName(key) ?? BundleByAsset(key);
         }
         public BundleIdentifier BundleByName(string name) {
-            if(BundlePool != null && BundlePool.TryGetValue(name, out var identifier) && Ready(identifier)) {
+            if(BundlePool.TryGetValue(name, out var identifier) && Ready(identifier)) {
                 return identifier;
             }
             return null;
@@ -265,10 +264,7 @@ namespace Transient.DataAccess {
             => (T)TakeFrom(bundle, asset, typeof(T));
         public object TakeFrom(string bundle, string asset, Type type) {
             BundleIdentifier identifier;
-            if (BundlePool == null) {
-                identifier = new BundleIdentifier() { name = bundle };
-            }
-            else if (!BundlePool.TryGetValue(bundle, out identifier)) {
+            if (!BundlePool.TryGetValue(bundle, out identifier)) {
                 identifier = new BundleIdentifier() { name = bundle };
                 BundlePool.Add(bundle, identifier);
             }
