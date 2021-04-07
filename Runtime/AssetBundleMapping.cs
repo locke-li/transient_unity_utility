@@ -140,6 +140,7 @@ namespace Transient.DataAccess {
             var skipAsset = !(byName || byAlias || byPath);
             AssetBundle.UnloadAllAssetBundles(false);
             foreach (var bundle in assetManifest.Info) {
+                if (BundlePool.ContainsKey(bundle.name)) continue;
                 var identifier = new BundleIdentifier() {
                     name = bundle.name,
                     hash = bundle.hash,
