@@ -14,28 +14,28 @@ namespace Transient {
             string msg_, string stack_ = "", string source_ = null,
             [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.debug, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.debug, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Info(
             string msg_, string stack_ = "", string source_ = null,
             [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.info, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.info, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Warning(
             string msg_, string stack_ = null, string source_ = null,
             [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.warning, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Error(
             string msg_, string stack_ = null, string source_ = null,
             [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(LogStream.error, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(LogStream.error, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Assert(
@@ -44,14 +44,14 @@ namespace Transient {
             string stack_ = null, string source_ = null,
             [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
-            LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, member_, filePath_, lineNumber_);
         }
 
         public static void Custom(
             int level_, string msg_, string stack_ = null, string source_ = null,
             [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
-            LogStream.Default.Message(level_, msg_, stack_ ?? new StackTrace(1).ToString(), source_, member_, filePath_, lineNumber_);
+            LogStream.Default.Message(level_, msg_, stack_, source_, member_, filePath_, lineNumber_);
         }
     }
 
@@ -71,7 +71,7 @@ namespace Transient {
             [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
             Performance.RecordProfiler(nameof(LogStream));
-            Cache.Log(msg_, stack_, level_, source_, new EntrySite(member_, filePath_, lineNumber_));
+            Cache.Log(msg_, stack_ ?? new StackTrace(1).ToString(), level_, source_, new EntrySite(member_, filePath_, lineNumber_));
             Performance.End(nameof(LogStream));
         }
 
@@ -84,7 +84,7 @@ namespace Transient {
             if (condition_) return;
             Performance.RecordProfiler(nameof(LogStream));
             var message = string.Format(msg_, arg0_, arg1_, arg2_, arg3_);
-            Cache.Log(message, stack_, assert, source_, new EntrySite(member_, filePath_, lineNumber_));
+            Cache.Log(message, stack_ ?? new StackTrace(1).ToString(), assert, source_, new EntrySite(member_, filePath_, lineNumber_));
             Performance.End(nameof(LogStream));
             throw new Exception($"assert failed: {message}");
         }
