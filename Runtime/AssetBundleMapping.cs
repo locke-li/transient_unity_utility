@@ -41,7 +41,9 @@ namespace Transient.DataAccess {
 
         public AssetBundleMapping() {
             Builder = new StringBuilder();
+            Asset2Bundle = new Dictionary<string, BundleIdentifier>(512);
             BundlePool = new Dictionary<string, BundleIdentifier>(128);
+            ToRelease = new Dictionary<BundleIdentifier, float>(64);
         }
 
         public static void Init(List<string> path, string extension) {
@@ -78,9 +80,9 @@ namespace Transient.DataAccess {
                 }
             }
             Alias2Name = null;
-            Asset2Bundle = null;
+            Asset2Bundle.Clear();
             BundlePool.Clear();
-            ToRelease = null;
+            ToRelease.Clear();
             MainLoop.OnUpdate.Remove(this);
         }
 
@@ -126,17 +128,14 @@ namespace Transient.DataAccess {
 
         public void InitAssetList(AssetManifest assetManifest,
             bool byName = false, bool byAlias = false, bool byPath = true) {
-            if (ToRelease == null) {
-                Asset2Bundle = new Dictionary<string, BundleIdentifier>(512);
-                ToRelease = new Dictionary<BundleIdentifier, float>(64);
-                if (byAlias) Alias2Name = new Dictionary<string, string>(512);
-                MainLoop.OnUpdate.Add(DelayedRelease, this);
+            if (byAlias) {
+                if (Alias2Name != null) Alias2Name.Clear();
+                else Alias2Name = new Dictionary<string, string>(512);
             }
-            else {
-                Asset2Bundle.Clear();
-                ToRelease.Clear();
-                if (byAlias) Alias2Name.Clear();
-            }
+            MainLoop.OnUpdate.Remove(this);
+            MainLoop.OnUpdate.Add(DelayedRelease, this);
+            Asset2Bundle.Clear();
+            ToRelease.Clear();
             var skipAsset = !(byName || byAlias || byPath);
             AssetBundle.UnloadAllAssetBundles(false);
             foreach (var bundle in assetManifest.Info) {
@@ -228,7 +227,7 @@ namespace Transient.DataAccess {
             return null;
         }
         public BundleIdentifier BundleByAsset(string alias) {
-            if(Asset2Bundle != null && Asset2Bundle.TryGetValue(alias, out var identifier) && Ready(identifier)) {
+            if(Asset2Bundle.TryGetValue(alias, out var identifier) && Ready(identifier)) {
                 return identifier;
             }
             return null;
@@ -264,8 +263,7 @@ namespace Transient.DataAccess {
         public T TakeFrom<T>(string bundle, string asset) where T : UnityEngine.Object
             => (T)TakeFrom(bundle, asset, typeof(T));
         public object TakeFrom(string bundle, string asset, Type type) {
-            BundleIdentifier identifier;
-            if (!BundlePool.TryGetValue(bundle, out identifier)) {
+            if (!BundlePool.TryGetValue(bundle, out var identifier)) {
                 identifier = new BundleIdentifier() { name = bundle };
                 BundlePool.Add(bundle, identifier);
             }
