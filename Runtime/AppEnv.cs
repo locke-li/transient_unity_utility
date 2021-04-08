@@ -11,6 +11,7 @@ namespace Transient {
         }
         public static string Channel { get; set; }
         public static string Version { get; set; }
+        public static string VersionPackage { get; set; }
         public static string VersionIdentifier { get; set; }
     }
 }
