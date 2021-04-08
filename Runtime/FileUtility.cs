@@ -35,6 +35,9 @@ namespace Transient {
         }
 
         public static byte[] LoadBytes(string path) {
+#if DEBUG
+            Log.Info($"loading {path}");
+#endif
             //only extract on Android
             if (!File.Exists(path)) {
 #if UNITY_ANDROID && !UNITY_EDITOR
