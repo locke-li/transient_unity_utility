@@ -125,7 +125,8 @@ namespace Transient {
                 error = "timeout";
             }
             catch(HttpRequestException e) {
-                error = e.Message;
+                var exp = e.InnerException ?? e;
+                error = exp.Message;
             }
             catch(Exception e) {
                 error = e.Message;
