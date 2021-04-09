@@ -119,9 +119,7 @@ namespace Transient {
         public ActionList<LogEntry> LogReceived { get; private set; }
 
         public LogCache() {
-#if UNITY_EDITOR
-            Init(2000);
-#endif
+
         }
 
         public void Init(int capacity_, bool forced = false) {
