@@ -35,6 +35,7 @@ namespace Transient {
         }
 
         public static void Clear() {
+            Instance?.StopAllCoroutines();
             OnUpdate?.Clear();
             Coroutine?.Clear();
         }
