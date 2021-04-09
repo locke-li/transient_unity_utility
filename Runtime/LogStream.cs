@@ -143,6 +143,9 @@ namespace Transient {
         }
 
         public void Log(string log_, string stacktrace_, int level_, string source_, EntrySite site_) {
+#if UNITY_EDITOR
+            if (logs == null) return;
+#endif
             Performance.RecordProfiler(nameof(LogCache));
             if (string.IsNullOrEmpty(log_)) {
                 log_ = "<null log>";

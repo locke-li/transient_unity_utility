@@ -71,12 +71,12 @@ namespace Transient.Development {
 
         private void OnEnable() {
             _log = LogStream.Default;
-            _log.Cache.LogReceived.Add(LogReceived, this);
+            _log.Cache.LogReceived?.Add(LogReceived, this);
             RefreshConfig();
         }
 
         private void OnDisable() {
-            _log.Cache.LogReceived.Remove(this);
+            _log.Cache.LogReceived?.Remove(this);
         }
 
         private Texture2D FillTexture(Color color) {
