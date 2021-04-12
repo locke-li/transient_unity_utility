@@ -10,10 +10,10 @@ namespace Transient.UI {
         public float Value => progress.value;
         public TextMeshProUGUI Version { get; private set; }
 
-        public void Init(string path, Transform parent, string progress_, string version_) {
-            InitAsset(path, true);
+        public void Init(string path, Transform parent, string progress_, float progressMin_, string version_) {
+            if(Asset == null) InitAsset(path, true);
             Asset.SetParent(parent, false);
-            progress.Init(Asset.FindChecked<Image>(progress_));
+            progress.Init(Asset.FindChecked<Image>(progress_), progressMin_);
             Version = Asset.FindChecked<TextMeshProUGUI>(version_);
         }
 

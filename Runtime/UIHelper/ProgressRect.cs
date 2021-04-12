@@ -12,10 +12,9 @@ namespace Transient.UI {
         public float flex;
         public float value;
 
-        public void Init(Image image) {
+        public void Init(Image image, float min_ = -1) {
             obj = image.rectTransform;
-            var size = DataUtility.GetMinSize(image.sprite);
-            min = size.x;
+            min = min_ < 0 ? DataUtility.GetMinSize(image.sprite).x : min_;
             flex = obj.sizeDelta.x - min;
             //Log.Debug($"{min} {flex}");
         }
