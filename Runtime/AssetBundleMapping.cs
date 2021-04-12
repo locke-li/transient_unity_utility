@@ -32,6 +32,7 @@ namespace Transient.DataAccess {
         private Dictionary<string, BundleIdentifier> Asset2Bundle { get; set; }
         private Dictionary<string, BundleIdentifier> BundlePool { get; set; }
         private Dictionary<BundleIdentifier, float> ToRelease { get; set; }
+        private List<string> LoadingChain { get; set; }
         private float ReleaseTimestamp = 0;
         public float ReleaseInterval { get; set; } = 1;
         public int ReleaseDelay { get; set; } = 30;
@@ -41,6 +42,7 @@ namespace Transient.DataAccess {
 
         public AssetBundleMapping() {
             Builder = new StringBuilder();
+            LoadingChain = new List<string>(8);
             Asset2Bundle = new Dictionary<string, BundleIdentifier>(512);
             BundlePool = new Dictionary<string, BundleIdentifier>(128);
             ToRelease = new Dictionary<BundleIdentifier, float>(64);
@@ -177,6 +179,8 @@ namespace Transient.DataAccess {
         }
 
         private bool ReadyInit(BundleIdentifier identifier) {
+            if (LoadingChain.Contains(identifier.name)) return true;
+            LoadingChain.Push(identifier.name);
             AssetBundle raw = null;
             if (identifier.dependency != null) {
                 foreach (var dep in identifier.dependency) {
@@ -199,6 +203,7 @@ namespace Transient.DataAccess {
                 }
             }
         result:
+            LoadingChain.Pop();
             var valid = identifier.Reset(raw);
             if (!valid) {
                 Log.Warning($"failed to find bundle {identifier.name}:\n{Builder}");
