@@ -16,7 +16,9 @@ namespace Transient.UI {
             obj = image.rectTransform;
             min = min_ < 0 ? DataUtility.GetMinSize(image.sprite).x : min_;
             flex = obj.sizeDelta.x - min;
-            //Log.Debug($"{min} {flex}");
+            if (flex <= 0) {
+                Log.Warning("flex size too small");
+            }
         }
 
         public void Resize(float percent) {
