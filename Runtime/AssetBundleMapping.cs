@@ -57,6 +57,7 @@ namespace Transient.DataAccess {
             Default?.Clear();
             Default = null;
             AssetBundle.UnloadAllAssetBundles(true);
+            Resources.UnloadUnusedAssets();
         }
 
 #if UNITY_EDITOR
@@ -130,16 +131,10 @@ namespace Transient.DataAccess {
 
         public void InitAssetList(AssetManifest assetManifest,
             bool byName = false, bool byAlias = false, bool byPath = true) {
-            if (byAlias) {
-                if (Alias2Name != null) Alias2Name.Clear();
-                else Alias2Name = new Dictionary<string, string>(512);
-            }
+            if (byAlias && Alias2Name == null) Alias2Name = new Dictionary<string, string>(512);
             MainLoop.OnUpdate.Remove(this);
             MainLoop.OnUpdate.Add(DelayedRelease, this);
-            Asset2Bundle.Clear();
-            ToRelease.Clear();
             var skipAsset = !(byName || byAlias || byPath);
-            AssetBundle.UnloadAllAssetBundles(false);
             foreach (var bundle in assetManifest.Info) {
                 if (BundlePool.ContainsKey(bundle.name)) continue;
                 var identifier = new BundleIdentifier() {
@@ -220,6 +215,7 @@ namespace Transient.DataAccess {
             Builder.Length = 0;
             valid = ReadyInit(identifier);
             Builder.Length = 0;
+            Log.Info($"{identifier.name} ready = {valid}");
             return valid;
         }
 
