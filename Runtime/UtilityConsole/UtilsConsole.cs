@@ -209,7 +209,7 @@ namespace Transient.Development {
             if(level_ >= LogStream.warning && level_ <= LogStream.assert) {
                 //Time.timeScale = 0;
                 //Toggle(true);
-                Select(cLog);
+                //Select(cLog);
             }
         }
 
