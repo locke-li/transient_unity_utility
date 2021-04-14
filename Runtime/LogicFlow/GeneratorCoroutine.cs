@@ -28,6 +28,12 @@ public class GeneratorCoroutine {
         updater.Add(Update, this);
     }
 
+    public void Execute(Enumerator enumerator_) {
+        CoroutineList.Add(new CoroutineCache() {
+            enumerator = enumerator_,
+        });
+    }
+
     public void Execute(Func<Enumerator> routine_) {
         CoroutineList.Add(new CoroutineCache() {
             enumerator = routine_(),
