@@ -185,6 +185,7 @@ namespace Transient.DataAccess {
             if (identifier.dependency != null) {
                 foreach (var dep in identifier.dependency) {
                     if (!BundlePool.TryGetValue(dep, out var identifierDep) || !Ready(identifierDep)) {
+                        if (Builder.Length == 0) Builder.AppendLine($"bundle identifier {dep} not found");
                         Builder.Append("dependency fail:").AppendLine(dep);
                         goto result;
                     }
@@ -198,7 +199,7 @@ namespace Transient.DataAccess {
                     raw = AssetBundle.LoadFromMemory(byteContent);
                     if (raw != null) break;
                 }
-                else {
+                if (raw == null) {
                     Builder.AppendLine(path);
                 }
             }
