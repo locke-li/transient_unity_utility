@@ -10,6 +10,7 @@ namespace Transient.UI {
         IBeginDragHandler, ISubmitHandler, IEventSystemHandler {
         private static float LastResponseTime = 0;
         public static float ResponseInterval = 0.1f;
+        public static float PressIntervalMax = 1.6f;
 
         public int id { get; set; }
         public object CustomInfo { get; set; }
@@ -19,6 +20,7 @@ namespace Transient.UI {
         public Action<ButtonReceiver> WhenClick { get; set; } = b => { };
         public Action<ButtonReceiver> WhenClickDown { get; set; } = b => { };
         public Action<ButtonReceiver> WhenClickUp { get; set; } = b => { };
+        public Func<ButtonReceiver, bool> WhenDrag { get; set; } = b => false;
         public Action<ButtonReceiver, bool> WhenHover { get; set; } = (b, c) => { };
         public Action<ButtonReceiver> WhenLongPressed { get; set; }
 
@@ -27,15 +29,15 @@ namespace Transient.UI {
         public bool interactable { get => _raycastAdapter.enabled; set => _raycastAdapter.enabled = value; }
         private IEventSystemRaycastAdapter _raycastAdapter;
         private float _pressTime;
-
-        public bool CancelClickOnDrag { get; set; } = false;
-        private bool _drag;
+        private Action<float> LongPressStep;
+        public bool CancelClickOnce { get; set; } = false;
 
         private void OnEnable() {
             if(_raycastAdapter == null) {
                 var v = EventSystemRaycastAdapter.Check(transform, out _raycastAdapter);
                 image = image ?? v as Image;
             }
+            if (LongPressStep == null) LongPressStep = CheckLongPress;
         }
 
         //TODO call this from somewhere, for long press check
@@ -47,17 +49,10 @@ namespace Transient.UI {
             return this;
         }
 
-        private void LongPressStep(float dt) {
-            _pressTime += dt;
-            if(_pressTime >= LongPressInterval) {
+        private void CheckLongPress(float dt) {
+            if(Time.realtimeSinceStartup - _pressTime >= LongPressInterval) {
                 WhenLongPressed(this);
-                StepI.Remove(this);
-            }
-        }
-
-        public void CancelClick() {
-            if(EventSystem.current?.currentSelectedGameObject == gameObject) {
-                EventSystem.current.SetSelectedGameObject(null);
+                CancelClick();
             }
         }
 
@@ -68,14 +63,18 @@ namespace Transient.UI {
             WhenClick(this);
         }
 
+        public void CancelClick() {
+            StepI.Remove(this);
+            CancelClickOnce = true;
+        }
+
         public void OnPointerClick(PointerEventData eventData) {
-            if (InvalidInput(eventData))
-                return;
-            if (_drag && CancelClickOnDrag) {
-                _drag = false;
+            if (CancelClickOnce || InvalidInput(eventData)) {
+                CancelClickOnce = false;
                 return;
             }
-            if (Time.realtimeSinceStartup - LastResponseTime < ResponseInterval) {
+            if (Time.realtimeSinceStartup - LastResponseTime < ResponseInterval
+             || Time.realtimeSinceStartup - _pressTime > PressIntervalMax) {
                 return;
             }
             LastResponseTime = Time.realtimeSinceStartup;
@@ -87,21 +86,17 @@ namespace Transient.UI {
         public void OnPointerDown(PointerEventData eventData) {
             if (InvalidInput(eventData))
                 return;
-            EventSystem.current.SetSelectedGameObject(gameObject, eventData);
+            _pressTime = Time.realtimeSinceStartup;
             if(WhenLongPressed != null) {//start tracking long press
-                _pressTime = 0;
                 StepI.Add(LongPressStep, this);
             }
-            //Log.Debug("button down");
             WhenClickDown(this);
         }
 
         public void OnPointerUp(PointerEventData eventData) {
             if (InvalidInput(eventData))
                 return;
-            EventSystem.current.SetSelectedGameObject(null);
             StepI.Remove(this);
-            //Debug.Log("button up");
             WhenClickUp(this);
         }
 
@@ -109,13 +104,14 @@ namespace Transient.UI {
 
         //this is called when enter play mode, why?
         public void OnPointerExit(PointerEventData eventData) {
-            StepI.Remove(this);
+            CancelClick();
             WhenHover(this, false);
         }
 
         public void OnBeginDrag(PointerEventData eventData) {
-            //Log.Debug("button drag");
-            _drag = true;
+            if (!WhenDrag(this)) {
+                CancelClick();
+            }
         }
 
         public void OnSubmit(BaseEventData eventData) => WhenClick(this);
