@@ -53,6 +53,10 @@ namespace Transient {
             limit.MaxX = borderCenter.x + borderExtent.x - viewExtent.x;
             limit.MinY = borderCenter.y - borderExtent.y + viewExtent.y;
             limit.MaxY = borderCenter.y + borderExtent.y - viewExtent.y;
+            limit.CenterX = (limit.MinX + limit.MaxX) * 0.5f;
+            limit.CenterY = (limit.MinY + limit.MaxY) * 0.5f;
+            limit.CenterOnX = viewExtent.x >= borderExtent.x;
+            limit.CenterOnY = viewExtent.y >= borderExtent.y;
             //Debug.Log($"{viewExtent} {limit.MinX} {limit.MaxX} {limit.MinY} {limit.MaxY}");
         }
 
@@ -77,10 +81,14 @@ namespace Transient {
     public class PositionLimit {
         public float MinX { get; set; }
         public float MaxX { get; set; }
+        public float CenterX { get; set; }
         public float OffsetX { get; set; }
+        public bool CenterOnX { get; set; }
         public float MinY { get; set; }
         public float MaxY { get; set; }
+        public float CenterY { get; set; }
         public float OffsetY { get; set; }
+        public bool CenterOnY { get; set; }
         public float Expand { get; set; }
         public bool Unstable { get; set; }
         public float Elasticity { get; set; }
@@ -94,10 +102,9 @@ namespace Transient {
         public (float x, float y) Limit(float x, float y) {
             Unstable = false;
             if (Expand == 0 || Elasticity == 1) {
-                return (
+                return Composite(
                     Mathf.Min(Mathf.Max(x + OffsetX, MinX), MaxX) - OffsetX,
-                    Mathf.Min(Mathf.Max(y + OffsetY, MinY), MaxY) - OffsetY
-                );
+                    Mathf.Min(Mathf.Max(y + OffsetY, MinY), MaxY) - OffsetY);
             }
             return LimitElastic(x, y);
         }
@@ -133,7 +140,9 @@ namespace Transient {
             var extendX = ElasticForceFactor(diffX) * Expand;
             var extendY = ElasticForceFactor(diffY) * Expand;
             //Debug.Log($"{diffX} {diffY} {extendX} {extendY}");
-            return (borderX + extendX * diffXSign, borderY + extendY * diffYSign);
+            return Composite(
+                borderX + extendX * diffXSign, 
+                borderY + extendY * diffYSign);
         }
 
         private float ElasticForceFactor(float diff) {
@@ -154,9 +163,15 @@ namespace Transient {
             diffY = Mathf.Max(diffY - 0.02f - pull * ElasticForceFactor(diffY), 0f);
             if (diffX <= 0 && diffY <= 0) {
                 Unstable = false;
-                return (borderX, borderY);
+                return Composite(borderX, borderY);
             }
             return DiffLimit();
+        }
+
+        private (float, float) Composite(float x, float y) {
+            if (CenterOnX) x = CenterX;
+            if (CenterOnY) y = CenterY;
+            return (x, y);
         }
     }
 }
