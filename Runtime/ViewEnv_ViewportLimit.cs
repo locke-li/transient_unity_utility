@@ -9,6 +9,7 @@ namespace Transient {
         private Vector2 borderExtent;
         private PositionLimit limit;
         private float limitExpand;
+        public bool offsetByCameraY;
 
         public void Init(SpriteRenderer border) {
             var sprite = border.sprite;
@@ -30,15 +31,19 @@ namespace Transient {
         public void Init(Vector2 extent, Vector2 center) {
             ViewEnv.ViewportLimit = this;
             limit = new PositionLimit();
-            CalculateOffset();
             borderCenter = center;
             borderExtent = extent;
             ViewEnv.PositionLimit = limit;
             OnZoom(ViewEnv.Zoom);
         }
 
+        public void ApplyOffsetY() {
+            offsetByCameraY = true;
+            CalculateOffset();
+        }
+
         internal void CalculateOffset() {
-            limit.OffsetY = ViewEnv.OffsetFromRelativeY(0).y;
+            if (offsetByCameraY) limit.OffsetY = ViewEnv.OffsetFromRelativeY(0).y;
         }
 
         void CalculateViewExtent() {
