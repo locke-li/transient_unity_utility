@@ -84,6 +84,7 @@ namespace Transient.UI {
         }
 
         public void OnPointerDown(PointerEventData eventData) {
+            CancelClickOnce = false;
             if (InvalidInput(eventData))
                 return;
             _pressTime = Time.realtimeSinceStartup;
@@ -94,6 +95,7 @@ namespace Transient.UI {
         }
 
         public void OnPointerUp(PointerEventData eventData) {
+            CancelClickOnce = false;
             if (InvalidInput(eventData))
                 return;
             StepI.Remove(this);
