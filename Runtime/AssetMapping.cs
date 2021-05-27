@@ -146,7 +146,14 @@ namespace Transient.DataAccess {
             if (resObj_ is GameObject obj) {
                 if (recognized) {
                     obj.SetActive(false);
+                    #if UNITY_EDITOR
+                    //to keep hierarchy clean
                     obj.transform.SetParent(RecycleObjectRoot, false);
+                    #else
+                    if (obj.transform.parent != null) {
+                        obj.transform.SetParent(null, false);
+                    }
+                    #endif
                 }
                 else {
                     Log.Error($"recycling un-registered object {resObj_} {obj.transform.parent?.name}");

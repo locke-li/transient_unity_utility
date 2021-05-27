@@ -95,7 +95,6 @@ namespace Transient.UI {
         }
 
         public void OnPointerUp(PointerEventData eventData) {
-            CancelClickOnce = false;
             if (InvalidInput(eventData))
                 return;
             StepI.Remove(this);
