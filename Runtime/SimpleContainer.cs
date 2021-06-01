@@ -247,6 +247,7 @@ namespace Transient.SimpleContainer {
         }
 
         public void Dequeue(int n) {
+            if (n <= 0) return;
             data[ps] = default;
             ps = (ps + n) % data.Length;
             Count -= n;
@@ -255,6 +256,8 @@ namespace Transient.SimpleContainer {
         public E Peek() => data[ps];
 
         public E Peek(int i) => data[(ps + i) % data.Length];
+
+        public E Last() => data[(pe + data.Length - 1) % data.Length];
 
         public int RawIndex(int index) => (ps + index) % data.Length;
 
@@ -274,7 +277,7 @@ namespace Transient.SimpleContainer {
 
             public bool MoveNext() {
                 if (index < list.Count) {
-                    Current = list.data[index];
+                    Current = list.Peek(index);
                     ++index;
                     return true;
                 }
