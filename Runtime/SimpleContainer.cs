@@ -253,11 +253,18 @@ namespace Transient.SimpleContainer {
             Count -= n;
         }
 
+        public E Pop() {
+            pe = (pe + data.Length - 1) % data.Length;
+            var ret = data[pe];
+            data[pe] = default;
+            return ret;
+        }
+
         public E Peek() => data[ps];
 
         public E Peek(int i) => data[(ps + i) % data.Length];
-
-        public E Last() => data[(pe + data.Length - 1) % data.Length];
+        
+        public ref E Last() => ref data[(pe + data.Length - 1) % data.Length];
 
         public int RawIndex(int index) => (ps + index) % data.Length;
 
