@@ -67,7 +67,15 @@ namespace Transient.DataAccess {
             _pool.Add(id, new AssetIdentifier(obj));
         }
 
-        public T TakePersistent<T>(string id) where T : UnityEngine.Object => UnityEngine.Object.Instantiate((T)AssetAdapter.Take(id, typeof(T)));
+        public T TakePersistent<T>(string id) where T : UnityEngine.Object {
+            var obj = (T)AssetAdapter.Take(id, typeof(T));
+            if (obj == null) {
+                Log.Warning($"failed to take persistent {id}");
+                return null;
+            }
+            return UnityEngine.Object.Instantiate(obj);
+        }
+
         public T TakeDirect<T>(string id, string ext_ = null) {
             var ret = (T)AssetAdapter.Take(id, typeof(T), ext_);
             if (ret == null) {
