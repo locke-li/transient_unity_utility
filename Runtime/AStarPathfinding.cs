@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Transient.Pathfinding {
     public interface IGraphData {
         int Size { get; }
-        Vector2 Position(int index_);
+        Vector3 Position(int index_);
         byte Cost(int index_);
         void PrintNode(int index_, StringBuilder text_);
     }
@@ -41,7 +41,8 @@ namespace Transient.Pathfinding {
         //origin point coordination in a system where the origin is in the top-left corner
         public ushort originX;
         public ushort originY;
-        public float gridSize;
+        public Vector3 gridX;
+        public Vector3 gridY;
 
         public void Fill(ushort w_, ushort h_, byte[] v_, ushort originX_ = 0, ushort originY_ = 0) {
             field = new Grid[w_ * h_];
@@ -68,9 +69,9 @@ namespace Transient.Pathfinding {
             return (x + originX) + (y + originY) * widthExpanded;
         }
 
-        public Vector2 Position(int index_) {
-            var grid = field[index_];
-            return new Vector2((grid.x + 0.5f) * gridSize, -(grid.y + 0.5f) * gridSize);
+        public Vector3 Position(int index_) {
+            ref var grid = ref field[index_];
+            return (grid.x + 0.5f) * gridX + (grid.y + 0.5f) * gridY;
         }
 
         public byte Cost(int index_) => field[index_].v;
@@ -190,7 +191,8 @@ namespace Transient.Pathfinding {
 
 namespace Transient.Pathfinding {
     public struct Waypoint {
-        public Vector2 position;
+        public Vector3 position;
+        public Quaternion rotation;
         public byte weight;
         public List<int> link;
     }
@@ -199,7 +201,7 @@ namespace Transient.Pathfinding {
         public Waypoint[] waypoint;
         public int Size => waypoint.Length;
 
-        public int Position2Index(Vector2 position, float maxDistanceSqr = float.MaxValue) {
+        public int Position2Index(Vector3 position, float maxDistanceSqr = float.MaxValue) {
             var min = maxDistanceSqr;
             int ret = -1;
             for (int o = 0; o < waypoint.Length; ++o) {
@@ -223,7 +225,7 @@ namespace Transient.Pathfinding {
             }
         }
 
-        public Vector2 Position(int index_) {
+        public Vector3 Position(int index_) {
             ref var node = ref waypoint[index_];
             return node.position;
         }
@@ -271,7 +273,7 @@ namespace Transient.Pathfinding {
             public uint cost;
         }
 
-        private IntermediateState[] _state;//1: in open list, 2: in closed list
+        private IntermediateState[] _state;
         private readonly List<int> _open;
         private IGraph _graph;
         private int _start;
@@ -449,6 +451,7 @@ namespace Transient.Pathfinding {
             dir = pos - position;
             var dist = dir.magnitude;
             if (dist < dist_) {
+                dist_ -= dist;
                 //passed next node
                 position = pos;
                 if (--target < stop) {
