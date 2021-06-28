@@ -7,6 +7,7 @@ using UnityEngine;
 namespace Transient.Pathfinding {
     public interface IGraphData {
         int Size { get; }
+        byte InaccessibleMask { get; }
         Vector3 Position(int index_);
         byte Cost(int index_);
         void PrintNode(int index_, StringBuilder text_);
@@ -43,24 +44,42 @@ namespace Transient.Pathfinding {
         public ushort originY;
         public Vector3 gridX;
         public Vector3 gridY;
+        public byte InaccessibleMask { get; set; }
 
-        public void Fill(ushort w_, ushort h_, byte[] v_ = null, byte vd_ = 0, ushort originX_ = 0, ushort originY_ = 0) {
+        public void Init(ushort w_, ushort h_, Vector3 gridX_, Vector3 gridY_, ushort originX_ = 0, ushort originY_ = 0) {
             field = new Grid[w_ * h_];
             //calculated for ease of comparison
             widthBorder = (ushort)(w_ - 1);
             heighBorder = (ushort)(h_ - 1);
             width = w_;
             height = h_;
+            gridX = gridX_;
+            gridY = gridY_;
             originX = originX_;
             originY = originY_;
-            int i;
-            for (ushort x = 0; x < w_; ++x) {
-                for (ushort y = 0; y < h_; ++y) {
-                    i = x + y * w_;
+        }
+
+        public void Fill(byte[] v_) {
+            for (ushort x = 0; x < width; ++x) {
+                for (ushort y = 0; y < height; ++y) {
+                    var i = x + y * width;
                     field[i] = new Grid() {
                         x = x,
                         y = y,
-                        v = v_ != null ? v_[i] : vd_
+                        v = v_[i]
+                    };
+                }
+            }
+        }
+
+        public void Fill(byte v_ = 0) {
+            for (ushort x = 0; x < width; ++x) {
+                for (ushort y = 0; y < height; ++y) {
+                    var i = x + y * width;
+                    field[i] = new Grid() {
+                        x = x,
+                        y = y,
+                        v = v_
                     };
                 }
             }
@@ -205,6 +224,7 @@ namespace Transient.Pathfinding {
     public class WaypointData : IGraphData {
         public Waypoint[] waypoint;
         public int Size => waypoint.Length;
+        public byte InaccessibleMask { get; set; }
 
         public int Position2Index(Vector3 position, float maxDistanceSqr = float.MaxValue) {
             var min = maxDistanceSqr;
@@ -284,7 +304,6 @@ namespace Transient.Pathfinding {
         private int _start;
         private int _goal;
         private int _current;
-        public int inaccessibleValue = byte.MaxValue;
 
         public AStarPathfinding(int capacity_ = 128) {
             _state = new IntermediateState[capacity_];
@@ -412,7 +431,7 @@ namespace Transient.Pathfinding {
 
         private void TryAdd(int next_, uint travelCost_) {
             uint tentative = _graph.data.Cost(next_);
-            if (tentative == inaccessibleValue) return;//inaccessible
+            if (tentative == _graph.data.InaccessibleMask) return;//inaccessible
             tentative += _state[_current].value + travelCost_;
             if (_state[next_].visited == 0) {
                 _open.Add(next_);
