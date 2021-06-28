@@ -34,22 +34,23 @@ namespace Transient.Pathfinding {
         public Grid[] field;
         public int Size => field.Length;
         //a size limit of 65534x65534 [1,65534] should be reasonable for grid based data
+        public ushort widthBorder;
+        public ushort heighBorder;
         public ushort width;
         public ushort height;
-        public ushort widthExpanded;
-        public ushort heightExpanded;
-        //origin point coordination in a system where the origin is in the top-left corner
+        //origin point coordinates in a system where the origin is in the top-left corner
         public ushort originX;
         public ushort originY;
         public Vector3 gridX;
         public Vector3 gridY;
 
-        public void Fill(ushort w_, ushort h_, byte[] v_, ushort originX_ = 0, ushort originY_ = 0) {
+        public void Fill(ushort w_, ushort h_, byte[] v_ = null, byte vd_ = 0, ushort originX_ = 0, ushort originY_ = 0) {
             field = new Grid[w_ * h_];
-            width = (ushort)(w_ - 1);
-            height = (ushort)(h_ - 1);
-            widthExpanded = w_;
-            heightExpanded = h_;
+            //calculated for ease of comparison
+            widthBorder = (ushort)(w_ - 1);
+            heighBorder = (ushort)(h_ - 1);
+            width = w_;
+            height = h_;
             originX = originX_;
             originY = originY_;
             int i;
@@ -59,14 +60,18 @@ namespace Transient.Pathfinding {
                     field[i] = new Grid() {
                         x = x,
                         y = y,
-                        v = v_[i]
+                        v = v_ != null ? v_[i] : vd_
                     };
                 }
             }
         }
 
+        public void Change(short x_, short y_, byte v_) {
+            field[Coord2Index(x_, y_)].v = v_;
+        }
+
         public int Coord2Index(short x, short y) {
-            return (x + originX) + (y + originY) * widthExpanded;
+            return (x + originX) + (y + originY) * width;
         }
 
         public Vector3 Position(int index_) {
@@ -77,9 +82,9 @@ namespace Transient.Pathfinding {
         public byte Cost(int index_) => field[index_].v;
 
         public void PrintNode(int index_, StringBuilder text_) {
-            text_.Append(index_ % widthExpanded);
+            text_.Append(index_ % width);
             text_.Append(",");
-            text_.Append(index_ / widthExpanded);
+            text_.Append(index_ / width);
         }
     }
 
@@ -100,9 +105,9 @@ namespace Transient.Pathfinding {
             int y = _data.field[index_].y;
             //4 directions
             if (x > 0) yield return (index_ - 1, 1);
-            if (y > 0) yield return (index_ - _data.widthExpanded, 1);
-            if (x < _data.width) yield return (index_ + 1, 1);
-            if (y < _data.height) yield return (index_ + _data.widthExpanded, 1);
+            if (y > 0) yield return (index_ - _data.width, 1);
+            if (x < _data.widthBorder) yield return (index_ + 1, 1);
+            if (y < _data.heighBorder) yield return (index_ + _data.width, 1);
         }
 
         public uint HeuristicCost(int a_, int b_) {
@@ -130,16 +135,16 @@ namespace Transient.Pathfinding {
             //8 directions
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
-                if (y > 0) yield return (index_ - 1 - _data.widthExpanded, 1);//-x-y
-                if (y < _data.height) yield return (index_ - 1 + _data.widthExpanded, 1);//-x+y
+                if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
+                if (y < _data.heighBorder) yield return (index_ - 1 + _data.width, 1);//-x+y
             }
-            if (y > 0) yield return (index_ - _data.width, 1);//-y
-            if (x < _data.width) {
+            if (y > 0) yield return (index_ - _data.widthBorder, 1);//-y
+            if (x < _data.widthBorder) {
                 yield return (index_ + 1, 1);//+x
-                if (y > 0) yield return (index_ + 1 - _data.widthExpanded, 1);//+x-y
-                if (y < _data.height) yield return (index_ + 1 + _data.widthExpanded, 1);//+x+y
+                if (y > 0) yield return (index_ + 1 - _data.width, 1);//+x-y
+                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1);//+x+y
             }
-            if (y < _data.height) yield return (index_ + _data.widthExpanded, 1);//+y
+            if (y < _data.heighBorder) yield return (index_ + _data.width, 1);//+y
         }
 
         public uint HeuristicCost(int a_, int b_) {
@@ -167,14 +172,14 @@ namespace Transient.Pathfinding {
             //6 directions
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
-                if (y > 0) yield return (index_ - 1 - _data.widthExpanded, 1);//-x-y
+                if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
             }
-            if (y > 0) yield return (index_ - _data.widthExpanded, 1);//-y
-            if (x < _data.width) {
+            if (y > 0) yield return (index_ - _data.width, 1);//-y
+            if (x < _data.widthBorder) {
                 yield return (index_ + 1, 1);//+x
-                if (y < _data.height) yield return (index_ + 1 + _data.widthExpanded, 1);//+x+y
+                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1);//+x+y
             }
-            if (y < _data.height) yield return (index_ + _data.widthExpanded, 1);//+y
+            if (y < _data.heighBorder) yield return (index_ + _data.width, 1);//+y
         }
 
         public uint HeuristicCost(int a_, int b_) {
@@ -279,6 +284,7 @@ namespace Transient.Pathfinding {
         private int _start;
         private int _goal;
         private int _current;
+        public int inaccessibleValue = byte.MaxValue;
 
         public AStarPathfinding(int capacity_ = 128) {
             _state = new IntermediateState[capacity_];
@@ -405,7 +411,9 @@ namespace Transient.Pathfinding {
         }
 
         private void TryAdd(int next_, uint travelCost_) {
-            uint tentative = _state[_current].value + _graph.data.Cost(next_) + travelCost_;
+            uint tentative = _graph.data.Cost(next_);
+            if (tentative == inaccessibleValue) return;//inaccessible
+            tentative += _state[_current].value + travelCost_;
             if (_state[next_].visited == 0) {
                 _open.Add(next_);
             }
