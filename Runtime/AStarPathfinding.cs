@@ -7,15 +7,15 @@ using UnityEngine;
 namespace Transient.Pathfinding {
     public interface IGraphData {
         int Size { get; }
-        byte InaccessibleMask { get; }
+        int InaccessibleMask { get; }
         Vector3 Position(int index_);
-        byte Cost(int index_);
+        int Cost(int index_);
         void PrintNode(int index_, StringBuilder text_);
     }
 
     public interface IGraph {
         IGraphData data { get; }
-        System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_);
+        System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_);
         uint HeuristicCost(int a_, int b_);
     }
 }
@@ -45,7 +45,7 @@ namespace Transient.Pathfinding {
         public Vector3 origin;
         public Vector3 gridX;
         public Vector3 gridY;
-        public byte InaccessibleMask { get; set; } = byte.MaxValue;
+        public int InaccessibleMask { get; set; } = byte.MaxValue;
 
         public void Init(ushort w_, ushort h_, ushort originX_ = 0, ushort originY_ = 0) {
             field = new Grid[w_ * h_];
@@ -103,7 +103,7 @@ namespace Transient.Pathfinding {
             return origin + (grid.x - originX + 0.5f) * gridX + (grid.y - originY + 0.5f) * gridY;
         }
 
-        public byte Cost(int index_) => field[index_].v;
+        public int Cost(int index_) => field[index_].v;
 
         public void PrintNode(int index_, StringBuilder text_) {
             text_.Append(index_ % width);
@@ -124,7 +124,7 @@ namespace Transient.Pathfinding {
             astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
         }
 
-        public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
+        public System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_) {
             int x = _data.field[index_].x;
             int y = _data.field[index_].y;
             //4 directions
@@ -153,20 +153,20 @@ namespace Transient.Pathfinding {
             astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
         }
 
-        public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
+        public System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_) {
             int x = _data.field[index_].x;
             int y = _data.field[index_].y;
             //8 directions
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
-                if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
-                if (y < _data.heighBorder) yield return (index_ - 1 + _data.width, 1);//-x+y
+                if (y > 0) yield return (index_ - 1 - _data.width, 1.4f);//-x-y
+                if (y < _data.heighBorder) yield return (index_ - 1 + _data.width, 1.4f);//-x+y
             }
             if (y > 0) yield return (index_ - _data.widthBorder, 1);//-y
             if (x < _data.widthBorder) {
                 yield return (index_ + 1, 1);//+x
-                if (y > 0) yield return (index_ + 1 - _data.width, 1);//+x-y
-                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1);//+x+y
+                if (y > 0) yield return (index_ + 1 - _data.width, 1.4f);//+x-y
+                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1.4f);//+x+y
             }
             if (y < _data.heighBorder) yield return (index_ + _data.width, 1);//+y
         }
@@ -190,7 +190,7 @@ namespace Transient.Pathfinding {
             astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
         }
 
-        public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
+        public System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_) {
             int x = _data.field[index_].x;
             int y = _data.field[index_].y;
             //6 directions
@@ -229,7 +229,7 @@ namespace Transient.Pathfinding {
     public class WaypointData : IGraphData {
         public Waypoint[] waypoint;
         public int Size => waypoint.Length;
-        public byte InaccessibleMask { get; set; }
+        public int InaccessibleMask { get; set; }
 
         public int Position2Index(Vector3 position, float maxDistanceSqr = float.MaxValue) {
             var min = maxDistanceSqr;
@@ -260,7 +260,7 @@ namespace Transient.Pathfinding {
             return node.position;
         }
 
-        public byte Cost(int index_) => waypoint[index_].weight;
+        public int Cost(int index_) => waypoint[index_].weight;
 
         public void PrintNode(int index_, StringBuilder text_) {
             text_.Append(index_);
@@ -276,9 +276,9 @@ namespace Transient.Pathfinding {
             _data = data_;
         }
 
-        public System.Collections.Generic.IEnumerable<(int, uint)> EnumerateLink(int index_) {
+        public System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_) {
             foreach (var link in _data.waypoint[index_].link) {
-                yield return (link, 1);
+                yield return (link, 1);//TODO distance
             }
         }
 
@@ -299,8 +299,8 @@ namespace Transient.Pathfinding {
         struct IntermediateState {
             public byte visited;
             public int from;
-            public uint value;
-            public uint cost;
+            public float value;
+            public float cost;
         }
 
         private IntermediateState[] _state;
@@ -375,15 +375,15 @@ namespace Transient.Pathfinding {
         //1. unreachable
         //2. state.value represents wave generation = uniform node cost/travel cost
         private int FindNearest(int goal_) {
-            int nearest = _start;
-            var min = uint.MaxValue;
-            uint max = 0;
+            var nearest = _start;
+            var min = float.MaxValue;
+            var max = 0f;
             for (int i = 0; i < _graph.data.Size; ++i) {
                 //supplement heuristic cost if not calculated in pathfinding
                 var cost = _state[i].cost + (_goal < 0 ? _graph.HeuristicCost(i, goal_) : 0);
                 var value = _state[i].value;
                 if (value > max) {
-                    min = uint.MaxValue;
+                    min = float.MaxValue;
                     max = value;
                 }
                 //Debug.Log($"{i} {cost} {value}");
@@ -407,11 +407,11 @@ namespace Transient.Pathfinding {
             _state[_start].value = 0;
             _state[_start].cost = HeuristicCost(_start, _goal);
             _current = 0;
-            uint min;
-            int currentIndex = 0;
+            float min;
+            var currentIndex = 0;
             int next;
             while (_open.Count > 0) {
-                min = uint.MaxValue;
+                min = float.MaxValue;
                 for (int i = 0; i < _open.Count; ++i) {
                     next = _open[i];
                     if (_state[next].cost < min) {
@@ -434,8 +434,8 @@ namespace Transient.Pathfinding {
             return false;
         }
 
-        private void TryAdd(int next_, uint travelCost_) {
-            uint tentative = _graph.data.Cost(next_);
+        private void TryAdd(int next_, float travelCost_) {
+            float tentative = _graph.data.Cost(next_);
             if (tentative == _graph.data.InaccessibleMask) return;//inaccessible
             tentative += _state[_current].value + travelCost_;
             if (_state[next_].visited == 0) {

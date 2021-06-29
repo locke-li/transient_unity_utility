@@ -22,9 +22,11 @@ namespace Tests {
                 1,  1,  1,  1,  1,
             };
             var data00 = new GridData();
-            data00.Fill(width, height, raw);
+            data00.Init(width, height);
+            data00.Fill(raw);
             var data22 = new GridData();
-            data22.Fill(width, height, raw, 2, 2);
+            data22.Init(width, height, 2, 2);
+            data22.Fill(raw);
             var rect4 = new RectGrid4Dir(data00);
             var rect4_offset = new RectGrid4Dir(data22);
             var rect8 = new RectGrid8Dir(data00);
