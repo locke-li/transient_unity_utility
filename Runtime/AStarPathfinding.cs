@@ -159,14 +159,14 @@ namespace Transient.Pathfinding {
             //8 directions
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
-                if (y > 0) yield return (index_ - 1 - _data.width, 1.4f);//-x-y
-                if (y < _data.heighBorder) yield return (index_ - 1 + _data.width, 1.4f);//-x+y
+                if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
+                if (y < _data.heighBorder) yield return (index_ - 1 + _data.width, 1);//-x+y
             }
-            if (y > 0) yield return (index_ - _data.widthBorder, 1);//-y
+            if (y > 0) yield return (index_ - _data.width, 1);//-y
             if (x < _data.widthBorder) {
                 yield return (index_ + 1, 1);//+x
-                if (y > 0) yield return (index_ + 1 - _data.width, 1.4f);//+x-y
-                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1.4f);//+x+y
+                if (y > 0) yield return (index_ + 1 - _data.width, 1);//+x-y
+                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1);//+x+y
             }
             if (y < _data.heighBorder) yield return (index_ + _data.width, 1);//+y
         }
@@ -414,13 +414,14 @@ namespace Transient.Pathfinding {
                 min = float.MaxValue;
                 for (int i = 0; i < _open.Count; ++i) {
                     next = _open[i];
+                    //Log.Debug($"{next} {_state[next].cost}");
                     if (_state[next].cost < min) {
                         currentIndex = i;
                         _current = next;
                         min = _state[next].cost;
                     }
                 }
-                //Log.Debug($"select {_current}");
+                //Log.Debug($"select {_current} {min}");
                 if (_current == _goal) {
                     _state[_current].visited = 1;
                     return true;
@@ -438,12 +439,10 @@ namespace Transient.Pathfinding {
             float tentative = _graph.data.Cost(next_);
             if (tentative == _graph.data.InaccessibleMask) return;//inaccessible
             tentative += _state[_current].value + travelCost_;
-            if (_state[next_].visited == 0) {
-                _open.Add(next_);
-            }
-            else if (tentative > _state[next_].value) {
+            if (_state[next_].value > 0 && tentative > _state[next_].value) {
                 return;
             }
+            _open.Add(next_);
             _state[next_].from = _current;
             _state[next_].value = tentative;
             _state[next_].cost = tentative + HeuristicCost(next_, _goal);
