@@ -42,21 +42,26 @@ namespace Transient.Pathfinding {
         //origin point coordinates in a system where the origin is in the top-left corner
         public ushort originX;
         public ushort originY;
+        public Vector3 origin;
         public Vector3 gridX;
         public Vector3 gridY;
-        public byte InaccessibleMask { get; set; }
+        public byte InaccessibleMask { get; set; } = byte.MaxValue;
 
-        public void Init(ushort w_, ushort h_, Vector3 gridX_, Vector3 gridY_, ushort originX_ = 0, ushort originY_ = 0) {
+        public void Init(ushort w_, ushort h_, ushort originX_ = 0, ushort originY_ = 0) {
             field = new Grid[w_ * h_];
             //calculated for ease of comparison
             widthBorder = (ushort)(w_ - 1);
             heighBorder = (ushort)(h_ - 1);
             width = w_;
             height = h_;
-            gridX = gridX_;
-            gridY = gridY_;
             originX = originX_;
             originY = originY_;
+        }
+
+        public void InitCoordSystem(Vector3 gridX_, Vector3 gridY_, Vector3 origin_) {
+            gridX = gridX_;
+            gridY = gridY_;
+            origin = origin_;
         }
 
         public void Fill(byte[] v_) {
@@ -95,7 +100,7 @@ namespace Transient.Pathfinding {
 
         public Vector3 Position(int index_) {
             ref var grid = ref field[index_];
-            return (grid.x + 0.5f) * gridX + (grid.y + 0.5f) * gridY;
+            return origin + (grid.x - originX + 0.5f) * gridX + (grid.y - originY + 0.5f) * gridY;
         }
 
         public byte Cost(int index_) => field[index_].v;
