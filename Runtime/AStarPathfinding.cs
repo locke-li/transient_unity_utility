@@ -159,14 +159,14 @@ namespace Transient.Pathfinding {
             //8 directions
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
-                if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
-                if (y < _data.heighBorder) yield return (index_ - 1 + _data.width, 1);//-x+y
+                if (y > 0) yield return (index_ - 1 - _data.width, 1.4f);//-x-y
+                if (y < _data.heighBorder) yield return (index_ - 1 + _data.width, 1.4f);//-x+y
             }
             if (y > 0) yield return (index_ - _data.width, 1);//-y
             if (x < _data.widthBorder) {
                 yield return (index_ + 1, 1);//+x
-                if (y > 0) yield return (index_ + 1 - _data.width, 1);//+x-y
-                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1);//+x+y
+                if (y > 0) yield return (index_ + 1 - _data.width, 1.4f);//+x-y
+                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1.4f);//+x+y
             }
             if (y < _data.heighBorder) yield return (index_ + _data.width, 1);//+y
         }
@@ -371,6 +371,36 @@ namespace Transient.Pathfinding {
 
         public string FormattedPath() => FormattedPath(_goal);
 
+        /*
+        public string FormattedGraph(StringBuilder text_ = null) {
+            var text = text_ ?? new StringBuilder("graph:\n");
+            var data = (GridData)_graph.data;
+            var dirLookup = new System.Collections.Generic.Dictionary<int, string>();
+            dirLookup.Add(0, "*");
+            dirLookup.Add(1, "←");
+            dirLookup.Add(-1, "→");
+            dirLookup.Add(data.width, "↑");
+            dirLookup.Add(-data.width, "↓");
+            dirLookup.Add(data.width + 1, "↖");
+            dirLookup.Add(data.width - 1, "↗");
+            dirLookup.Add(-data.width + 1, "↙");
+            dirLookup.Add(-data.width - 1, "↘");
+            for (var k = 0; k < _graph.data.Size; ++k) {
+                var state = _state[k];
+                if (k == _start) text.Append("+s|\t");
+                else if (k == _goal) text.Append("+e|\t");
+                else if (state.value == 0) text.Append("  |\t");
+                else {
+                    if (!dirLookup.TryGetValue(state.from - k, out var dir))
+                        dir = (state.from - k).ToString();
+                    text.Append(state.value).Append(dir).Append("|").Append("\t");
+                }
+                if ((k + 1) % data.width == 0) text.AppendLine();
+            }
+            return text.ToString();
+        }
+        */
+
         //only works when:
         //1. unreachable
         //2. state.value represents wave generation = uniform node cost/travel cost
@@ -410,7 +440,8 @@ namespace Transient.Pathfinding {
             float min;
             var currentIndex = 0;
             int next;
-            while (_open.Count > 0) {
+            var iter = 0;
+            while (_open.Count > 0 && ++iter <= _state.Length) {
                 min = float.MaxValue;
                 for (int i = 0; i < _open.Count; ++i) {
                     next = _open[i];
@@ -432,6 +463,9 @@ namespace Transient.Pathfinding {
                     TryAdd(link, cost);
                 }
             }
+            if (iter == _state.Length) {
+                Log.Warning("iteration overflown");
+            }
             return false;
         }
 
@@ -439,7 +473,7 @@ namespace Transient.Pathfinding {
             float tentative = _graph.data.Cost(next_);
             if (tentative == _graph.data.InaccessibleMask) return;//inaccessible
             tentative += _state[_current].value + travelCost_;
-            if (_state[next_].value > 0 && tentative > _state[next_].value) {
+            if (_state[next_].value > 0 && tentative >= _state[next_].value) {
                 return;
             }
             _open.Add(next_);
