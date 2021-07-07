@@ -9,14 +9,14 @@ namespace Transient.Pathfinding {
         int Size { get; }
         int InaccessibleMask { get; }
         Vector3 Position(int index_);
-        int Cost(int index_);
+        float Cost(int index_);
         void PrintNode(int index_, StringBuilder text_);
     }
 
     public interface IGraph {
         IGraphData data { get; }
         System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_);
-        uint HeuristicCost(int a_, int b_);
+        float HeuristicCost(int a_, int b_);
     }
 }
 
@@ -35,8 +35,6 @@ namespace Transient.Pathfinding {
         public Grid[] field;
         public int Size => field.Length;
         //a size limit of 65534x65534 [1,65534] should be reasonable for grid based data
-        public ushort widthBorder;
-        public ushort heighBorder;
         public ushort width;
         public ushort height;
         //origin point coordinates in a system where the origin is in the top-left corner
@@ -49,9 +47,6 @@ namespace Transient.Pathfinding {
 
         public void Init(ushort w_, ushort h_, ushort originX_ = 0, ushort originY_ = 0) {
             field = new Grid[w_ * h_];
-            //calculated for ease of comparison
-            widthBorder = (ushort)(w_ - 1);
-            heighBorder = (ushort)(h_ - 1);
             width = w_;
             height = h_;
             originX = originX_;
@@ -103,7 +98,7 @@ namespace Transient.Pathfinding {
             return origin + (grid.x - originX + 0.5f) * gridX + (grid.y - originY + 0.5f) * gridY;
         }
 
-        public int Cost(int index_) => field[index_].v;
+        public float Cost(int index_) => field[index_].v;
 
         public void PrintNode(int index_, StringBuilder text_) {
             text_.Append(index_ % width);
@@ -130,14 +125,14 @@ namespace Transient.Pathfinding {
             //4 directions
             if (x > 0) yield return (index_ - 1, 1);
             if (y > 0) yield return (index_ - _data.width, 1);
-            if (x < _data.widthBorder) yield return (index_ + 1, 1);
-            if (y < _data.heighBorder) yield return (index_ + _data.width, 1);
+            if (x < _data.width - 1) yield return (index_ + 1, 1);
+            if (y < _data.height - 1) yield return (index_ + _data.width, 1);
         }
 
-        public uint HeuristicCost(int a_, int b_) {
+        public float HeuristicCost(int a_, int b_) {
             var a = _data.field[a_];
             var b = _data.field[b_];
-            return (uint)(Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y));
+            return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
         }
     }
 
@@ -160,21 +155,21 @@ namespace Transient.Pathfinding {
             if (x > 0) {
                 yield return (index_ - 1, 1);//-x
                 if (y > 0) yield return (index_ - 1 - _data.width, 1.4f);//-x-y
-                if (y < _data.heighBorder) yield return (index_ - 1 + _data.width, 1.4f);//-x+y
+                if (y < _data.height - 1) yield return (index_ - 1 + _data.width, 1.4f);//-x+y
             }
             if (y > 0) yield return (index_ - _data.width, 1);//-y
-            if (x < _data.widthBorder) {
+            if (x < _data.width - 1) {
                 yield return (index_ + 1, 1);//+x
                 if (y > 0) yield return (index_ + 1 - _data.width, 1.4f);//+x-y
-                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1.4f);//+x+y
+                if (y < _data.height - 1) yield return (index_ + 1 + _data.width, 1.4f);//+x+y
             }
-            if (y < _data.heighBorder) yield return (index_ + _data.width, 1);//+y
+            if (y < _data.height - 1) yield return (index_ + _data.width, 1);//+y
         }
 
-        public uint HeuristicCost(int a_, int b_) {
+        public float HeuristicCost(int a_, int b_) {
             var a = _data.field[a_];
             var b = _data.field[b_];
-            return (uint)(Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y));
+            return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
         }
     }
 
@@ -199,17 +194,17 @@ namespace Transient.Pathfinding {
                 if (y > 0) yield return (index_ - 1 - _data.width, 1);//-x-y
             }
             if (y > 0) yield return (index_ - _data.width, 1);//-y
-            if (x < _data.widthBorder) {
+            if (x < _data.width - 1) {
                 yield return (index_ + 1, 1);//+x
-                if (y < _data.heighBorder) yield return (index_ + 1 + _data.width, 1);//+x+y
+                if (y < _data.height - 1) yield return (index_ + 1 + _data.width, 1);//+x+y
             }
-            if (y < _data.heighBorder) yield return (index_ + _data.width, 1);//+y
+            if (y < _data.height - 1) yield return (index_ + _data.width, 1);//+y
         }
 
-        public uint HeuristicCost(int a_, int b_) {
+        public float HeuristicCost(int a_, int b_) {
             var a = _data.field[a_];
             var b = _data.field[b_];
-            return (uint)(Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y));
+            return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
         }
     }
 }
@@ -260,7 +255,7 @@ namespace Transient.Pathfinding {
             return node.position;
         }
 
-        public int Cost(int index_) => waypoint[index_].weight;
+        public float Cost(int index_) => waypoint[index_].weight;
 
         public void PrintNode(int index_, StringBuilder text_) {
             text_.Append(index_);
@@ -282,11 +277,10 @@ namespace Transient.Pathfinding {
             }
         }
 
-        public uint HeuristicCost(int a_, int b_) {
-            var a = _data.waypoint[a_];
-            var b = _data.waypoint[b_];
-            var line = a.position - b.position;
-            return (uint)Mathf.Round(line.sqrMagnitude * HeuristicScale);
+        public float HeuristicCost(int a_, int b_) {
+            var a = _data.waypoint[a_].position;
+            var b = _data.waypoint[b_].position;
+            return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y) + Mathf.Abs(a.z - b.z);
         }
     }
 }
@@ -427,7 +421,7 @@ namespace Transient.Pathfinding {
             return nearest;
         }
 
-        private uint HeuristicCost(int a_, int b_) => _goal < 0 ? 0 : _graph.HeuristicCost(a_, b_);
+        private float HeuristicCost(int a_, int b_) => _goal < 0 ? 0 : _graph.HeuristicCost(a_, b_);
 
         public bool FindPath(IGraph graph_, int start_, int goal_) {
             Setup(graph_);
