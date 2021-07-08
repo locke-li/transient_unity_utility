@@ -345,25 +345,23 @@ namespace Transient.Pathfinding {
         public bool FillPathNearest(List<int> buffer_) => FillPath(FindNearest(_goal), buffer_);
         public bool FillPathNearest(int goal_, List<int> buffer_) => FillPath(FindNearest(goal_), buffer_);
 
-        public string FormattedPath(int goal_, StringBuilder text_ = null) {
+        public string FormattedPath(int goal_ = -1, StringBuilder text_ = null, string linkSymbol_ = "-") {
             var text = text_ ?? new StringBuilder("path:");
-            int next = goal_;
+            int next = goal_ < 0 ? _goal : goal_;
             int loop = -1;
             while (next != _start && ++loop < _graph.data.Size) {
                 _graph.data.PrintNode(next, text);
                 //handle unreachable
                 if (_state[next].visited == 0) {
-                    text.Append("-x-");
+                    text.Append(linkSymbol_).Append("x").Append(linkSymbol_);
                     return text_ == null ? FormattedPath(FindNearest(goal_), text) : text.ToString();
                 }
-                text.Append("-");
+                text.Append(linkSymbol_);
                 next = _state[next].from;
             }
             _graph.data.PrintNode(_start, text);
             return text.ToString();
         }
-
-        public string FormattedPath() => FormattedPath(_goal);
 
         /*
         public string FormattedGraph(StringBuilder text_ = null) {
