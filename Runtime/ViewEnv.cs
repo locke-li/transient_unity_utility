@@ -355,6 +355,11 @@ namespace Transient {
             return (position - new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
         }
 
+        public static Vector2 UILocalToCanvasSpace(Vector3 position) {
+            //TODO persist screen offset
+            return (UICamera.WorldToScreenPoint(position) - new Vector3(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
+        }
+
         //TODO should be in CoordinateSystem
         public static Vector2 OffsetFromRelativeY(float height) {
             var relative = MainCamera.transform.position.y - height;
