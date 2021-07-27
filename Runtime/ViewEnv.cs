@@ -364,7 +364,8 @@ namespace Transient {
         public static Vector2 OffsetFromRelativeY(float height) {
             var relative = MainCamera.transform.position.y - height;
             var rotationAngle = MainCamera.transform.rotation.eulerAngles.x;
-            return new Vector2(0f, 0.5f * relative / Mathf.Tan(rotationAngle * Mathf.Deg2Rad));
+            var value = Mathf.Tan(rotationAngle * Mathf.Deg2Rad);
+            return value == 0 ? Vector2.zero : new Vector2(0f, 0.5f * relative / value );
         }
 
         public static bool VisibleInCanvas(RectTransform obj) {
