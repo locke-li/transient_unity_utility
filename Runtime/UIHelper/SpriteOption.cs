@@ -10,8 +10,20 @@ namespace Transient.UI {
         public bool nativeSize;
 
 #if UNITY_EDITOR
+        [Min(0)]
+        public int preview;
+
         internal void OnValidate() {
+            var init = target == null;
             target = GetComponent<Image>();
+            if (init) {
+                option = new Sprite[] {
+                    target.sprite
+                };
+            }
+            if (target == null || option == null) return;
+            preview = Mathf.Min(preview, option.Length - 1);
+            Select(preview);
         }
 #endif
 
