@@ -6,11 +6,16 @@ using UnityEngine.UI;
 namespace Transient.UI {
     public class ImageFlex : Image {
         public bool hidden;
+        private bool raycast;
+
+        private void Start() {
+            raycast = raycastTarget;
+        }
 
         public void Hide(bool value) {
             if (hidden == value) return;
             hidden = value;
-            raycastTarget = !hidden;
+            raycastTarget = raycast && !hidden;
             SetVerticesDirty();
         }
 
