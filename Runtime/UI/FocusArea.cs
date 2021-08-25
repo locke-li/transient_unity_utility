@@ -6,7 +6,7 @@ using System.Text;
 using Transient;
 
 namespace Transient.UI {
-    public class FocusArea : Graphic {
+    public class FocusArea : Graphic, ICanvasRaycastFilter {
         public RectTransform sync;
         public Rect focusRect;
         public bool circle;
@@ -98,6 +98,21 @@ namespace Transient.UI {
                 vh.AddVert(new Vector3(focusRect.xMin, focusRect.yMax), color, new Vector2(0, 1));
                 vh.AddTriangle(8, 10, 9);
                 vh.AddTriangle(8, 11, 10);
+            }
+        }
+
+        public virtual bool IsRaycastLocationValid (Vector2 screenPoint, Camera eventCamera) {
+            Vector2 val = default;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out val)) {
+                return false;
+            }
+            if (hidden) return true;
+            if (circle) {
+                var dist = Vector2.Distance(val, focusRect.center);
+                return dist > radius * focusRect.width;
+            }
+            else {
+                return !focusRect.Contains(val);
             }
         }
     }
