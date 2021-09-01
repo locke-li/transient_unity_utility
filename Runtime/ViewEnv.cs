@@ -47,6 +47,7 @@ namespace Transient {
         public static Vector2 FocusOffset;
         private static bool _focusOverride = false;
         private static bool _focusOnce = false;
+        private static Action _afterFocus;
         private static float _focusStep = 2f;
 
         private static DragReceiver _drag;
@@ -122,17 +123,18 @@ namespace Transient {
         public static void Message(string m, Color color, int index_ = 0) => _fadeMessage[index_].Create(m, color);
         public static void ClearMessage(int index_ = 0) => _fadeMessage[index_].Clear();
 
-        public static void InitFocusViewport(Transform location, Vector2 viewOffset, bool once = false, float step = 0f) {
+        public static void InitFocusViewport(Transform location, Vector2 viewOffset, bool once = false, float step = 0f, Action afterFocus = null) {
             var unitPerPixel = CalculateUnitPerPixel(_zoomTarget);
             var offset = new Vector2(
                 -viewOffset.x * _screenWidth * unitPerPixel,
                 -viewOffset.y * _screenHeight * unitPerPixel
             );
-            InitFocus(location, offset, once, step);
+            InitFocus(location, offset, once, step, afterFocus);
         }
 
-        public static void InitFocus(Transform location, Vector2 offset, bool once = false, float step = 0f) {
+        public static void InitFocus(Transform location, Vector2 offset, bool once = false, float step = 0f, Action afterFocus = null) {
             Focus = location;
+            _afterFocus = afterFocus;
             if (location == null) return;
             FocusOffset = offset - OffsetFromRelativeY(location.position.y);
             _focusOnce = once;
@@ -394,6 +396,10 @@ namespace Transient {
                     CameraSystem.PositionXY = focus;
                     if (_focusOnce) {
                         Focus = null;
+                    }
+                    if (_afterFocus != null) {
+                        _afterFocus();
+                        _afterFocus = null;
                     }
                 }
                 else CameraSystem.PositionXY += dir / dist * Mathf.Lerp(0.5f, 2f, dist) * _focusStep * deltaTime;
