@@ -17,7 +17,10 @@ namespace Transient.ControlFlow {
                 throw new Exception("pushing duplicate fsm graph");
             }
             #endif
-            _stacked.Push((_active.Graph, exit_ ?? _active.CurrentState, _active.Token));
+            if (exit_ == null || !_active.Graph.Contains(exit_)) {
+                exit_ = _active.CurrentState;
+            }
+            _stacked.Push((_active.Graph, exit_, _active.Token));
             _active.Init(graph_, token_);
             if (!skip_) {
                 _active.Reset(entry_);
@@ -181,6 +184,10 @@ namespace Transient.ControlFlow {
             var trans = new Transition(source_, target_, Condition_, token_);
             source_.AddTransition(trans);
             return trans;
+        }
+
+        public bool Contains(State state_) {
+            return _states.Contains(state_);
         }
     }
 
