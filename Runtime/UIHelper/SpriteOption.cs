@@ -10,8 +10,8 @@ namespace Transient.UI {
         public bool nativeSize;
 
 #if UNITY_EDITOR
-        [Min(0)]
-        public int preview;
+        [Min(0)][SerializeField]
+        internal int preview;
 
         internal void OnValidate() {
             var init = target == null;
