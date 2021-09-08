@@ -16,12 +16,12 @@ namespace Transient.UI {
         internal void OnValidate() {
             var init = target == null;
             target = GetComponent<Image>();
+            if (target == null || option == null) return;
             if (init) {
                 option = new Sprite[] {
                     target.sprite
                 };
             }
-            if (target == null || option == null) return;
             preview = Mathf.Min(preview, option.Length - 1);
             Select(preview);
         }
@@ -41,6 +41,10 @@ namespace Transient.UI {
         public void SelectFor(int index, Image image) {
             image.sprite = option[index];
             if (nativeSize) image.SetNativeSize();
+        }
+
+        public void SelectFor(int index, SpriteRenderer renderer) {
+            renderer.sprite = option[index];
         }
     }
 }
