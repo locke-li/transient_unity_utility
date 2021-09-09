@@ -289,7 +289,7 @@ namespace Transient {
         }
 
         public static void ViewportControl(bool v) {
-            _drag.interactable = v;
+            _drag.enabled = v;
         }
 
         public static void InitDragInertia(float damping_, float threshold_) {
