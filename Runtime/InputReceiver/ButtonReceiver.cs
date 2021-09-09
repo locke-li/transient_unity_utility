@@ -27,7 +27,7 @@ namespace Transient.UI {
         public float LongPressInterval { get; set; } = 0.5f;
         private static readonly ActionList<float> StepI = new ActionList<float>(2);
         public bool interactable { get => _raycastAdapter.enabled; set => _raycastAdapter.enabled = value; }
-        private IEventSystemRaycastAdapter _raycastAdapter;
+        internal IEventSystemRaycastAdapter _raycastAdapter;
         private float _pressTime;
         private Action<float> LongPressStep;
         public bool CancelClickOnce { get; set; } = false;

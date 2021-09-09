@@ -46,7 +46,7 @@ namespace Transient.UI {
         public Action<DragReceiver, float, float> WhenPinch { get; set; } = (d, b, v) => { };
         public Action<DragReceiver> WhenPinchEnd { get; set; } = d => { };
         public bool interactable { get => _raycastAdapter.enabled; set => _raycastAdapter.enabled = value; }
-        private IEventSystemRaycastAdapter _raycastAdapter;
+        internal IEventSystemRaycastAdapter _raycastAdapter;
         private Vector2 _start;
         private float _distance;
         private int touchCount;
