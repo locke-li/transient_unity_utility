@@ -58,7 +58,6 @@ namespace Transient {
         private static float _dragInertiaThreshold = 0.05f;
         private static float _dragInertiaDamping = 0.85f;
         public static ActionList<Vector3, Vector3> OnDrag { get; private set; }
-        public static bool LockView { get; set; } = false;
 
         public static ViewportLimit ViewportLimit { get; set; }
         public static PositionLimit PositionLimit { get; set; }
@@ -260,7 +259,6 @@ namespace Transient {
         public static void InitViewportControl(DragReceiver drag_) {
             _drag = drag_;
             _drag.WhenDragBegin = d => {
-                if (LockView) return;
                 _focusOverride = _dragFocusOverride;
                 _dragInertiaValue = 0;
                 CameraSystem.WorldPosition = MainCamera.transform.position;
@@ -271,24 +269,19 @@ namespace Transient {
                 if (PositionLimit != null) {
                     (targetX, targetY) = PositionLimit.Limit(targetX, targetY);
                 }
-                if(!LockView)
-                {
-                    MainCamera.transform.position = CameraSystem.SystemToWorld(
+                MainCamera.transform.position = CameraSystem.SystemToWorld(
                     targetX,
                     targetY,
                     CameraSystem.Z);
-                }
                 OnDrag.Invoke(offset, new Vector3(targetX, targetY, CameraSystem.Z));
             };
             _drag.WhenDragEnd = (d, delta) => {
-                if (LockView) return;
                 _focusOverride = false;
                 _dragInertiaValue = delta.magnitude;
                 _dragInertiaDelta = delta / _dragInertiaValue;
                 CameraSystem.WorldPosition = MainCamera.transform.position;
             };
             _drag.WhenPinch = (d, start, distance) => {
-                if (LockView) return;
                 var diff = (distance - start) * zoomSetting.dragFactor * zoomSetting.range * _screenHeightInverse;
                 TargetZoom(_zoomTarget - diff);
             };
@@ -329,13 +322,11 @@ namespace Transient {
         }
 
         public static void ZoomOrthographic(Camera camera_, AbstractCoordinateSystem _, float v_) {
-            if (LockView) return;
             camera_.orthographicSize = v_;
             UpdateViewHeight(v_);
         }
 
         public static void ZoomPerspective(Camera camera_, AbstractCoordinateSystem system_, float v_) {
-            if (LockView) return;
             system_.Z = -v_ * _perspectiveProjectionFactor;
             camera_.transform.position = system_.WorldPosition;
             //TODO UnitPerPixel at a designated plane (z)
