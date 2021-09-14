@@ -102,8 +102,7 @@ namespace Transient.UI {
         }
 
         public virtual bool IsRaycastLocationValid (Vector2 screenPoint, Camera eventCamera) {
-            Vector2 val = default;
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out val)) {
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out var val)) {
                 return false;
             }
             if (hidden) return true;

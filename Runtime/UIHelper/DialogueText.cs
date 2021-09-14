@@ -10,6 +10,7 @@ namespace Transient.UI {
         public TextMeshProUGUI line;
         public string text;
         public float speed = 20;//char per second
+        public float linePause;//second
         private float interval;
         private int index;
         private readonly StringBuilder builder = new StringBuilder();
@@ -39,6 +40,10 @@ namespace Transient.UI {
                     return;
                 }
                 builder.Append(text[++index]);
+                var lastChar = text[index];
+                if (lastChar == '\n' || lastChar == '\r') {
+                    interval += speed * linePause;
+                }
                 line.text = builder.ToString();
             }
         }
