@@ -21,10 +21,10 @@ namespace Transient.UI {
             AnimateUpdateDelegate = AnimateUpdate;
         }
 
-        public void Animate(string text_, Action WhenStop_) {
+        public void Animate(string text_, Action WhenStop_, bool append_) {
             text = text_;
             WhenStop = WhenStop_;
-            builder.Clear();
+            if (!append_) builder.Clear();
             interval = 0;
             index = -1;
             //TODO prevent multiple animate
