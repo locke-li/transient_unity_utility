@@ -21,15 +21,22 @@ namespace Transient.UI {
             AnimateUpdateDelegate = AnimateUpdate;
         }
 
-        public void Animate(string text_, Action WhenStop_, bool append_) {
+        public void Animate(string text_, Action WhenStop_, string prepend_ = null, float delay_ = 0, bool appendLine_ = false) {
+            builder.Clear();
+            builder.Append(prepend_);
+            if (appendLine_) {
+                builder.AppendLine();
+                delay_ += speed * linePause;
+            }
             text = text_;
             WhenStop = WhenStop_;
-            if (!append_) builder.Clear();
-            interval = 0;
+            interval = delay_;
             index = -1;
             //TODO prevent multiple animate
             MainLoop.OnUpdate.Add(AnimateUpdateDelegate, this);
         }
+        public void AnimateAppend(string text_, Action WhenStop_, float delay_ = 0, bool appendLine_ = false)
+            => Animate(text_, WhenStop_, text, delay_, appendLine_);
 
         public void AnimateUpdate(float deltaTime_) {
             interval -= speed * deltaTime_;
@@ -49,12 +56,12 @@ namespace Transient.UI {
         }
 
         public bool Stop() {
-            line.text = text;
+            line.text = builder.ToString();
             builder.Clear();
             MainLoop.OnUpdate.Remove(this);
-            WhenStop?.Invoke();
             var ret = index >= text.Length - 1;
             index = text.Length;
+            WhenStop?.Invoke();
             return ret;
         }
     }
