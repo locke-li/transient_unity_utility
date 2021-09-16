@@ -28,7 +28,7 @@ namespace Transient.UI {
                 builder.AppendLine();
                 delay_ += speed * linePause;
             }
-            text = text_;
+            text = prepend_ + text_;
             WhenStop = WhenStop_;
             interval = delay_;
             index = -1;
@@ -56,7 +56,7 @@ namespace Transient.UI {
         }
 
         public bool Stop() {
-            line.text = builder.ToString();
+            line.text = text;
             builder.Clear();
             MainLoop.OnUpdate.Remove(this);
             var ret = index >= text.Length - 1;
