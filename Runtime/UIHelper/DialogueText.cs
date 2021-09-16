@@ -34,7 +34,7 @@ namespace Transient.UI {
             }
             WhenStop = WhenStop_;
             interval = delay_;
-            index = -1;
+            index = prepend_ != null ? prepend_.Length : -1;
             //TODO prevent multiple animate
             MainLoop.OnUpdate.Add(AnimateUpdateDelegate, this);
         }
