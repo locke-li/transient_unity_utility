@@ -27,8 +27,11 @@ namespace Transient.UI {
             if (appendLine_) {
                 builder.AppendLine();
                 delay_ += speed * linePause;
+                text = prepend_ + '\n' + text_;
             }
-            text = prepend_ + text_;
+            else {
+                text = prepend_ + text_;
+            }
             WhenStop = WhenStop_;
             interval = delay_;
             index = -1;
