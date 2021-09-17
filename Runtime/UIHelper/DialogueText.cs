@@ -59,6 +59,7 @@ namespace Transient.UI {
         }
 
         public bool Stop() {
+            if (builder.Length == 0) return true;
             line.text = text;
             builder.Clear();
             MainLoop.OnUpdate.Remove(this);
