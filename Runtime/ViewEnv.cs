@@ -132,6 +132,22 @@ namespace Transient {
             InitFocus(location, offset, once, step, afterFocus);
         }
 
+        public static float CameraDistanceXY(Vector3 pos_, Vector2 offset_) {
+            var pos = CameraSystem.WorldToSystemXY(pos_) + offset_ - OffsetFromRelativeY(pos_.y);
+            return Vector2.Distance(pos, CameraSystem.PositionXY);
+        }
+
+        public static void InitFocusWithDuration(Transform location, Vector2 offset, float duration, Action afterFocus = null) {
+            Focus = location;
+            _afterFocus = afterFocus;
+            if (location == null) return;
+            FocusOffset = offset - OffsetFromRelativeY(location.position.y);
+            var dist = Vector2.Distance(CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset, CameraSystem.PositionXY);
+            if (duration <= 0) duration = 1;
+            _focusOnce = true;
+            _focusStep = dist / duration;
+        }
+
         public static void InitFocus(Transform location, Vector2 offset, bool once = false, float step = 0f, Action afterFocus = null) {
             Focus = location;
             _afterFocus = afterFocus;
@@ -402,7 +418,7 @@ namespace Transient {
                         _afterFocus = null;
                     }
                 }
-                else CameraSystem.PositionXY += dir / dist * Mathf.Lerp(0.5f, 2f, dist) * _focusStep * deltaTime;
+                else CameraSystem.PositionXY += _focusStep * deltaTime * dist * Mathf.Lerp(0.5f, 2f, dist) * dir;
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
             if (_dragInertia && _dragInertiaValue > _dragInertiaThreshold) {
