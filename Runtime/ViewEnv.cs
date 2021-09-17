@@ -43,12 +43,7 @@ namespace Transient {
         public static ClickVisual ClickVisual { get; set; }
         public static AbstractCoordinateSystem CameraSystem { get; private set; }
 
-        public static Transform Focus;
-        public static Vector2 FocusOffset;
-        private static bool _focusOverride = false;
-        private static bool _focusOnce = false;
-        private static Action _afterFocus;
-        private static float _focusStep = 2f;
+        public static ViewportFocus Focus { get; set; }
 
         private static DragReceiver _drag;
         private static bool _dragFocusOverride = false;
@@ -122,40 +117,6 @@ namespace Transient {
         public static void Message(string m, int index_ = 0) => _fadeMessage[index_].Create(m, Color.clear);
         public static void Message(string m, Color color, int index_ = 0) => _fadeMessage[index_].Create(m, color);
         public static void ClearMessage(int index_ = 0) => _fadeMessage[index_].Clear();
-
-        public static void InitFocusViewport(Transform location, Vector2 viewOffset, bool once = false, float step = 0f, Action afterFocus = null) {
-            var unitPerPixel = CalculateUnitPerPixel(_zoomTarget);
-            var offset = new Vector2(
-                -viewOffset.x * _screenWidth * unitPerPixel,
-                -viewOffset.y * _screenHeight * unitPerPixel
-            );
-            InitFocus(location, offset, once, step, afterFocus);
-        }
-
-        public static float CameraDistanceXY(Vector3 pos_, Vector2 offset_) {
-            var pos = CameraSystem.WorldToSystemXY(pos_) + offset_ - OffsetFromRelativeY(pos_.y);
-            return Vector2.Distance(pos, CameraSystem.PositionXY);
-        }
-
-        public static void InitFocusWithDuration(Transform location, Vector2 offset, float duration, Action afterFocus = null) {
-            Focus = location;
-            _afterFocus = afterFocus;
-            if (location == null) return;
-            FocusOffset = offset - OffsetFromRelativeY(location.position.y);
-            var dist = Vector2.Distance(CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset, CameraSystem.PositionXY);
-            if (duration <= 0) duration = 1;
-            _focusOnce = true;
-            _focusStep = dist / duration;
-        }
-
-        public static void InitFocus(Transform location, Vector2 offset, bool once = false, float step = 0f, Action afterFocus = null) {
-            Focus = location;
-            _afterFocus = afterFocus;
-            if (location == null) return;
-            FocusOffset = offset - OffsetFromRelativeY(location.position.y);
-            _focusOnce = once;
-            _focusStep = step <= 0 ? _focusStep : step;
-        }
 
         public static void MoveToSystemPos(Vector2 pos) {
             CameraSystem.X = pos.x;
@@ -275,7 +236,7 @@ namespace Transient {
         public static void InitViewportControl(DragReceiver drag_) {
             _drag = drag_;
             _drag.WhenDragBegin = d => {
-                _focusOverride = _dragFocusOverride;
+                Focus?.Override(_dragFocusOverride);
                 _dragInertiaValue = 0;
                 CameraSystem.WorldPosition = MainCamera.transform.position;
             };
@@ -292,7 +253,7 @@ namespace Transient {
                 OnDrag.Invoke(offset, new Vector3(targetX, targetY, CameraSystem.Z));
             };
             _drag.WhenDragEnd = (d, delta) => {
-                _focusOverride = false;
+                Focus?.Override(false);
                 _dragInertiaValue = delta.magnitude;
                 _dragInertiaDelta = delta / _dragInertiaValue;
                 CameraSystem.WorldPosition = MainCamera.transform.position;
@@ -363,6 +324,14 @@ namespace Transient {
             if (duration == 0) ZoomValue(v);
         }
 
+        public static Vector2 ViewportOffsetToWorld(Vector2 viewOffset) {
+            var unitPerPixel = CalculateUnitPerPixel(_zoomTarget);
+            return new Vector2(
+                -viewOffset.x * _screenWidth * unitPerPixel,
+                -viewOffset.y * _screenHeight * unitPerPixel
+            );
+        }
+
         public static Vector2 WorldToCanvasSpace(Vector3 position) {
             //TODO persist screen offset
             return (MainCamera.WorldToScreenPoint(position) - new Vector3(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
@@ -403,27 +372,10 @@ namespace Transient {
                     m.Fade(deltaTime);
                 }
             }
-            if (Focus != null && !_focusOverride) {
-                var focus = CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset;
-                var dir = focus - CameraSystem.PositionXY;
-                var dist = dir.magnitude;
-                var move = _focusStep * deltaTime;
-                if (move >= dist) {
-                    CameraSystem.PositionXY = focus;
-                    if (_focusOnce) {
-                        Focus = null;
-                    }
-                    if (_afterFocus != null) {
-                        _afterFocus();
-                        _afterFocus = null;
-                    }
-                }
-                else CameraSystem.PositionXY += _focusStep * deltaTime * dist * Mathf.Lerp(0.5f, 2f, dist) * dir;
-                MainCamera.transform.position = CameraSystem.WorldPosition;
-            }
+            Focus?.Update(deltaTime);
             if (_dragInertia && _dragInertiaValue > _dragInertiaThreshold) {
                 _dragInertiaValue *= _dragInertiaDamping;
-                var inertia = _dragInertiaValue * _dragInertiaDelta * UnitPerPixel;
+                var inertia = _dragInertiaValue * UnitPerPixel * _dragInertiaDelta;
                 var targetX = CameraSystem.X - inertia.x;
                 var targetY = CameraSystem.Y - inertia.y;
                 if (PositionLimit != null) {
