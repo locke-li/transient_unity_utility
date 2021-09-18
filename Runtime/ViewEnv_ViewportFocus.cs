@@ -37,6 +37,7 @@ namespace Transient {
             _focusOnce = true;
             _focusStep = dist / duration;
             _damping = DampingNoneDelegate;
+            //Debug.Log($"focus|D {Focus.name} offset {offset}");
         }
 
         public void InitWithStep(Transform location, Vector2 offset, bool once = false, float step = 0f, Action afterFocus = null) {
@@ -47,12 +48,13 @@ namespace Transient {
             _focusOnce = once;
             _focusStep = step <= 0 ? _focusStep : step;
             _damping = once ? DampingNoneDelegate : DampingDefaultDelegate;
+            //Debug.Log($"focus|S {Focus.name} offset {offset}");
         }
 
         private static float DampingDefault(float dist)
             => dist * Mathf.Lerp(0.5f, 2f, dist);
         private static float DampingNone(float dist)
-            => 1 / dist;
+            => 1;
 
         public void Damping(Func<float, float> v_) => _damping = v_;
 
@@ -66,6 +68,7 @@ namespace Transient {
                 var dir = focus - CameraSystem.PositionXY;
                 var dist = dir.magnitude;
                 var move = _focusStep * deltaTime;
+                //Debug.Log($"focus update {move} {dist} {focus} {CameraSystem.PositionXY} {dir}");
                 if (move >= dist) {
                     CameraSystem.PositionXY = focus;
                     if (_focusOnce) {
@@ -76,7 +79,10 @@ namespace Transient {
                         _afterFocus = null;
                     }
                 }
-                else CameraSystem.PositionXY += move * _damping(dist) * dir;
+                else {
+                    dir /= dist;
+                    CameraSystem.PositionXY += move * _damping(dist) * dir;
+                }
                 MainCamera.transform.position = CameraSystem.WorldPosition;
             }
         }
