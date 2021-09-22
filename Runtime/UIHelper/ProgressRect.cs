@@ -27,6 +27,12 @@ namespace Transient.UI {
             obj.sizeDelta = new Vector2(min + flex * percent, current.y);
         }
 
+        public Vector2 Calculate(float percent) {
+            value = percent;
+            var current = obj.sizeDelta;
+            return new Vector2(min + flex * percent, current.y);
+        }
+
         public void Resize(float a, float b) => Resize(a / b);
     }
 }
