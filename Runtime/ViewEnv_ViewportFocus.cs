@@ -74,16 +74,16 @@ namespace Transient {
                     if (_focusOnce) {
                         Focus = null;
                     }
-                    if (_afterFocus != null) {
-                        _afterFocus();
-                        _afterFocus = null;
-                    }
                 }
                 else {
                     dir /= dist;
                     CameraSystem.PositionXY += move * _damping(dist) * dir;
                 }
                 MainCamera.transform.position = CameraSystem.WorldPosition;
+                if (Focus == null && _afterFocus != null) {
+                    _afterFocus();
+                    _afterFocus = null;
+                }
             }
         }
     }
