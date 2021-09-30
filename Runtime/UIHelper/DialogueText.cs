@@ -16,6 +16,7 @@ namespace Transient.UI {
         private readonly StringBuilder builder = new StringBuilder();
         private Action<float> AnimateUpdateDelegate;
         private Action WhenStop;
+        private bool animating;
 
         private void Awake() {
             AnimateUpdateDelegate = AnimateUpdate;
@@ -35,8 +36,11 @@ namespace Transient.UI {
             WhenStop = WhenStop_;
             interval = delay_;
             index = prepend_ != null ? prepend_.Length : -1;
-            //TODO prevent multiple animate
-            MainLoop.OnUpdate.Add(AnimateUpdateDelegate, this);
+            //prevent multiple animate
+            if (!animating) {
+                MainLoop.OnUpdate.Add(AnimateUpdateDelegate, this);
+                animating = true;
+            }
         }
         public void AnimateAppend(string text_, Action WhenStop_, float delay_ = 0, bool appendLine_ = false)
             => Animate(text_, WhenStop_, text, delay_, appendLine_);
@@ -62,6 +66,7 @@ namespace Transient.UI {
             if (builder.Length == 0) return true;
             line.text = text;
             builder.Clear();
+            animating = false;
             MainLoop.OnUpdate.Remove(this);
             var ret = index >= text.Length - 1;
             index = text.Length;
