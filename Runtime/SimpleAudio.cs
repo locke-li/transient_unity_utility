@@ -13,6 +13,7 @@ namespace Transient.Audio {
         List<string> groupKey;
         Dictionary<string, AudioSource> channel;
         Dictionary<string, (string name, string channel)> eventList;
+        List<string> failedEvent;
         List<AudioSource> copyList;
         public bool Enabled { get; set; }
         private static readonly string KeyEnabled = "audio_enabled";
@@ -77,6 +78,7 @@ namespace Transient.Audio {
             Enabled = AudioEnabled;
 #endif
             eventList = new Dictionary<string, (string, string)>(32);
+            failedEvent = new List<string>(16);
             copyList = new List<AudioSource>(16);
             groupKey = new List<string>(4);
             channel = new Dictionary<string, AudioSource>(8);
@@ -134,13 +136,19 @@ namespace Transient.Audio {
         //TODO preload
         public void RegisterEvent(string event_, string clip_, string ch_) {
             eventList[event_] = (clip_, ch_);
+            failedEvent.Remove(event_);
         }
 
         public void Event(string event_) {
-            if (!string.IsNullOrEmpty(event_) && eventList.TryGetValue(event_, out var info)) {
+            if (string.IsNullOrEmpty(event_)) {
+                Log.Error($"empty audio event!");
+                return;
+            }
+            if (eventList.TryGetValue(event_, out var info)) {
                 Sound(info.name, info.channel);
             }
-            else {
+            else if(!failedEvent.Contains(event_)) {
+                failedEvent.Add(event_);
                 Log.Warning($"audio event failed {event_}");
             }
         }
