@@ -197,7 +197,10 @@ namespace Transient {
             return false;
         }
 
-        public void ForEach(Action<int, LogEntry> Process) => ForEach(Process, logs.Length);
+        public void ForEach(Action<int, LogEntry> Process) {
+            if (logs == null) return;
+            ForEach(Process, logs.Length);
+        }
         public void ForEach(Action<int, LogEntry> Process, int max_) {
             int tailV = tail, headV = head;
             if (tailV < headV) {
