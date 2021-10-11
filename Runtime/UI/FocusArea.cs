@@ -14,7 +14,10 @@ namespace Transient.UI {
         public float radius;
         [Range(0.01f, 0.25f)]
         public float fade;
-        public bool hidden;
+        private bool hideVisual;//but blocks raycast
+        //by default, will block the whole area when hidden
+        //set to true to exculde the focus area
+        public bool focusClickThrough;
 
 #if UNITY_EDITOR
         public Vector2 syncPadding;
@@ -65,14 +68,14 @@ namespace Transient.UI {
         }
 
         public void Hide(bool value) {
-            if (hidden == value) return;
-            hidden = value;
+            if (hideVisual == value) return;
+            hideVisual = value;
             SetVerticesDirty();
         }
 
         protected override void OnPopulateMesh(VertexHelper vh) {
             vh.Clear();
-            if (hidden) return;
+            if (hideVisual) return;
             var rect = rectTransform.rect;
             vh.AddVert(new Vector3(rect.xMin, rect.yMin), color, Vector2.zero);
             vh.AddVert(new Vector3(rect.xMax, rect.yMin), color, Vector2.zero);
@@ -105,7 +108,7 @@ namespace Transient.UI {
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out var val)) {
                 return false;
             }
-            if (hidden) return true;
+            if (hideVisual && !focusClickThrough) return true;
             if (circle) {
                 var dist = Vector2.Distance(val, focusRect.center);
                 return dist > radius * focusRect.width;

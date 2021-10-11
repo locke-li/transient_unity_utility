@@ -45,7 +45,7 @@ namespace Transient.Development {
         private Queue<Log> _logList;
         private int _logCount = 0;
         private Log _lastLog;
-        private const int LOG_LIMIT = 999;
+        private const int LOG_LIMIT = 99;
         private RectTransform _logTemplate;
         private ScrollRect _logScroll;
         private readonly Color[] _logColors = new Color[] {
@@ -176,6 +176,7 @@ namespace Transient.Development {
                 cLog = _logList.Dequeue();
             }
             else {
+                //TODO delay instantiation
                 Transform tr = null;
                 if(_logList.Count == 0)
                     tr = _logTemplate;
