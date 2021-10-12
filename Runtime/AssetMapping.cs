@@ -342,6 +342,10 @@ namespace Transient.DataAccess {
             _pool = new List<ParticleSystem>(AutoRecycleCap);
         }
 
+        public void RegisterWithMainLoop() {
+            MainLoop.OnUpdate.Add(CheckRecycle, this);
+        }
+
         public void AutoRecycle(ParticleSystem ps) => _pool.Add(ps);
 
         public void CheckRecycle(float _) {
