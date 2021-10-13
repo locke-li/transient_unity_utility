@@ -1,4 +1,5 @@
-﻿
+﻿//#define DebugPathfinding
+
 using System;
 using System.Text;
 using Transient.SimpleContainer;
@@ -10,7 +11,7 @@ namespace Transient.Pathfinding {
         int InaccessibleMask { get; }
         Vector3 Position(int index_);
         float Cost(int index_);
-        void PrintNode(int index_, StringBuilder text_);
+        StringBuilder PrintNode(int index_, StringBuilder text_);
     }
 
     public interface IGraph {
@@ -100,10 +101,11 @@ namespace Transient.Pathfinding {
 
         public float Cost(int index_) => field[index_].v;
 
-        public void PrintNode(int index_, StringBuilder text_) {
+        public StringBuilder PrintNode(int index_, StringBuilder text_) {
             text_.Append(index_ % width);
             text_.Append(",");
             text_.Append(index_ / width);
+            return text_;
         }
     }
 
@@ -257,8 +259,9 @@ namespace Transient.Pathfinding {
 
         public float Cost(int index_) => waypoint[index_].weight;
 
-        public void PrintNode(int index_, StringBuilder text_) {
+        public StringBuilder PrintNode(int index_, StringBuilder text_) {
             text_.Append(index_);
+            return text_;
         }
     }
 
@@ -303,6 +306,9 @@ namespace Transient.Pathfinding {
         private int _start;
         private int _goal;
         private int _current;
+#if DebugPathfinding
+        private StringBuilder _text = new StringBuilder();
+#endif
 
         public AStarPathfinding(int capacity_ = 128) {
             _state = new IntermediateState[capacity_];
@@ -433,20 +439,32 @@ namespace Transient.Pathfinding {
             var currentIndex = 0;
             int next;
             var iter = 0;
+#if DebugPathfinding
+            _text.Clear();
+            _text.AppendLine("find path:");
+#endif
             while (_open.Count > 0 && ++iter <= _state.Length) {
                 min = float.MaxValue;
                 for (int i = 0; i < _open.Count; ++i) {
                     next = _open[i];
-                    //Log.Debug($"{next} {_state[next].cost}");
+#if DebugPathfinding
+                    _graph.data.PrintNode(next, _text).AppendLine($" {_state[next].cost}");
+#endif
                     if (_state[next].cost < min) {
                         currentIndex = i;
                         _current = next;
                         min = _state[next].cost;
                     }
                 }
-                //Log.Debug($"select {_current} {min}");
+#if DebugPathfinding
+                _text.Append("select ");
+                _graph.data.PrintNode(_current, _text).AppendLine($" {min}");
+#endif
                 if (_current == _goal) {
                     _state[_current].visited = 1;
+#if DebugPathfinding
+                    Log.Debug(_text.ToString());
+#endif
                     return true;
                 }
                 _open.OutOfOrderRemoveAt(currentIndex);
@@ -457,6 +475,9 @@ namespace Transient.Pathfinding {
             }
             if (iter == _state.Length) {
                 Log.Warning("iteration overflown");
+#if DebugPathfinding
+                Log.Debug(_text.ToString());
+#endif
             }
             return false;
         }
@@ -472,7 +493,10 @@ namespace Transient.Pathfinding {
             _state[next_].from = _current;
             _state[next_].value = tentative;
             _state[next_].cost = tentative + HeuristicCost(next_, _goal);
-            //Log.Debug($"add node {next_} value={tentative} cost={_state[next_].cost}");
+#if DebugPathfinding
+            _text.Append("add ");
+            _graph.data.PrintNode(next_, _text).AppendLine($" value={tentative} cost={_state[next_].cost}");
+#endif
         }
     }
 
