@@ -364,6 +364,32 @@ namespace Transient {
             pos = MainCamera.WorldToViewportPoint(pos);
             return pos.x > 0 && pos.x < 1 && pos.y > 0 && pos.y < 1;
         }
+        public static Vector3 GetLimitWorldToCanvasPosition(Vector3 pos)
+        {
+            var canvasPos = WorldToCanvasSpace(pos);
+            if (VisibleInView(pos))
+            {
+                return new Vector3(canvasPos.x, canvasPos.y, 0);
+            }
+            else
+            {
+                var z_rotation_angle = 0f;
+                var viewOffset = MainCamera.WorldToViewportPoint(pos);
+                var realX = viewOffset.x >= 0 && viewOffset.x <= 1 ? canvasPos.x : viewOffset.x / Math.Abs(viewOffset.x) * Screen.width * 0.5f / MainCanvas.scaleFactor;
+                var realY = viewOffset.y >= 0 && viewOffset.y <= 1 ? canvasPos.y : viewOffset.y / Math.Abs(viewOffset.y) * Screen.height * 0.5f / MainCanvas.scaleFactor;
+                viewOffset = new Vector2(viewOffset.x - 0.5f, viewOffset.y - 0.5f);
+                if (Math.Abs(viewOffset.y) >= Math.Abs(viewOffset.x))
+                {
+                    z_rotation_angle = viewOffset.y < 0 ? 0 : 180;
+                }
+                else
+                {
+                    z_rotation_angle = viewOffset.x < 0 ? 270 : 90;
+                }
+                // 0:Down | 90:Right | 180:Up | 270:Left
+                return new Vector3(realX, realY, z_rotation_angle);
+            }
+        }
 
         private void Update(float deltaTime) {
             CheckScreenSize();
