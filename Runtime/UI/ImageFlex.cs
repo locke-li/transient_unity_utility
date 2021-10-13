@@ -6,9 +6,9 @@ using UnityEngine.UI;
 namespace Transient.UI {
     public class ImageFlex : Image {
         public bool hidden;
-        private bool raycast;
+        public bool raycast;
 
-        private void Start() {
+        private void Awake() {
             raycast = raycastTarget;
         }
 
