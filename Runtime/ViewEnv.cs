@@ -16,7 +16,7 @@ namespace Transient {
         public bool spring;
         public float springStep;
         public float springTolerance;//TODO: make a smooth implementation
-        public Action<Camera, AbstractCoordinateSystem, float> CustomeProcess;
+        public Action<Camera, AbstractCoordinateSystem, float> ZoomOverride;
     }
 
     public sealed class ViewEnv {
@@ -58,6 +58,8 @@ namespace Transient {
         public static PositionLimit PositionLimit { get; set; }
 
         public static ZoomSetting zoomSetting;
+        private static bool _zoomMute;
+        private static float _zoomCache;
         private static float _zoomTarget;
         private static float _zoomStart;
         private static float _zoomTransitTime;
@@ -259,6 +261,7 @@ namespace Transient {
                 CameraSystem.WorldPosition = MainCamera.transform.position;
             };
             _drag.WhenPinch = (d, start, distance) => {
+                if (!_zoomMute) return;
                 var diff = (distance - start) * zoomSetting.dragFactor * zoomSetting.range * _screenHeightInverse;
                 TargetZoom(_zoomTarget - diff);
             };
@@ -282,13 +285,25 @@ namespace Transient {
             zoomSetting.scrollStep *= 4f;
 #endif
             if (MainCamera.orthographic) {
-                ProcessZoom = setting_.CustomeProcess ?? ZoomOrthographic;
+                ProcessZoom = setting_.ZoomOverride ?? ZoomOrthographic;
             }
             else {
-                ProcessZoom = setting_.CustomeProcess ?? ZoomPerspective;
+                ProcessZoom = setting_.ZoomOverride ?? ZoomPerspective;
                 MainCamera.farClipPlane = setting_.max + 1;
             }
             ZoomTo(setting_.rest);
+        }
+
+        //mute input induced zoom
+        public static void MuteZoom(bool value_) {
+            _zoomMute = value_;
+        }
+
+        public static void CacheZoom() => _zoomCache = Zoom;
+        public static void RestoreZoom(float duration_) {
+            if (_zoomCache <= 0) return;
+            ZoomTo(_zoomCache, duration_);
+            _zoomCache = 0;
         }
 
         private static void ZoomValue(float v_) {
@@ -427,7 +442,7 @@ namespace Transient {
             if (Input.GetMouseButtonDown(0)) {
                 ClickVisual?.EmitAt(UICamera.ScreenToWorldPoint(mp), UIViewScale);
             }
-            if (_drag != null && _drag.interactable && Input.mouseScrollDelta.y != 0) {
+            if (!_zoomMute && Input.mouseScrollDelta.y != 0) {
                 _zoomTransitTime = 0;
                 TargetZoom(_zoomTarget - Input.mouseScrollDelta.y * zoomSetting.scrollStep);
             }
