@@ -10,7 +10,16 @@ namespace Transient.SimpleContainer {
         private readonly int extf;
 
         public E[] Data => data;
-        public E this[int i] { get => data[i]; set => data[i] = value; }
+        public E this[int i] {
+            get {
+                if (i < 0 || i >= Count) throw new IndexOutOfRangeException($"{i} is outside of {Count}");
+                return data[i];
+            }
+            set {
+                if (i < 0 || i >= Count) throw new IndexOutOfRangeException($"{i} is outside of {Count}");
+                data[i] = value;
+            }
+        }
         public int Count { get; private set; }
 
         public List(int c) : this(c, 1, 2) {

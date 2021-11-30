@@ -30,7 +30,7 @@ namespace Transient {
             var x = Mathf.Clamp(eventData.position.x, 0, Screen.width);
             var y = Mathf.Clamp(eventData.position.y, 0, Screen.height);
             var pos = new Vector2(x, y);
-            if (_canvas.worldCamera != null) {
+            if (_canvas != null && _canvas.worldCamera != null) {
                 pos = _canvas.worldCamera.ScreenToViewportPoint(pos);
                 pos.x = (pos.x - 0.5f) * _resolution.x;
                 pos.y = (pos.y - 0.5f) * _resolution.y;
