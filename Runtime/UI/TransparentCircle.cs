@@ -20,6 +20,7 @@ namespace Transient.UI {
 #endif
 
         public override bool Raycast(Vector2 sp, Camera eventCamera) {
+            if (!raycastTarget) return false;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, sp, eventCamera, out var point);
             var diff = rectTransform.rect.center - point;
             return diff.sqrMagnitude <= radiusSqr;
