@@ -76,9 +76,9 @@ namespace Transient.DataAccess {
             return UnityEngine.Object.Instantiate(obj);
         }
 
-        public T TakeDirect<T>(string id, string ext_ = null) {
+        public T TakeDirect<T>(string id, string ext_ = null, bool try_ = false) {
             var ret = (T)AssetAdapter.Take(id, typeof(T), ext_);
-            if (ret == null) {
+            if (!try_ && ret == null) {
                 Log.Warning($"failed to directly take {id}.{ext_}");
             }
             return ret;
@@ -94,13 +94,13 @@ namespace Transient.DataAccess {
 
         public GameObject TakeEmpty() => Take<GameObject>(AssetEmpty, true);
 
-        public T Take<T>(string id, bool ins = true, string ext_ = null) where T : class {
+        public T Take<T>(string id, bool ins = true, string ext_ = null, bool try_ = false) where T : class {
             Performance.RecordProfiler(nameof(Take));
             object retv;
             if (!_pool.TryGetValue(id, out var resi)) {
                 Performance.RecordProfiler(nameof(AssetIdentifier));
                 resi = new AssetIdentifier(id, typeof(T));
-                resi.Load(ext_);//load for the first time
+                resi.Load(ext_, try_);//load for the first time
                 _pool.Add(id, resi);//add to pool
                 Performance.End(nameof(AssetIdentifier), true, $"first load:{id}");
             }
@@ -304,7 +304,7 @@ namespace Transient.DataAccess {
             InstantiateI = null;
         }
 
-        internal void Load(string ext_) {
+        internal void Load(string ext_, bool try_) {
             if (AssetAdapter.TryGetTypeCoalescing(id, out var lt)) {
                 InstantiateI = lt.Inst;
                 Raw = AssetAdapter.Take(id, lt.targetType, ext_);
@@ -317,7 +317,7 @@ namespace Transient.DataAccess {
             }
             if (Mapped == null) {
                 InstantiateI = InstantiateEmpty;
-                Log.Warning($"failed to load {id} {_type}");
+                if (!try_) Log.Warning($"failed to load {id} {_type}");
             }
         }
 
