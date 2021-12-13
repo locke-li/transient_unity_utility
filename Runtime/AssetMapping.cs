@@ -20,12 +20,12 @@ namespace Transient.DataAccess {
         public static string AssetEmpty { get; private set; } = "_empty_";
         internal static AssetMappingComparer _comparer;
 
-        readonly Dictionary<string, AssetIdentifier> _pool;
+        readonly Dictionary<(string, Type), AssetIdentifier> _pool;
         readonly Dictionary<object, AssetIdentifier> _activePool;//objects in the scene
         readonly Dictionary<AssetIdentifier, List<object>> _recyclePool;//recyclable(resetable) disabled objects
 
         private AssetMapping(int capacity_, int active_, int recycle_) {
-            _pool = new Dictionary<string, AssetIdentifier>(capacity_, _comparer);
+            _pool = new Dictionary<(string, Type), AssetIdentifier>(capacity_, _comparer);
             _activePool = new Dictionary<object, AssetIdentifier>(active_);
             _recyclePool = new Dictionary<AssetIdentifier, List<object>>(recycle_, _comparer);
         }
@@ -64,7 +64,7 @@ namespace Transient.DataAccess {
 
         public void AddInternal(string id, GameObject obj) {
             obj.hideFlags = HideFlags.HideAndDontSave;
-            _pool.Add(id, new AssetIdentifier(obj));
+            _pool.Add((id, typeof(GameObject)), new AssetIdentifier(obj));
         }
 
         public T TakePersistent<T>(string id) where T : UnityEngine.Object {
@@ -97,11 +97,12 @@ namespace Transient.DataAccess {
         public T Take<T>(string id, bool ins = true, string ext_ = null, bool try_ = false) where T : class {
             Performance.RecordProfiler(nameof(Take));
             object retv;
-            if (!_pool.TryGetValue(id, out var resi)) {
+            var key = (id, typeof(T));
+            if (!_pool.TryGetValue(key, out var resi)) {
                 Performance.RecordProfiler(nameof(AssetIdentifier));
                 resi = new AssetIdentifier(id, typeof(T));
                 resi.Load(ext_, try_);//load for the first time
-                _pool.Add(id, resi);//add to pool
+                _pool.Add(key, resi);//add to pool
                 Performance.End(nameof(AssetIdentifier), true, $"first load:{id}");
             }
             if (!ins) {
@@ -208,13 +209,13 @@ namespace Transient.DataAccess {
 
     internal sealed class AssetMappingComparer :
         Generic.IEqualityComparer<AssetIdentifier>,
-        Generic.IEqualityComparer<string>
+        Generic.IEqualityComparer<(string, Type)>
         {
         public bool Equals(AssetIdentifier a, AssetIdentifier b) => a.id == b.id;
         public int GetHashCode(AssetIdentifier i) => i.id.GetHashCode();
 
-        public bool Equals(string a, string b) => a == b;
-        public int GetHashCode(string i) => i.GetHashCode();
+        public bool Equals((string, Type) a, (string, Type) b) => a == b;
+        public int GetHashCode((string, Type) i) => i.GetHashCode();
     }
 
     public static class AssetAdapter {
@@ -284,27 +285,27 @@ namespace Transient.DataAccess {
         public readonly string id;
         public object Mapped { get; private set; }
         public object Raw { get; private set; }
-        private readonly Type _type;
+        public readonly Type type;
         Func<object, object> InstantiateI;
 
         public object Instantiate() => InstantiateI(Mapped);
 
         public AssetIdentifier(UnityEngine.Object obj) {
             id = string.Empty;
-            _type = obj.GetType();
+            type = obj.GetType();
             Raw = Mapped = obj;
             InstantiateI = InstantiateUnityObject;
         }
 
         public AssetIdentifier(string id_, Type type_) {
             id = id_;
-            _type = type_;
+            type = type_;
             Mapped = null;
             Raw = null;
             InstantiateI = null;
         }
 
-        internal void Load(string ext_, bool try_) {
+        internal bool Load(string ext_, bool try_) {
             if (AssetAdapter.TryGetTypeCoalescing(id, out var lt)) {
                 InstantiateI = lt.Inst;
                 Raw = AssetAdapter.Take(id, lt.targetType, ext_);
@@ -312,13 +313,15 @@ namespace Transient.DataAccess {
             }
             else {
                 InstantiateI = InstantiateUnityObject;
-                Raw = AssetAdapter.Take(id, _type, ext_);
+                Raw = AssetAdapter.Take(id, type, ext_);
                 Mapped = Raw;
             }
             if (Mapped == null) {
                 InstantiateI = InstantiateEmpty;
-                if (!try_) Log.Warning($"failed to load {id} {_type}");
+                if (!try_) Log.Warning($"failed to load {id} {type}");
+                return false;
             }
+            return true;
         }
 
         internal void Preload(object o_) {
