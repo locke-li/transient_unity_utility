@@ -14,6 +14,13 @@ namespace Transient.UI {
         public DragReceiver drag;
         public ButtonReceiver button;
 
+        #if UNITY_EDITOR
+        private void OnValidate() {
+            if (drag != null) drag.enabled = false;
+            if (button != null) button.enabled = false;
+        }
+        #endif
+
         private void OnEnable() {
             if(drag == null || button == null) {
                 enabled = false;
@@ -23,7 +30,9 @@ namespace Transient.UI {
                 EventSystemRaycastAdapter.Check(transform, out _raycastAdapter);
             }
             drag._raycastAdapter = _raycastAdapter;
+            drag.enabled = true;
             button._raycastAdapter = _raycastAdapter;
+            button.enabled = true;
         }
 
         public void OnPointerClick(PointerEventData eventData) {
