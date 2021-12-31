@@ -9,7 +9,7 @@ namespace Transient.UI {
         ScrollData data { get; set; }
         public void Reset(ScrollData data_) => data = data_;
 
-        public float ContentPos(float xScale, float yScale) => content.anchoredPosition.x* xScale + content.anchoredPosition.y * yScale;
+        public float ContentPos(float xScale, float yScale) => content.anchoredPosition.x * xScale + content.anchoredPosition.y * yScale;
 
         protected override void LateUpdate() {
             base.LateUpdate();
@@ -85,9 +85,10 @@ namespace Transient.UI {
         float viewportSize, paddedSize;
         float headOffset;
         float currentContentSize;
+        Vector2 fixedOffset;
         Vector2 contentOffset;
         Func<int, int, Vector2, Vector2> Reposition;
-        Vector2 flexibleSize, fixedSize;
+        Vector2 flexibleSize, fixedSize, restPos;
         float xScale, yScale;
         ScrollToTarget scrollToTarget;
 
@@ -149,7 +150,7 @@ namespace Transient.UI {
             if(scrollToTarget.scrollTime > 0) {
                 var target = scrollToTarget.TargetStep(Time.deltaTime);
                 Fill(-target);
-                _scroll.content.anchoredPosition = -flexibleSize * target;
+                _scroll.content.anchoredPosition = -flexibleSize * target + restPos;
                 _scroll.velocity = Vector2.zero;
             }
             else if (_scroll.velocity != Vector2.zero) {
@@ -246,7 +247,7 @@ namespace Transient.UI {
 
         private void RefreshContentSize() {
             var size = headOffset + currentContentSize;
-            _scroll.content.sizeDelta = size * flexibleSize + fixedSize;
+            _scroll.content.sizeDelta = size * flexibleSize;
             if (autoCenter) {
                 var viewSize = Vector2.Dot(_scroll.viewport.rect.size, flexibleSize);
                 _scroll.content.pivot = size > viewSize ? new Vector2(0, 1) : new Vector2(0.5f, 0.5f);
@@ -324,14 +325,15 @@ namespace Transient.UI {
             _scroll.StopMovement();
             indexOffset = 0;
             headOffset = 0;
-            _scroll.normalizedPosition = new Vector2(0, 1);//top-left
+            _scroll.content.anchoredPosition = restPos;
             Refill();
         }
 
         public void Reset(int count_) {
             if(vertical) {
                 flexibleSize = Vector2.up;
-                fixedSize = Vector2.right;
+                fixedSize = new Vector2(_scroll.content.sizeDelta.x, 0);
+                restPos = new Vector2(_scroll.content.anchoredPosition.x, 0);
                 viewportSize = _scroll.viewport.rect.height;
                 elementPositionUnit = new Vector2(defaultElementSize.x, 0);
                 xScale = 0;
@@ -339,7 +341,8 @@ namespace Transient.UI {
             }
             else {
                 flexibleSize = Vector2.right;
-                fixedSize = Vector2.up;
+                fixedSize = new Vector2(0, _scroll.content.sizeDelta.y);
+                restPos = new Vector2(0, _scroll.content.anchoredPosition.y);
                 viewportSize = _scroll.viewport.rect.width;
                 elementPositionUnit = new Vector2(0, -defaultElementSize.y);
                 xScale = 1;
@@ -374,7 +377,7 @@ namespace Transient.UI {
         float elementSize, elementSizeInverse, viewportSize;
         Vector2 contentOffset;
         Vector2 lineOffset;
-        Vector2 flexibleSize;
+        Vector2 flexibleSize, fixedSize, restPos;
         Func<int, int, Vector2, Vector2, Vector2> Reposition;
         float xScale, yScale;
         ScrollToTarget scrollToTarget;
@@ -405,10 +408,11 @@ namespace Transient.UI {
 
         public ScrollDataFixed<T> Resize(int elementPerLine_ = 1, float visibleSize_ = -1f, float elementFlexibleDirSize_ = 0, float elementFixedDirSize_ = 0) {
             elementPerLine = elementPerLine_;
-            pivotOffset = Vector2.zero;
-            contentOffset = Vector2.zero;
-            if (visibleSize_ >= 0)
-                ((RectTransform)_scroll.transform).sizeDelta = flexibleSize * visibleSize_;
+            if (visibleSize_ >= 0) {
+                var rect = (RectTransform)_scroll.transform;
+                rect.anchoredPosition = restPos;
+                rect.sizeDelta = flexibleSize * visibleSize_ + fixedSize;
+            }
             if (vertical) {
                 defaultElementSize.y = elementFlexibleDirSize_ > 0 ? elementFlexibleDirSize_ : defaultElementSize.y;
                 defaultElementSize.x = elementFixedDirSize_ > 0 ? elementFixedDirSize_ : defaultElementSize.x;
@@ -431,7 +435,7 @@ namespace Transient.UI {
             if(scrollToTarget.scrollTime > 0) {
                 var target = scrollToTarget.TargetStep(Time.deltaTime);
                 Fill(-target);
-                _scroll.content.anchoredPosition = -flexibleSize * target;
+                _scroll.content.anchoredPosition = -flexibleSize * target + restPos;
                 _scroll.velocity = Vector2.zero;
             }
             else if(_scroll.velocity != Vector2.zero) {
@@ -490,7 +494,7 @@ namespace Transient.UI {
         }
 
         private void RefreshContentSize(float size) {
-            _scroll.content.sizeDelta = size * flexibleSize;
+            _scroll.content.sizeDelta = size * flexibleSize + fixedSize;
             if (autoCenter) {
                 var viewSize = Vector2.Dot(_scroll.viewport.rect.size, flexibleSize);
                 _scroll.content.pivot = size > viewSize ? new Vector2(0, 1) : new Vector2(0.5f, 0.5f);
@@ -545,19 +549,23 @@ namespace Transient.UI {
             indexOffset = 0;
             ps = 0;
             pe = entryCount - 1;
-            _scroll.normalizedPosition = new Vector2(0, 1);
+            _scroll.content.anchoredPosition = restPos;
             Refill();
         }
 
         public void Reset(int count_) {
             if(vertical) {
                 flexibleSize = Vector2.up;
+                fixedSize = new Vector2(_scroll.content.sizeDelta.x, 0);
+                restPos = new Vector2(_scroll.content.anchoredPosition.x, 0);
                 viewportSize = _scroll.viewport.rect.height;
                 xScale = 0;
                 yScale = 1;
             }
             else {
                 flexibleSize = Vector2.right;
+                fixedSize = new Vector2(0, _scroll.content.sizeDelta.y);
+                restPos = new Vector2(0, _scroll.content.anchoredPosition.y);
                 viewportSize = _scroll.viewport.rect.width;
                 xScale = 1;
                 yScale = 0;
