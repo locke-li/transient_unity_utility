@@ -1,5 +1,6 @@
 ﻿using Transient;
 using Transient.SimpleContainer;
+using System;
 
 using Enumerator = System.Collections.Generic.IEnumerator<CoroutineState>;
 

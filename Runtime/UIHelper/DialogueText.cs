@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Text;
 using Transient;
+using System;
 
 namespace Transient.UI {
     public class DialogueText : MonoBehaviour {

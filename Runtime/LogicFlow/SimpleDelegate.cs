@@ -2,19 +2,6 @@
 using Transient.SimpleContainer;
 
 namespace Transient {
-    //use these delegates eliminates the need for Action/Func delegate definition in System.Core (approx 1.3m in .Net 4.0)
-    public delegate void Action();
-    public delegate void Action<T1>(T1 t1);
-    public delegate void Action<T1, T2>(T1 t1, T2 t2);
-    public delegate void Action<T1, T2, T3>(T1 t1, T2 t2, T3 t3);
-    public delegate void Action<T1, T2, T3, T4>(T1 t1, T2 t2, T3 t3, T4 t4);
-
-    public delegate Tr Func<Tr>();
-    public delegate Tr Func<T1, Tr>(T1 t1);
-    public delegate Tr Func<T1, T2, Tr>(T1 t1, T2 t2);
-    public delegate Tr Func<T1, T2, T3, Tr>(T1 t1, T2 t2, T3 t3);
-    public delegate Tr Func<T1, T2, T3, T4, Tr>(T1 t1, T2 t2, T3 t3, T4 t4);
-
     internal struct ActionWithRef<A> {
         public A Value { get; set; }
         public object token;

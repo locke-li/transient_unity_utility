@@ -3,6 +3,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Transient.SimpleContainer;
+using System;
 
 namespace Transient.UI {
     public sealed class ScrollDataView : ScrollRect {

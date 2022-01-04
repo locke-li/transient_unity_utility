@@ -1,6 +1,7 @@
 using UnityEngine;
 using Transient.DataAccess;
 using Transient.SimpleContainer;
+using System;
 
 namespace Transient {
     public interface IMessageFade {

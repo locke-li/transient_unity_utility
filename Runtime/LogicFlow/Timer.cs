@@ -4,6 +4,7 @@
 // author: liyingbo
 //
 using Transient.SimpleContainer;
+using System;
 
 namespace Transient {
     public class Timer {
