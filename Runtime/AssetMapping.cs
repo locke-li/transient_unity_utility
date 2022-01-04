@@ -67,8 +67,8 @@ namespace Transient.DataAccess {
             _pool.Add((id, typeof(GameObject)), new AssetIdentifier(obj));
         }
 
-        public T TakePersistent<T>(string id) where T : UnityEngine.Object {
-            var obj = (T)AssetAdapter.Take(id, typeof(T));
+        public T TakePersistent<T>(string id, string ext_ = null, bool try_ = false) where T : UnityEngine.Object {
+            var obj = (T)AssetAdapter.Take(id, typeof(T), ext_, try_);
             if (obj == null) {
                 Log.Warning($"failed to take persistent {id}");
                 return null;
@@ -77,7 +77,7 @@ namespace Transient.DataAccess {
         }
 
         public T TakeDirect<T>(string id, string ext_ = null, bool try_ = false) {
-            var ret = (T)AssetAdapter.Take(id, typeof(T), ext_);
+            var ret = (T)AssetAdapter.Take(id, typeof(T), ext_, try_);
             if (!try_ && ret == null) {
                 Log.Warning($"failed to directly take {id}.{ext_}");
             }
@@ -247,8 +247,8 @@ namespace Transient.DataAccess {
         public static bool TryGetTypeCoalescing(string id, out TypeCoalescing t_) =>
             TypeCoalescingByCategory.TryGetValue(Id2Category(id), out t_);
 
-        public static Func<string, string, Type, string, object> PackSearch { get; set; }
-        public static Func<string, string, Type, string, object> ExtendedSearch { get; set; }
+        public static Func<string, string, Type, string, bool, object> PackSearch { get; set; }
+        public static Func<string, string, Type, string, bool, object> ExtendedSearch { get; set; }
         public static Func<string, (string, string)> ExtractSubId { get; set; } = id_ => {
             string sub = null;
             var separator = id_.LastIndexOf("#");
@@ -259,10 +259,10 @@ namespace Transient.DataAccess {
             return (id_, sub);
         };
 
-        public static object Take(string id_, Type type_, string ext_ = null) {
+        public static object Take(string id_, Type type_, string ext_, bool try_) {
             var (id, sub) = ExtractSubId(id_);
             //try AssetBundles
-            var ret = PackSearch?.Invoke(id, sub, type_, ext_);
+            var ret = PackSearch?.Invoke(id, sub, type_, ext_, try_);
             if (ret != null) return ret;
             //try Resources
             if (sub != null) {
@@ -276,7 +276,7 @@ namespace Transient.DataAccess {
                 if (ret != null) return ret;
             }
             //try extra/fail-safe
-            return ExtendedSearch?.Invoke(id, sub, type_, ext_);
+            return ExtendedSearch?.Invoke(id, sub, type_, ext_, try_);
         }
     }
 
@@ -308,12 +308,12 @@ namespace Transient.DataAccess {
         internal bool Load(string ext_, bool try_) {
             if (AssetAdapter.TryGetTypeCoalescing(id, out var lt)) {
                 InstantiateI = lt.Inst;
-                Raw = AssetAdapter.Take(id, lt.targetType, ext_);
+                Raw = AssetAdapter.Take(id, lt.targetType, ext_, try_);
                 if (Raw != null) Mapped = lt.Mapping(Raw);
             }
             else {
                 InstantiateI = InstantiateUnityObject;
-                Raw = AssetAdapter.Take(id, type, ext_);
+                Raw = AssetAdapter.Take(id, type, ext_, try_);
                 Mapped = Raw;
             }
             if (Mapped == null) {
