@@ -67,8 +67,10 @@ namespace Transient.DataAccess {
             _pool.Add((id, typeof(GameObject)), new AssetIdentifier(obj));
         }
 
-        public T TakePersistent<T>(string id, string ext_ = null, bool try_ = false) where T : UnityEngine.Object {
-            var obj = (T)AssetAdapter.Take(id, typeof(T), ext_, try_);
+        public T TakePersistent<T>(string id, bool try_ = false) where T : UnityEngine.Object
+            => (T)TakePersistent(typeof(T), id, try_);
+        public object TakePersistent(Type type_, string id, bool try_ = false) {
+            var obj = (UnityEngine.Object)AssetAdapter.Take(id, type_, try_);
             if (obj == null) {
                 Log.Warning($"failed to take persistent {id}");
                 return null;
@@ -76,10 +78,12 @@ namespace Transient.DataAccess {
             return UnityEngine.Object.Instantiate(obj);
         }
 
-        public T TakeDirect<T>(string id, string ext_ = null, bool try_ = false) {
-            var ret = (T)AssetAdapter.Take(id, typeof(T), ext_, try_);
+        public T TakeDirect<T>(string id, bool try_ = false)
+            => (T)TakeDirect(typeof(T), id, try_);
+        public object TakeDirect(Type type_, string id, bool try_ = false) {
+            var ret = AssetAdapter.Take(id, type_, try_);
             if (!try_ && ret == null) {
-                Log.Warning($"failed to directly take {id}.{ext_}");
+                Log.Warning($"failed to directly take {id}");
             }
             return ret;
         }
@@ -94,14 +98,16 @@ namespace Transient.DataAccess {
 
         public GameObject TakeEmpty() => Take<GameObject>(AssetEmpty, true);
 
-        public T Take<T>(string id, bool ins = true, string ext_ = null, bool try_ = false) where T : class {
+        public T Take<T>(string id, bool ins = true, bool try_ = false) where T : class
+            => Take(typeof(T), id, ins, try_) as T;
+        public object Take(Type type_, string id, bool ins = true, bool try_ = false) {
             Performance.RecordProfiler(nameof(Take));
             object retv;
-            var key = (id, typeof(T));
+            var key = (id, type_);
             if (!_pool.TryGetValue(key, out var resi)) {
                 Performance.RecordProfiler(nameof(AssetIdentifier));
-                resi = new AssetIdentifier(id, typeof(T));
-                resi.Load(ext_, try_);//load for the first time
+                resi = new AssetIdentifier(id, type_);
+                resi.Load(try_);//load for the first time
                 _pool.Add(key, resi);//add to pool
                 Performance.End(nameof(AssetIdentifier), true, $"first load:{id}");
             }
@@ -116,7 +122,7 @@ namespace Transient.DataAccess {
             }
             if (ins) ActivateObject(retv, resi);
             Performance.End(nameof(Take));
-            return retv as T;
+            return retv;
         }
 
         bool TryGetRecycle(AssetIdentifier resId, out object resObject) {
@@ -225,8 +231,15 @@ namespace Transient.DataAccess {
             { typeof(Material), new string[] { "mat" } },
             { typeof(Sprite), new string[] { "png", "jpg", "tga", "psd" } },
             { typeof(AudioClip), new string[] { "mp3", "ogg", "wav" } },
+            { typeof(UnityEngine.Audio.AudioMixer), new string[] { "mixer" } },
         };
 #endif
+
+        public struct IdExtract {
+            public string id;
+            public string ext;
+            public string sub;
+        }
 
         public struct TypeCoalescing {
             public Func<object, object> Mapping;
@@ -247,36 +260,48 @@ namespace Transient.DataAccess {
         public static bool TryGetTypeCoalescing(string id, out TypeCoalescing t_) =>
             TypeCoalescingByCategory.TryGetValue(Id2Category(id), out t_);
 
-        public static Func<string, string, Type, string, bool, object> PackSearch { get; set; }
-        public static Func<string, string, Type, string, bool, object> ExtendedSearch { get; set; }
-        public static Func<string, (string, string)> ExtractSubId { get; set; } = id_ => {
+        public static Func<IdExtract, Type, bool, object> PackSearch { get; set; }
+        public static Func<IdExtract, Type, bool, object> ExtendedSearch { get; set; }
+        public static Func<string, IdExtract> ExtractId { get; set; } = id_ => {
+            //format: [name].<ext>#<sub>
             string sub = null;
-            var separator = id_.LastIndexOf("#");
-            if (separator > 0) {
-                sub = id_.Substring(separator + 1);
-                id_ = id_.Substring(0, separator);
+            string ext = null;
+            var sep = id_.LastIndexOf("#");
+            var dot = id_.LastIndexOf(".");
+            if (dot > 0 && sep > 0) {
+                ext = id_.Substring(dot + 1, sep - dot);
+                sub = id_.Substring(sep + 1);
+                id_ = id_.Substring(0, dot);
             }
-            return (id_, sub);
+            else if (sep > 0) {
+                sub = id_.Substring(sep + 1);
+                id_ = id_.Substring(0, sep);
+            }
+            else if (dot > 0) {
+                ext = id_.Substring(dot + 1);
+                id_ = id_.Substring(0, dot);
+            }
+            return new IdExtract() { id = id_, sub = sub, ext = ext };
         };
 
-        public static object Take(string id_, Type type_, string ext_, bool try_) {
-            var (id, sub) = ExtractSubId(id_);
+        public static object Take(string id_, Type type_, bool try_) {
+            var id = ExtractId(id_);
             //try AssetBundles
-            var ret = PackSearch?.Invoke(id, sub, type_, ext_, try_);
+            var ret = PackSearch?.Invoke(id, type_, try_);
             if (ret != null) return ret;
             //try Resources
-            if (sub != null) {
-                var batch = Resources.LoadAll(id, type_);
+            if (id.sub != null) {
+                var batch = Resources.LoadAll(id.id, type_);
                 foreach (var r in batch) {
-                    if (r.name == sub) return r;
+                    if (r.name == id.sub) return r;
                 }
             }
             else {
-                ret = Resources.Load(id, type_);
+                ret = Resources.Load(id.id, type_);
                 if (ret != null) return ret;
             }
             //try extra/fail-safe
-            return ExtendedSearch?.Invoke(id, sub, type_, ext_, try_);
+            return ExtendedSearch?.Invoke(id, type_, try_);
         }
     }
 
@@ -305,15 +330,15 @@ namespace Transient.DataAccess {
             InstantiateI = null;
         }
 
-        internal bool Load(string ext_, bool try_) {
+        internal bool Load(bool try_) {
             if (AssetAdapter.TryGetTypeCoalescing(id, out var lt)) {
                 InstantiateI = lt.Inst;
-                Raw = AssetAdapter.Take(id, lt.targetType, ext_, try_);
+                Raw = AssetAdapter.Take(id, lt.targetType, try_);
                 if (Raw != null) Mapped = lt.Mapping(Raw);
             }
             else {
                 InstantiateI = InstantiateUnityObject;
-                Raw = AssetAdapter.Take(id, type, ext_, try_);
+                Raw = AssetAdapter.Take(id, type, try_);
                 Mapped = Raw;
             }
             if (Mapped == null) {
