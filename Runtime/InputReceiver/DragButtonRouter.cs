@@ -66,6 +66,7 @@ namespace Transient.UI {
 
         public void OnEndDrag(PointerEventData eventData) {
             if(drag.enabled) drag.OnEndDrag(eventData);
+            if(button.enabled) button.OnEndDrag(eventData);
         }
 
         public void OnSubmit(BaseEventData eventData) {

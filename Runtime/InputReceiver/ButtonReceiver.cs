@@ -21,7 +21,8 @@ namespace Transient.UI {
         public Action<ButtonReceiver> WhenClick { get; set; } = b => { };
         public Action<ButtonReceiver> WhenClickDown { get; set; } = b => { };
         public Action<ButtonReceiver> WhenClickUp { get; set; } = b => { };
-        public Func<ButtonReceiver, bool> WhenDrag { get; set; } = b => false;
+        public Func<ButtonReceiver, bool> WhenDragBegin { get; set; } = b => false;
+        public Action<ButtonReceiver> WhenDragEnd { get; set; } = b => { };
         public Action<ButtonReceiver, bool> WhenHover { get; set; } = (b, c) => { };
         public Action<ButtonReceiver> WhenLongPressed { get; set; }
 
@@ -111,9 +112,13 @@ namespace Transient.UI {
         }
 
         public void OnBeginDrag(PointerEventData eventData) {
-            if (!WhenDrag(this)) {
+            if (!WhenDragBegin(this)) {
                 CancelClick();
             }
+        }
+
+        public void OnEndDrag(PointerEventData eventData) {
+            WhenDragEnd(this);
         }
 
         public void OnSubmit(BaseEventData eventData) => WhenClick(this);
