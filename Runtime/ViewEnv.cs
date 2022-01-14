@@ -26,6 +26,7 @@ namespace Transient {
         public static Canvas MainCanvas { get; private set; }
         public static RectTransform CanvasContent { get; private set; }
         public static RectTransform CanvasOverlay { get; private set; }
+        public static Vector2 SafeAreaPosOffset;
 
         public static float RatioXY { get; private set; }
         public static float RatioYX { get; private set; }
@@ -216,23 +217,24 @@ namespace Transient {
         }
 
         public static void FitSafeArea(float l_, float r_, float t_, float b_) {
+            Vector2 size;
             if (l_ < 0 && r_ < 0) {
                 var rect = Screen.safeArea;
-                CanvasContent.anchoredPosition = rect.position;
-                CanvasOverlay.anchoredPosition = rect.position;
-                var value = rect.size;
-                value = new Vector2(value.x - Screen.width, value.y - Screen.height);
-                CanvasContent.sizeDelta = value;
-                CanvasOverlay.sizeDelta = value;
+                Log.Debug($"Screen.safeArea: {rect}");
+                SafeAreaPosOffset = rect.position;
+                size = rect.size;
+                size = new Vector2(size.x - Screen.width, size.y - Screen.height);
+                
             }
             else {
-                var value = new Vector2(l_ - r_, b_ - t_) * 0.5f;
-                CanvasContent.anchoredPosition = value;
-                CanvasOverlay.anchoredPosition = value;
-                value = new Vector2(-l_ - r_, -t_ - b_);
-                CanvasContent.sizeDelta = value;
-                CanvasOverlay.sizeDelta = value;
+                Log.Debug($"custom safeArea: {l_},{r_},{t_},{b_}");
+                SafeAreaPosOffset = new Vector2(l_ - r_, b_ - t_) * 0.5f;
+                size = new Vector2(-l_ - r_, -t_ - b_);
             }
+            CanvasContent.anchoredPosition = SafeAreaPosOffset;
+            CanvasOverlay.anchoredPosition = SafeAreaPosOffset;
+            CanvasContent.sizeDelta = size;
+            CanvasOverlay.sizeDelta = size;
         }
 
         public static void InitViewportControl(DragReceiver drag_) {
@@ -349,17 +351,17 @@ namespace Transient {
 
         public static Vector2 WorldToCanvasSpace(Vector3 position) {
             //TODO persist screen offset
-            return (MainCamera.WorldToScreenPoint(position) - new Vector3(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
+            return ((Vector2)MainCamera.WorldToScreenPoint(position) - new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor - SafeAreaPosOffset;
         }
 
         public static Vector2 ScreenToCanvasSpace(Vector2 position) {
             //TODO persist screen offset
-            return (position - new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
+            return (position - new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor - SafeAreaPosOffset;
         }
 
         public static Vector2 UILocalToCanvasSpace(Vector3 position) {
             //TODO persist screen offset
-            return (UICamera.WorldToScreenPoint(position) - new Vector3(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor;
+            return ((Vector2)UICamera.WorldToScreenPoint(position) - new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor - SafeAreaPosOffset;
         }
 
         //TODO should be in CoordinateSystem
