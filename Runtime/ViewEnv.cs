@@ -24,6 +24,7 @@ namespace Transient {
         public static Camera MainCamera { get; private set; }
         public static Camera UICamera { get; private set; }
         public static Canvas MainCanvas { get; private set; }
+        private static CanvasScaler _canvasScaler;
         public static RectTransform CanvasContent { get; private set; }
         public static RectTransform CanvasOverlay { get; private set; }
         public static Vector2 SafeAreaPosOffset;
@@ -81,8 +82,8 @@ namespace Transient {
             UICamera = ui_;
             MainCanvas = canvas_;
             _perspectiveProjectionFactor = (float)Math.Tan(MainCamera.fieldOfView * Mathf.Deg2Rad * 0.5f);
-            CheckScreenSize();
             CheckCanvas();
+            CheckScreenSize();
             InitViewport();
             ResetCoordinateSystem();
             CanvasContent = MainCanvas.transform.AddChildRect("content");
@@ -161,13 +162,14 @@ namespace Transient {
             _screenHeightInverse = 1f / Screen.height;
             UIViewScale = UICamera.orthographicSize * _screenHeightInverse * 2f;
             UnitPerPixel = Zoom * _screenHeightInverse * 2f;
+            CheckCanvas();
             OnScreenSizeChange.Invoke(_screenWidth, _screenHeight, RatioXY);
         }
 
         private static void CheckCanvas() {
-            var scaler = MainCanvas.GetComponent<CanvasScaler>();
-            if (scaler != null) {
-                CanvasSize = scaler.referenceResolution;
+            _canvasScaler = MainCanvas.GetComponent<CanvasScaler>();
+            if (_canvasScaler != null) {
+                CanvasSize = _canvasScaler.referenceResolution;
             }
             else {
                 CanvasSize = new Vector2(Screen.width, Screen.height);
@@ -220,17 +222,17 @@ namespace Transient {
             Vector2 size;
             if (l_ < 0 && r_ < 0) {
                 var rect = Screen.safeArea;
-                Log.Debug($"Screen.safeArea: {rect}");
-                SafeAreaPosOffset = rect.position;
+                var pos = rect.position;
                 size = rect.size;
-                size = new Vector2(size.x - Screen.width, size.y - Screen.height);
-                
+                l_ = pos.x;
+                r_ = Screen.width - size.x - l_;
+                t_ = pos.y;
+                b_ = Screen.height - size.y - t_;
+                Log.Debug($"SafeArea|Screen.safeArea: {rect}");
             }
-            else {
-                Log.Debug($"custom safeArea: {l_},{r_},{t_},{b_}");
                 SafeAreaPosOffset = new Vector2(l_ - r_, b_ - t_) * 0.5f;
                 size = new Vector2(-l_ - r_, -t_ - b_);
-            }
+            Log.Debug($"SafeArea|input: ({l_},{r_},{t_},{b_}) {MainCanvas.scaleFactor} output:{SafeAreaPosOffset} {size}");
             CanvasContent.anchoredPosition = SafeAreaPosOffset;
             CanvasOverlay.anchoredPosition = SafeAreaPosOffset;
             CanvasContent.sizeDelta = size;
