@@ -36,7 +36,7 @@ namespace Transient.DataAccess {
             _comparer = new AssetMappingComparer();
             Default = Create(16, 512, 512);
             View = Create(8, 32, 64);
-            Default.AddInternal(AssetEmpty, new GameObject());
+            Default.AddInternal(AssetEmpty, new GameObject());//TODO don't create
             Performance.End(nameof(AssetMapping));
         }
 
@@ -145,9 +145,20 @@ namespace Transient.DataAccess {
             Performance.End(nameof(ActivateObject));
         }
 
-        public void Recycle(object resObj_, GameObject go_) {
+        private void Recycle(GameObject go_) {
             go_.SetActive(false);
+            #if UNITY_EDITOR
+            //to keep hierarchy clean
             go_.transform.SetParent(RecycleObjectRoot, false);
+            #else
+            if (go_.transform.parent != null) {
+                go_.transform.SetParent(null, false);
+            }
+            #endif
+        }
+
+        public void Recycle(object resObj_, GameObject go_) {
+            Recycle(go_);
             Recycle(resObj_);
         }
 
@@ -160,15 +171,7 @@ namespace Transient.DataAccess {
             var recognized = _activePool.TryGetValue(resObj_, out var resId);
             if (resObj_ is GameObject obj) {
                 if (recognized) {
-                    obj.SetActive(false);
-                    #if UNITY_EDITOR
-                    //to keep hierarchy clean
-                    obj.transform.SetParent(RecycleObjectRoot, false);
-                    #else
-                    if (obj.transform.parent != null) {
-                        obj.transform.SetParent(null, false);
-                    }
-                    #endif
+                    Recycle(obj);
                 }
                 else {
                     Log.Error($"recycling un-registered object {resObj_} {obj.transform.parent?.name}");
