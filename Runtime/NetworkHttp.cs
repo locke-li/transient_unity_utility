@@ -46,13 +46,13 @@ namespace Transient {
         private Task sendTask;
         private CancellationTokenSource sendToken;
 
-        public void Init() {
+        public virtual void Init() {
             Client = new HttpClient();
             queue = new ConcurrentQueue<HttpRequest>();
             Timeout = 5;
         }
 
-        public void Destroy() {
+        public virtual void Destroy() {
             lock(queue) {
                 sendToken?.Cancel();
             }
