@@ -1,5 +1,5 @@
-# transient_unity_utility
-Unity extension/utility
+# Transient.UnityUtility
+Unity extension/utility.
 
 + Utility Console (UtilsConsole)
 + Log (LogStream)
