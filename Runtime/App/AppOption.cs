@@ -10,12 +10,8 @@ namespace Transient {
 
         public static (AppOption, string) Parse(string str) {
             var option = new AppOption();
-            try {
-                JsonUtility.FromJsonOverwrite(str, option);
-            }
-            catch (Exception e) {
-                return (option, e.Message);
-            }
+            JsonUtility.FromJsonOverwrite(str, option);
+            option.data = option.data ?? new Dictionary<string, string>();
             return (option, string.Empty);
         }
 

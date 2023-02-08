@@ -17,13 +17,8 @@ namespace Transient {
         public Dictionary<string, string> info;
 
         public static (AppVersion, string) Parse(string str) {
-            AppVersion version = null;
-            try {
-                version = JsonUtility.FromJson<AppVersion>(str);
-            }
-            catch (Exception e) {
-                return (null, e.Message);
-            }
+            var version = JsonUtility.FromJson<AppVersion>(str);
+            if (version == null) return (null, "parse failed");
             var (valid, reason) = version.Init();
             if (!valid) return (null, reason);
             return (version, string.Empty);
