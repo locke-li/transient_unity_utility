@@ -11,11 +11,12 @@ namespace Transient {
         }
         public static string LanguageCode => Language2Code(Language);
 
-        public static string Channel => Version.channel;
-        public static AppVersion Version => VersionExternal ?? VersionInternal;
         public static AppVersion VersionExternal { get; set; }
         public static AppVersion VersionInternal { get; set; }
+        public static AppVersion Version => VersionExternal ?? VersionInternal;
+        public static string Channel => Version.Channel;
         public static string VersionIdentifier { get; set; }
+        public static AppOption Option { get; set; }
     }
 }
 
