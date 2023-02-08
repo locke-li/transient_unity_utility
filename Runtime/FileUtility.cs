@@ -34,27 +34,45 @@ namespace Transient {
             return true;
         }
 
+        public static DownloadHandlerBuffer Download(string path) {
+            var request = new UnityWebRequest(path);
+            var handler = new DownloadHandlerBuffer();
+            request.downloadHandler = handler;
+            request.SendWebRequest();
+            while (!request.isDone) { }
+            if (request.error != null) {
+                return null;
+            }
+            while (!handler.isDone) {
+                Thread.Sleep(100);
+            }
+            return handler;
+        }
+
         public static byte[] LoadBytes(string path) {
             //only extract on Android
             if (!File.Exists(path)) {
 #if UNITY_ANDROID && !UNITY_EDITOR
-                var request = new UnityWebRequest(path);
-                var handler = new DownloadHandlerBuffer();
-                request.downloadHandler = handler;
-                request.SendWebRequest();
-                while (!request.isDone) { }
-                if (request.error != null) {
-                    return null;
-                }
-                while (!handler.isDone) {
-                    Thread.Sleep(100);
-                }
+                var handler = Download(path);
                 return handler.data;
 #else
                 return null;
 #endif
             }
             return File.ReadAllBytes(path);
+        }
+
+        public static string LoadText(string path) {
+            //only extract on Android
+            if (!File.Exists(path)) {
+#if UNITY_ANDROID && !UNITY_EDITOR
+                var handler = Download(path);
+                return handler.text;
+#else
+                return null;
+#endif
+            }
+            return File.ReadAllText(path);
         }
 
         public static string TryReadText(string path) {
