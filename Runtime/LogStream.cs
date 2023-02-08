@@ -242,7 +242,7 @@ namespace Transient {
             return logs[n];
         }
 
-        //assume no clearing while iterating
+        //NOTE don't clear while iterating
         public void Clear() {
             LogReceived.Clear();
             Array.Clear(logs, 0, logs.Length);
