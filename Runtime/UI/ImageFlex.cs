@@ -9,7 +9,8 @@ namespace Transient.UI {
         public bool hidden;
         public bool raycast;
 
-        private void Awake() {
+        protected override void Awake() {
+            base.Awake();
             raycast = raycastTarget;
         }
 
