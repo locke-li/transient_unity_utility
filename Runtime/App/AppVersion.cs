@@ -1,10 +1,16 @@
 using Transient;
-using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.IO;
+using System.Text;
+using System.Collections.Generic;
+using InfoMap = Transient.SimpleContainer.Dictionary<string, string>;
 
 namespace Transient {
     public class AppVersion : IEqualityComparer<AppVersion>, IComparable<AppVersion> {
+        public static Func<byte[], AppVersion, (AppVersion, string)> Parser;
+        public static char seperator = ':';
+
         public string version;
         public int major;
         public int minor;
@@ -14,17 +20,49 @@ namespace Transient {
         public string Env => InfoChecked(nameof(Env));
         public string DataVersion => InfoChecked(nameof(DataVersion));
         public string AssetVersion => InfoChecked(nameof(AssetVersion));
-        public Dictionary<string, string> info;
+        public InfoMap info = new InfoMap(4);
 
-        public static (AppVersion, string) Parse(string str) {
-            var version = JsonUtility.FromJson<AppVersion>(str);
-            if (version == null) return (null, "parse failed");
-            var (valid, reason) = version.Init();
-            if (!valid) return (null, reason);
+        public static (AppVersion, string) TryCreate(byte[] content) {
+            var (version, reason) = Parser?.Invoke(content, null) ?? Deserialize(content, null);
+            if (reason != null) return (null, reason);
             return (version, string.Empty);
         }
 
-        private (bool, string) Init() {
+        public (bool, string) Parse(byte[] content) {
+            var (version, reason) = Parser?.Invoke(content, this) ?? Deserialize(content, this);
+            if (reason != null) return (false, reason);
+            return (true, string.Empty);
+        }
+
+        public static (AppVersion, string) Deserialize(byte[] content, AppVersion target) {
+            target = target ?? new AppVersion();
+            using var reader = new StreamReader(new MemoryStream(content));
+            while (!reader.EndOfStream) {
+                var l = reader.ReadLine();
+                if (!l.Contains(seperator)) continue;
+                var seg = l.Split(seperator, ' ', StringSplitOptions.RemoveEmptyEntries);
+                if (seg.Length < 2) continue;
+                var v = seg[0];
+                switch (v) {
+                    case nameof(version): target.Reset(v); break;
+                    default: target.info.Add(v, seg[1]); break;
+                }
+            }
+            if (target.version == null) return (null, "invalid version");
+            return (target, string.Empty);
+        }
+
+        public byte[] Serialize() {
+            var builder = new StringBuilder();
+            builder.Append(nameof(version)).Append(seperator).Append(version).AppendLine();
+            foreach (var (k, v) in info) {
+                builder.Append(k).Append(seperator).Append(v).AppendLine();
+            }
+            return Encoding.UTF8.GetBytes(builder.ToString());//TODO optimize
+        }
+
+        public (bool, string) Reset(string version_) {
+            version = version_;
             var seg = version.Split('.');
             if (seg.Length != 3) return (false, "invalid version format");
             if (int.TryParse(seg[0], out var majorT)
@@ -35,6 +73,13 @@ namespace Transient {
             minor = minorT;
             patch = patchT;
             return (true, string.Empty);
+        }
+
+        public void Reset(int major_, int minor_, int patch_) {
+            major = major_;
+            minor = minor_;
+            patch = patch_;
+            version = $"{major_}.{minor_}.{patch_}";
         }
 
         public string InfoChecked(string key) {
