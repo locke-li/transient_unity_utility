@@ -21,14 +21,12 @@ namespace Transient {
 
         public static (AppVersion, string) TryCreate(byte[] content) {
             var (version, reason) = Deserialize(content, null);
-            if (reason != null) return (null, reason);
-            return (version, string.Empty);
+            return (reason == null ? version : null, null);
         }
 
         public (bool, string) Parse(byte[] content) {
             var (version, reason) = Deserialize(content, this);
-            if (reason != null) return (false, reason);
-            return (true, string.Empty);
+            return (reason == null, reason);
         }
 
         public static (AppVersion, string) Deserialize(byte[] content, AppVersion target) {
@@ -41,7 +39,7 @@ namespace Transient {
                 }
             }
             if (target.version == null) return (null, "invalid version");
-            return (target, string.Empty);
+            return (target, null);
         }
 
         public byte[] Serialize() {

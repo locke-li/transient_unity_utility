@@ -17,8 +17,7 @@ namespace Transient {
 
         public (bool, string) Parse(byte[] content) {
             var (option, reason) = Deserialize(content, this);
-            if (reason != null) return (false, reason);
-            return (true, string.Empty);
+            return (reason == null, reason);
         }
 
         public static (AppOption, string) Deserialize(byte[] content, AppOption target) {
@@ -27,7 +26,7 @@ namespace Transient {
             foreach (var (k, v) in parser.Deserialize(content)) {
                 target.data.Add(k, v); break;
             }
-            return (target, string.Empty);
+            return (target, null);
         }
 
         public byte[] Serialize() {
