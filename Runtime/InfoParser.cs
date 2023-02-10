@@ -15,16 +15,17 @@ namespace Transient {
             set => _instance = value;
         }
         public char seperator = ':';
+        public string comment = "//";
 
         public virtual IEnumerable<(string, string)> Deserialize(byte[] content) {
             if (content == null || content.Length == 0) yield break;
             using var reader = new StreamReader(new MemoryStream(content));
             while (!reader.EndOfStream) {
                 var l = reader.ReadLine();
-                if (!l.Contains(seperator)) continue;
+                if (l.StartsWith(comment) || !l.Contains(seperator)) continue;
                 var seg = l.Split(seperator, ' ', StringSplitOptions.RemoveEmptyEntries);
-                if (seg.Length < 2) continue;
-                yield return (seg[0], seg[1]);
+                if (seg.Length < 2) yield return (seg[0], string.Empty);
+                else yield return (seg[0], seg[1]);
             }
         }
 
