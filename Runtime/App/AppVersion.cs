@@ -8,9 +8,6 @@ using InfoMap = Transient.SimpleContainer.Dictionary<string, string>;
 
 namespace Transient {
     public class AppVersion : IEqualityComparer<AppVersion>, IComparable<AppVersion> {
-        public static Func<byte[], AppVersion, (AppVersion, string)> Parser;
-        public static char seperator = ':';
-
         public string version;
         public int major;
         public int minor;
@@ -23,29 +20,24 @@ namespace Transient {
         public InfoMap info = new InfoMap(4);
 
         public static (AppVersion, string) TryCreate(byte[] content) {
-            var (version, reason) = Parser?.Invoke(content, null) ?? Deserialize(content, null);
+            var (version, reason) = Deserialize(content, null);
             if (reason != null) return (null, reason);
             return (version, string.Empty);
         }
 
         public (bool, string) Parse(byte[] content) {
-            var (version, reason) = Parser?.Invoke(content, this) ?? Deserialize(content, this);
+            var (version, reason) = Deserialize(content, this);
             if (reason != null) return (false, reason);
             return (true, string.Empty);
         }
 
         public static (AppVersion, string) Deserialize(byte[] content, AppVersion target) {
+            var parser = InfoParser.Instance;
             target = target ?? new AppVersion();
-            using var reader = new StreamReader(new MemoryStream(content));
-            while (!reader.EndOfStream) {
-                var l = reader.ReadLine();
-                if (!l.Contains(seperator)) continue;
-                var seg = l.Split(seperator, ' ', StringSplitOptions.RemoveEmptyEntries);
-                if (seg.Length < 2) continue;
-                var v = seg[0];
-                switch (v) {
+            foreach(var (k, v) in parser.Deserialize(content)) {
+                switch (k) {
                     case nameof(version): target.Reset(v); break;
-                    default: target.info.Add(v, seg[1]); break;
+                    default: target.info.Add(k, v); break;
                 }
             }
             if (target.version == null) return (null, "invalid version");
@@ -53,12 +45,14 @@ namespace Transient {
         }
 
         public byte[] Serialize() {
-            var builder = new StringBuilder();
-            builder.Append(nameof(version)).Append(seperator).Append(version).AppendLine();
-            foreach (var (k, v) in info) {
-                builder.Append(k).Append(seperator).Append(v).AppendLine();
+            var parser = InfoParser.Instance;
+            IEnumerable<(string, string)> SerializeEach() {
+                yield return (nameof(version), version);
+                foreach (var p in info) {
+                    yield return p;
+                }
             }
-            return Encoding.UTF8.GetBytes(builder.ToString());//TODO optimize
+            return parser.Serialize(SerializeEach());
         }
 
         public (bool, string) Reset(string version_) {

@@ -8,9 +8,6 @@ using DataMap = Transient.SimpleContainer.Dictionary<string, string>;
 
 namespace Transient {
     public class AppOption {
-        public static Func<byte[], AppOption, (AppOption, string)> Parser;
-        public static char seperator = ':';
-
         public DataMap data = new DataMap(4);
         public string this[string key] => InfoString(key);
 
@@ -19,30 +16,28 @@ namespace Transient {
         }
 
         public (bool, string) Parse(byte[] content) {
-            var (option, reason) = Parser?.Invoke(content, this) ?? Deserialize(content, this);
+            var (option, reason) = Deserialize(content, this);
             if (reason != null) return (false, reason);
             return (true, string.Empty);
         }
 
         public static (AppOption, string) Deserialize(byte[] content, AppOption target) {
+            var parser = InfoParser.Instance;
             target = target ?? new AppOption();
-            using var reader = new StreamReader(new MemoryStream(content));
-            while (!reader.EndOfStream) {
-                var l = reader.ReadLine();
-                if (!l.Contains(seperator)) continue;
-                var seg = l.Split(seperator, ' ', StringSplitOptions.RemoveEmptyEntries);
-                if (seg.Length < 2) continue;
-                target.data.Add(seg[0], seg[1]); break;
+            foreach (var (k, v) in parser.Deserialize(content)) {
+                target.data.Add(k, v); break;
             }
             return (target, string.Empty);
         }
 
         public byte[] Serialize() {
-            var builder = new StringBuilder();
-            foreach (var (k, v) in data) {
-                builder.Append(k).Append(seperator).Append(v).AppendLine();
+            var parser = InfoParser.Instance;
+            IEnumerable<(string, string)> SerializeEach() {
+                foreach (var p in data) {
+                    yield return p;
+                }
             }
-            return Encoding.UTF8.GetBytes(builder.ToString());//TODO optimize
+            return parser.Serialize(SerializeEach());
         }
 
         public void Reset() {
