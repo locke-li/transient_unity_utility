@@ -344,13 +344,21 @@ namespace Transient {
             if (duration == 0) ZoomValue(v);
         }
 
-        public static Vector2 ViewportOffsetToWorld(Vector2 viewOffset) {
-            var unitPerPixel = CalculateUnitPerPixel(_zoomTarget);
+        public static Vector2 ViewportOffsetToWorld(Vector2 viewOffset, float zoom) {
+            var unitPerPixel = CalculateUnitPerPixel(zoom);
             return new Vector2(
                 -viewOffset.x * _screenWidth * unitPerPixel,
                 -viewOffset.y * _screenHeight * unitPerPixel
             );
         }
+        public static Vector2 ViewportOffsetToWorld(Vector2 viewOffset)
+            => ViewportOffsetToWorld(viewOffset, _zoomTarget);
+
+        public static Vector2 ViewportOffsetToSystem(Vector2 viewOffset, float zoom) {
+            return CameraSystem.WorldToSystemXY(ViewportOffsetToWorld(viewOffset, zoom));
+        }
+        public static Vector2 ViewportOffsetToSystem(Vector2 viewOffset)
+            => ViewportOffsetToSystem(viewOffset, _zoomTarget);
 
         public static Vector2 WorldToCanvasSpace(Vector3 position) {
             //TODO persist screen offset
