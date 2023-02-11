@@ -85,7 +85,8 @@ namespace Transient {
             CheckCanvas();
             CheckScreenSize();
             InitViewport();
-            ResetCoordinateSystem();
+            if (CameraSystem == null) ResetCoordinateSystem();
+            else CameraSystem.SyncPosition(main_.transform);
             CanvasContent = MainCanvas.transform.AddChildRect("content");
             CanvasOverlay = MainCanvas.transform.AddChildRect("overlay");
             updater.Add(Instance.Update, Instance);
@@ -189,7 +190,7 @@ namespace Transient {
             CameraSystem.AxisX = axisX.normalized;
             CameraSystem.AxisY = axisY.normalized;
             CameraSystem.AxisZ = axisZ.normalized;
-            CameraSystem.WorldPosition = MainCamera.transform.position;
+            CameraSystem.SyncPosition(MainCamera?.transform);
         }
         public static void InitCoordinateSystem(Transform local) => InitCoordinateSystem(local.right, local.up, local.forward);
 
@@ -204,7 +205,7 @@ namespace Transient {
             system.ScaleX = scaleX;
             system.ScaleY = scaleY;
             system.ScaleZ = scaleZ;
-            CameraSystem.WorldPosition = MainCamera.transform.position;
+            CameraSystem.SyncPosition(MainCamera?.transform);
         }
 
         public static void ResetCoordinateSystem() {
@@ -215,7 +216,7 @@ namespace Transient {
             CameraSystem.AxisX = Vector3.right;
             CameraSystem.AxisY = Vector3.up;
             CameraSystem.AxisZ = Vector3.forward;
-            CameraSystem.WorldPosition = MainCamera.transform.position;
+            CameraSystem.SyncPosition(MainCamera?.transform);
         }
 
         public static void FitSafeArea(float l_, float r_, float t_, float b_) {

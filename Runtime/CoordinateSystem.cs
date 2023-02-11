@@ -26,6 +26,11 @@ namespace Transient
         public Vector3 SystemToWorld(Vector2 pos, float z) => SystemToWorld(pos.x, pos.y, z);
 
         public abstract Vector2 WorldToSystemXY(Vector3 pos);
+
+        public void SyncPosition(Transform t_) {
+            if (t_ == null) return;
+            WorldPosition = t_.position;
+        }
     }
 
     public class WorldCoordinateSystem : AbstractCoordinateSystem {
