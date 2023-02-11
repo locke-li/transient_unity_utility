@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 namespace Transient {
     public class ViewportFocus {
-        private Camera MainCamera;
-        private AbstractCoordinateSystem CameraSystem;
+        private Camera MainCamera => ViewEnv.MainCamera;
+        private AbstractCoordinateSystem CameraSystem => ViewEnv.CameraSystem;
         public Transform Focus;
         public Vector2 FocusOffset;
         private bool _focusOverride = false;
@@ -22,8 +22,6 @@ namespace Transient {
         public ViewportFocus Init() {
             DampingDefaultDelegate = DampingDefaultDelegate ?? DampingDefault;
             DampingNoneDelegate = DampingNoneDelegate ?? DampingNone;
-            MainCamera = ViewEnv.MainCamera;
-            CameraSystem = ViewEnv.CameraSystem;
             return this;
         }
 
