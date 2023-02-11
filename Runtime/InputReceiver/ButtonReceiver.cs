@@ -21,7 +21,7 @@ namespace Transient.UI {
         public Action<ButtonReceiver> WhenClick { get; set; } = b => { };
         public Action<ButtonReceiver> WhenClickDown { get; set; } = b => { };
         public Action<ButtonReceiver> WhenClickUp { get; set; } = b => { };
-        public Func<ButtonReceiver, bool> WhenDragBegin { get; set; } = b => false;
+        public Func<ButtonReceiver, bool> WhenDragBegin { get; set; } = b => false;//default: cancel click on drag
         public Action<ButtonReceiver> WhenDragEnd { get; set; } = b => { };
         public Action<ButtonReceiver, bool> WhenHover { get; set; } = (b, c) => { };
         public Action<ButtonReceiver> WhenLongPressed { get; set; }
