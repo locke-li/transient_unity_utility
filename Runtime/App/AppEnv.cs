@@ -1,9 +1,12 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace Transient {
     public static partial class AppEnv {
+        public static bool IsPlatformUnix => Environment.OSVersion.Platform == PlatformID.Unix;
+
         public static string keyLanguage = nameof(keyLanguage);
         public static SystemLanguage Language {
             get => (SystemLanguage)PlayerPrefs.GetInt(keyLanguage, (int)Application.systemLanguage);
