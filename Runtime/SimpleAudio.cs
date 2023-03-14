@@ -53,12 +53,12 @@ namespace Transient.Audio {
             private set => UnityEditor.EditorPrefs.SetBool(KeyEnabled, value);
         }
 
-        [UnityEditor.MenuItem(MenuPath, priority = 1000)]
+        [UnityEditor.MenuItem(MenuPath, priority = 10000)]
         private static void ToggleAudio() {
             AudioEnabled = !AudioEnabled;
         }
 
-        [UnityEditor.MenuItem(MenuPath, priority = 1000, validate = true)]
+        [UnityEditor.MenuItem(MenuPath, priority = 10000, validate = true)]
         private static bool ToggleAudioValidate() {
             UnityEditor.Menu.SetChecked(MenuPath, AudioEnabled);
             return true;
