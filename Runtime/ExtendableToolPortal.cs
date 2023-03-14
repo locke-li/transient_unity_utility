@@ -155,7 +155,6 @@ namespace Transient {
                 else {
                     if (GUILayout.Button(content, styleButton, guiOption)) {
                         method.Invoke(null, null);
-                        return;
                     }
                 }
             }
