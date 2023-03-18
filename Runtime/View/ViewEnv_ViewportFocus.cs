@@ -29,7 +29,8 @@ namespace Transient {
             Focus = location;
             _afterFocus = afterFocus;
             if (location == null) return;
-            FocusOffset = offset - ViewEnv.CameraOffset.Calculate(location.position);
+            var vOffset = ViewEnv.CameraOffset.Calculate(location.position);
+            FocusOffset = ViewEnv.CameraSystem.ApplyOffset(offset, vOffset);
             var dist = Vector2.Distance(CameraSystem.WorldToSystemXY(Focus.position) + FocusOffset, CameraSystem.PositionXY);
             if (duration <= 0) duration = 1;
             _focusOnce = true;
@@ -42,7 +43,8 @@ namespace Transient {
             Focus = location;
             _afterFocus = afterFocus;
             if (location == null) return;
-            FocusOffset = offset - ViewEnv.CameraOffset.Calculate(location.position);
+            var vOffset = ViewEnv.CameraOffset.Calculate(location.position);
+            FocusOffset = ViewEnv.CameraSystem.ApplyOffset(offset, vOffset);
             _focusOnce = once;
             _focusStep = step <= 0 ? _focusStep : step;
             _damping = once ? DampingNoneDelegate : DampingDefaultDelegate;
