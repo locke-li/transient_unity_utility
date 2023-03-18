@@ -7,9 +7,9 @@ namespace Transient {
         private Vector2 viewExtent;
         private Vector2 borderCenter;
         private Vector2 borderExtent;
-        private PositionLimit limit;
+        internal PositionLimit limit = new PositionLimit();
         private float limitExpand;
-        public bool offsetByCameraY;
+        private float plane;
 
         public void Init(SpriteRenderer border) {
             var sprite = border.sprite;
@@ -18,33 +18,30 @@ namespace Transient {
             Init(extent, offset + sprite.rect.center / sprite.pixelsPerUnit - extent);
         }
 
-        //TODO need to compensate view extent
         public void InitWithCorner(Vector3 posTopLeft, Vector3 posBottomRight) {
             var system = ViewEnv.CameraSystem;
             var vTL = system.WorldToSystemXY(posTopLeft);
             var vBR = system.WorldToSystemXY(posBottomRight);
-            var center = new Vector2(0.5f * (vTL.x + vBR.x), 0.5f * (vTL.y + vBR.y)) + ViewEnv.OffsetFromRelativeY(0);
+            var center = new Vector2(0.5f * (vTL.x + vBR.x), 0.5f * (vTL.y + vBR.y));
             var extent = new Vector2(0.5f * Mathf.Abs(vTL.x - vBR.x), 0.5f * Mathf.Abs(vTL.y - vBR.y));
             Init(extent, center);
         }
 
         public void Init(Vector2 extent, Vector2 center) {
-            ViewEnv.ViewportLimit = this;
-            limit = new PositionLimit();
             borderCenter = center;
             borderExtent = extent;
-            ViewEnv.PositionLimit = limit;
             OnZoom(ViewEnv.Zoom);
         }
 
-        public void ApplyOffsetY() {
-            offsetByCameraY = true;
-            CalculateOffset();
+        public void ApplyOffset(float v_) {
+            plane = v_;
+            var offset = ViewEnv.CameraOffset.Calculate(v_);
+            offset = ViewEnv.CameraSystem.ApplyOffset(Vector2.zero, offset);
+            limit.OffsetX = -offset.x;
+            limit.OffsetY = -offset.y;
         }
 
-        internal void CalculateOffset() {
-            if (offsetByCameraY) limit.OffsetY = ViewEnv.OffsetFromRelativeY(0).y;
-        }
+        public void CalculateOffset() => ApplyOffset(plane);
 
         void CalculateViewExtent() {
             var size = ViewEnv.UnitPerPixel * Screen.height * 0.5f;

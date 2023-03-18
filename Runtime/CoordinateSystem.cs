@@ -24,12 +24,18 @@ namespace Transient
 
         public abstract Vector3 SystemToWorld(float x, float y, float z);
         public Vector3 SystemToWorld(Vector2 pos, float z) => SystemToWorld(pos.x, pos.y, z);
+        public virtual Vector2 ApplyOffset(Vector2 pos, Vector2 offset) => pos + offset;
 
         public abstract Vector2 WorldToSystemXY(Vector3 pos);
 
         public void SyncPosition(Transform t_) {
             if (t_ == null) return;
             WorldPosition = t_.position;
+        }
+
+        public void SyncPosition(Vector2 p_, float v_) {
+            PositionXY = p_;
+            Z = v_;
         }
     }
 
@@ -88,6 +94,12 @@ namespace Transient
                 Vector3.Dot(pos, AxisX) / ScaleX,
                 Vector3.Dot(pos, AxisY) / ScaleY
             );
+        }
+
+        public override Vector2 ApplyOffset(Vector2 pos, Vector2 offset) {
+            pos.x += offset.x / ScaleX;
+            pos.y += offset.y / ScaleY;
+            return pos;
         }
     }
 }

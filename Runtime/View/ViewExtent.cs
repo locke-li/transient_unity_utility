@@ -15,12 +15,15 @@ namespace Transient {
         private Vector3 viewAxisX, viewAxisY, viewAxisZ;
         public Camera target;
         private ScaledCoordinateSystem system;
+        private OffsetByYRelative offset;
         private Transform tr;
 
         private void OnValidate() {
-            system = system ?? new ScaledCoordinateSystem();
             target = target ?? GetComponent<Camera>();
             tr = target != null ? target.transform : transform;
+            system = system ?? new ScaledCoordinateSystem();
+            offset = offset ?? new OffsetByYRelative();
+            offset.Init(tr, height);
             var y = tr.rotation.eulerAngles.y;
             var axisRotation = Quaternion.AngleAxis(y, Vector3.up);
             system.AxisX = axisRotation * Vector3.right;
@@ -29,11 +32,17 @@ namespace Transient {
             system.ScaleX = 1;
             system.ScaleY = 2;
             system.ScaleZ = 1;
-            system.Position = new Vector3(origin.x, origin.y, height);
-            transform.position = system.WorldPosition;
+            var pos = SystemToWorld(origin);
+            system.WorldPosition = pos;
+            transform.position = pos;
             viewAxisX = tr.right;
             viewAxisY = tr.up;
             viewAxisZ = tr.forward;
+        }
+
+        private Vector3 SystemToWorld(Vector2 pos) {
+            pos = system.ApplyOffset(pos, offset.Calculate(0));
+            return system.SystemToWorld(pos, height);
         }
 
         private void DrawRect(Vector3 pos, Vector3 sizeX, Vector3 sizeY) {
@@ -46,10 +55,7 @@ namespace Transient {
         private Vector3 ProjXZ(Vector3 p, float h_)
             => new Vector3(Vector3.Dot(p, Vector3.right), h_,  Vector3.Dot(p, Vector3.forward));
         private float Offset(Vector3 p, float h_) {
-            var y = p.y - h_;
-            var angle = (90 - tr.rotation.eulerAngles.x) * Mathf.Deg2Rad;
-            var x = y * Mathf.Tan(angle);
-            return x;
+            return offset.CalculateRelative(p.y - h_).y;
         }
 
         private Vector3 ProjView(Vector3 p, float h_) {
@@ -65,7 +71,7 @@ namespace Transient {
         }
 
         private void OnDrawGizmos() {
-            var pos = system.SystemToWorld(center, height);
+            var pos = SystemToWorld(center);
             var sizeX = extent.x * viewAxisX;
             var sizeY = extent.y * viewAxisY;
             DrawRect(pos, sizeX, sizeY);

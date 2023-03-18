@@ -44,6 +44,7 @@ namespace Transient {
         private static List<IMessageFade> _fadeMessage;
         public static ClickVisual ClickVisual { get; set; }
         public static AbstractCoordinateSystem CameraSystem { get; private set; }
+        public static AbstractCoordinateOffset CameraOffset { get; private set; }
 
         public static ViewportFocus Focus { get; set; }
 
@@ -84,13 +85,17 @@ namespace Transient {
             _perspectiveProjectionFactor = (float)Math.Tan(MainCamera.fieldOfView * Mathf.Deg2Rad * 0.5f);
             CheckCanvas();
             CheckScreenSize();
-            InitViewport();
-            if (CameraSystem == null) ResetCoordinateSystem();
-            else CameraSystem.SyncPosition(main_.transform);
             CanvasContent = MainCanvas.transform.AddChildRect("content");
             CanvasOverlay = MainCanvas.transform.AddChildRect("overlay");
             updater.Add(Instance.Update, Instance);
             Performance.End(nameof(ViewEnv));
+        }
+
+        public static void InitViewport() {
+            if (CameraSystem == null) InitCoordinateSystem(null, null);
+            //TODO what about perspective camera?
+            Zoom = MainCamera.orthographicSize;
+            UnitPerPixel = Zoom * 2 * _screenHeightInverse;
         }
 
         public static void Clear() {
@@ -130,8 +135,8 @@ namespace Transient {
         }
 
         public static void MoveToSystemPos(Vector2 pos, float z) {
-            //TODO temporary
-            pos -= OffsetFromRelativeY(MainCamera.transform.position.y - z);
+            CameraOffset.Value = z;
+            pos -= (Vector2)CameraOffset.Calculate(z);
             CameraSystem.X = pos.x;
             CameraSystem.Y = pos.y;
             CameraSystem.Z = z;
@@ -143,6 +148,7 @@ namespace Transient {
             CameraSystem.WorldPosition = pos;
             MainCamera.transform.position = pos;
             if (y != pos.y) {
+                CameraOffset.Value = pos.y;
                 ViewportLimit?.CalculateOffset();
             }
         }
@@ -177,46 +183,19 @@ namespace Transient {
             }
         }
 
-        private static void InitViewport() {
-            //TODO what about perspective camera?
-            Zoom = MainCamera.orthographicSize;
-            UnitPerPixel = Zoom * 2 * _screenHeightInverse;
+        public static void InitCoordinateSystem(AbstractCoordinateSystem v_, AbstractCoordinateOffset o_) {
+            CameraSystem = v_ ?? new WorldCoordinateSystem();
+            CameraOffset = o_ ?? new OffsetNone();
+        }
+        public static void SyncCoordinateSystem(Transform tr_, Vector2 pos_, float v_, float vRef_) {
+            CameraOffset.Init(tr_, v_);
+            if (vRef_ != v_) pos_ = CameraSystem.ApplyOffset(pos_, CameraOffset.CalculateRelative(vRef_ - v_));
+            CameraSystem.SyncPosition(pos_, v_);
         }
 
-        public static void InitCoordinateSystem(Vector3 axisX, Vector3 axisY, Vector3 axisZ) {
-            if (!(CameraSystem is FlexibleCoordinateSystem)) {
-                CameraSystem = new FlexibleCoordinateSystem();
-            }
-            CameraSystem.AxisX = axisX.normalized;
-            CameraSystem.AxisY = axisY.normalized;
-            CameraSystem.AxisZ = axisZ.normalized;
-            CameraSystem.SyncPosition(MainCamera?.transform);
-        }
-        public static void InitCoordinateSystem(Transform local) => InitCoordinateSystem(local.right, local.up, local.forward);
-
-        public static void InitCoordinateSystem(Vector3 axisX, Vector3 axisY, Vector3 axisZ, float scaleX, float scaleY, float scaleZ) {
-            if (!(CameraSystem is ScaledCoordinateSystem)) {
-                CameraSystem = new ScaledCoordinateSystem();
-            }
-            var system = (ScaledCoordinateSystem)CameraSystem;
-            CameraSystem.AxisX = axisX.normalized;
-            CameraSystem.AxisY = axisY.normalized;
-            CameraSystem.AxisZ = axisZ.normalized;
-            system.ScaleX = scaleX;
-            system.ScaleY = scaleY;
-            system.ScaleZ = scaleZ;
-            CameraSystem.SyncPosition(MainCamera?.transform);
-        }
-
-        public static void ResetCoordinateSystem() {
-            if (!(CameraSystem is WorldCoordinateSystem)) {
-                CameraSystem = new WorldCoordinateSystem();
-            }
-            //these axis values won't actually be used
-            CameraSystem.AxisX = Vector3.right;
-            CameraSystem.AxisY = Vector3.up;
-            CameraSystem.AxisZ = Vector3.forward;
-            CameraSystem.SyncPosition(MainCamera?.transform);
+        public static void InitViewportLimit(ViewportLimit limit_) {
+            ViewportLimit = limit_;
+            PositionLimit = limit_.limit;
         }
 
         public static void FitSafeArea(float l_, float r_, float t_, float b_) {
@@ -373,14 +352,6 @@ namespace Transient {
         public static Vector2 UILocalToCanvasSpace(Vector3 position) {
             //TODO persist screen offset
             return ((Vector2)UICamera.WorldToScreenPoint(position) - new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)) / MainCanvas.scaleFactor - SafeAreaPosOffset;
-        }
-
-        //TODO should be in CoordinateSystem
-        public static Vector2 OffsetFromRelativeY(float height) {
-            var relative = MainCamera.transform.position.y - height;
-            var rotationAngle = MainCamera.transform.rotation.eulerAngles.x;
-            var value = Mathf.Tan(rotationAngle * Mathf.Deg2Rad);
-            return value == 0 ? Vector2.zero : new Vector2(0f, 0.5f * relative / value );
         }
 
         public static bool VisibleInCanvas(RectTransform obj) {
