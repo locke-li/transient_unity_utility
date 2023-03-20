@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEditor;
 using System.Reflection;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Transient {
     [AttributeUsage(AttributeTargets.Method, Inherited = false)]
@@ -11,15 +12,17 @@ namespace Transient {
         public string Name { get; }
         public string Group { get; }
         public int Priority { get; }
+        public int Replace { get; }
         public bool IsToggle { get; set; }
 
-        public ExtendableToolAttribute(string name = null, string group = null, int priority = 0) {
+        public ExtendableToolAttribute(string name = null, string group = null, int priority = 0, int replace = 0) {
             Name = name;
             Group = group;
             Priority = priority;
+            Replace = replace;
         }
 
-        public void CheckType(MethodInfo method) {
+        public void Check(MethodInfo method) {
             if (method.ReturnParameter.ParameterType == typeof(bool)) {
                 var input = method.GetParameters();
                 IsToggle = input.Length > 0 && input[0].ParameterType == typeof(bool?);
@@ -29,7 +32,7 @@ namespace Transient {
 
     class ExtendableToolPortal : EditorWindow {
         const string DisplayName = "Tool Portal";
-        private static (MethodInfo method, ExtendableToolAttribute attr)[] Entry { get; set; }
+        private static List<(MethodInfo method, ExtendableToolAttribute attr)> Entry { get; set; }
         Vector2 entryScrollPos;
         public static int ButtonWidth => 50;
         public static int ButtonHeight => 30;
@@ -40,7 +43,7 @@ namespace Transient {
         private float groupPadding = 8;
         private float contentPadding = 10;
 
-        [MenuItem("Window/"+ DisplayName)]
+        [MenuItem("Window/" + DisplayName)]
         private static void Open() {
             RefreshEntry();
             RefreshStyle();
@@ -49,19 +52,21 @@ namespace Transient {
 
         private static void RefreshEntry() {
             var assemblyEnumerable = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => !a.FullName.StartsWith("Unity") && !a.FullName.StartsWith("System") && !a.FullName.StartsWith("Mono"))
-                .Where(a => !a.FullName.StartsWith("mscorlib") && !a.FullName.StartsWith("netstandard"));
+                .Where(a => !a.FullName.StartsWith("Unity") && !a.FullName.StartsWith("System") && !a.FullName.StartsWith("Mono")
+                    && !a.FullName.StartsWith("mscorlib") && !a.FullName.StartsWith("netstandard"));
             //foreach (var asm in assemblyEnumerable) Debug.Log($"{asm.FullName} {asm.GetName().Name}");
             var methodWithAttr = assemblyEnumerable
                 .SelectMany(assem => assem.GetTypes())
                 .SelectMany(t => t.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
                 .Select(m => (method: m, attr: m.GetCustomAttribute<ExtendableToolAttribute>()))
                 .Where(pair => pair.attr != null)
+                .GroupBy(p => $"{p.attr.Group}{p.attr.Name}")
+                .Select(g => g.OrderBy(p => p.attr.Replace).Last())
                 .OrderBy(pair => pair.attr.Group)
                 .ThenBy(pair => pair.attr.Priority);
-            Entry = methodWithAttr.ToArray();
+            Entry = methodWithAttr.ToList();
             foreach (var (method, attr) in Entry) {
-                attr.CheckType(method);
+                attr.Check(method);
             }
         }
 
