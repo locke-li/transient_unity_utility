@@ -148,5 +148,25 @@ namespace Transient {
             }
             Directory.CreateDirectory(dir);
         }
+
+        public static void SyncFile(List<(string, string, string[], string[], string[])> list) {
+            foreach (var (srcRoot, dstRoot, pattern, white, black) in list) {
+                if (Directory.Exists(dstRoot)) Directory.Delete(dstRoot, true);
+                Directory.CreateDirectory(dstRoot);
+                var srcDir = new DirectoryInfo(srcRoot);
+                foreach (var sub in white ?? srcDir.EnumerateDirectories().Select(d => d.Name)) {
+                    if (black != null && black.Any(p => sub.Contains(p))) continue;
+                    var src = Path.Combine(srcRoot, sub);
+                    var dst = Path.Combine(dstRoot, sub);
+                    Debug.Log($"{src} -> {dst}");
+                    FileUtility.CopyDirectory(src, dst, pattern);
+                }
+                foreach (var p in pattern) {
+                    foreach (var file in srcDir.EnumerateFiles(p)) {
+                        file.CopyTo(Path.Combine(dstRoot, $"{file.Name}"), true);
+                    }
+                }
+            }
+        }
     }
 }
