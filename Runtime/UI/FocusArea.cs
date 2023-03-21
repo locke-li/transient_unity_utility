@@ -15,9 +15,7 @@ namespace Transient.UI {
         [Range(0.01f, 0.25f)]
         public float fade;
         private bool hideVisual;//but blocks raycast
-        //by default, will block the whole area when hidden
-        //set to true to exculde the focus area
-        public bool focusClickThrough;
+        public bool isMask;//ignore focus area, always blocks raycast
 
 #if UNITY_EDITOR
         public Vector2 syncPadding;
@@ -108,7 +106,7 @@ namespace Transient.UI {
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out var val)) {
                 return false;
             }
-            if (hideVisual && !focusClickThrough) return true;
+            if (hideVisual || isMask) return true;
             if (circle) {
                 var dist = Vector2.Distance(val, focusRect.center);
                 return dist > radius * focusRect.width;

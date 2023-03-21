@@ -21,8 +21,8 @@ namespace Transient {
         private void OnValidate() {
             target = target ?? GetComponent<Camera>();
             tr = target != null ? target.transform : transform;
-            system = system ?? new ScaledCoordinateSystem();
-            offset = offset ?? new OffsetByYRelative();
+            system = system ?? new();
+            offset = offset ?? new();
             offset.Init(tr, height);
             var y = tr.rotation.eulerAngles.y;
             var axisRotation = Quaternion.AngleAxis(y, Vector3.up);

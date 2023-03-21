@@ -21,7 +21,7 @@ namespace Transient {
             var go = new GameObject("MainLoop");
             DontDestroyOnLoad(go);
             Instance = go.AddComponent<MainLoop>();
-            OnUpdate = new ActionList<float>(16);
+            OnUpdate = new(16);
             if (coroutine) {
                 Coroutine = new GeneratorCoroutine(OnUpdate);
             }

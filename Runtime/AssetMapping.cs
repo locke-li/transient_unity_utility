@@ -4,14 +4,12 @@
 //
 //
 using UnityEngine;
-using Transient.SimpleContainer;
+using System.Collections.Generic;
 using System;
-using Generic = System.Collections.Generic;
+using Transient.Container;
 
 namespace Transient.DataAccess {
     public sealed class AssetMapping {
-        const int ItemPerRecycle = 64;
-        const int ItemPerRecycleIncrement = 32;
         public Transform ActiveObjectRoot { get; set; }
         public Transform RecycleObjectRoot { get; set; }
         private static List<AssetMapping> _mapping;
@@ -25,15 +23,15 @@ namespace Transient.DataAccess {
         readonly Dictionary<AssetIdentifier, List<object>> _recyclePool;//recyclable(resetable) disabled objects
 
         private AssetMapping(int capacity_, int active_, int recycle_) {
-            _pool = new Dictionary<(string, Type), AssetIdentifier>(capacity_, _comparer);
-            _activePool = new Dictionary<object, AssetIdentifier>(active_);
-            _recyclePool = new Dictionary<AssetIdentifier, List<object>>(recycle_, _comparer);
+            _pool = new(capacity_, _comparer);
+            _activePool = new(active_);
+            _recyclePool = new(recycle_, _comparer);
         }
 
         public static void Init() {
             Performance.RecordProfiler(nameof(AssetMapping));
-            _mapping = new List<AssetMapping>(4);
-            _comparer = new AssetMappingComparer();
+            _mapping = new(4);
+            _comparer = new();
             Default = Create(16, 512, 512);
             View = Create(8, 32, 64);
             Default.AddInternal(AssetEmpty, new GameObject());//TODO don't create
@@ -186,7 +184,7 @@ namespace Transient.DataAccess {
             _activePool.Remove(resObj_);
             List<object> recyclables;
             if (!_recyclePool.ContainsKey(resId)) {
-                recyclables = new List<object>(ItemPerRecycle, ItemPerRecycleIncrement);
+                recyclables = new List<object>(64);
                 recyclables.Push(resObj_);
                 _recyclePool.Add(resId, recyclables);
             }
@@ -217,8 +215,8 @@ namespace Transient.DataAccess {
     }
 
     internal sealed class AssetMappingComparer :
-        Generic.IEqualityComparer<AssetIdentifier>,
-        Generic.IEqualityComparer<(string, Type)>
+        IEqualityComparer<AssetIdentifier>,
+        IEqualityComparer<(string, Type)>
         {
         public bool Equals(AssetIdentifier a, AssetIdentifier b) => a.id == b.id;
         public int GetHashCode(AssetIdentifier i) => i.id.GetHashCode();
@@ -229,7 +227,7 @@ namespace Transient.DataAccess {
 
     public static class AssetAdapter {
 #if UNITY_EDITOR
-        public static readonly Generic.Dictionary<Type, string[]> TypeToExtension = new Generic.Dictionary<Type, string[]>() {
+        public static readonly Dictionary<Type, string[]> TypeToExtension = new() {
             { typeof(GameObject), new string[] { "prefab" } },
             { typeof(Material), new string[] { "mat" } },
             { typeof(Sprite), new string[] { "png", "jpg", "tga", "psd" } },
@@ -370,7 +368,7 @@ namespace Transient.DataAccess {
 
         public AutoRecycler(AssetMapping mapping_) {
             _mapping = mapping_;
-            _pool = new List<ParticleSystem>(AutoRecycleCap);
+            _pool = new(AutoRecycleCap);
         }
 
         public void RegisterWithMainLoop() {

@@ -118,7 +118,7 @@ namespace Transient.Development {
             _fpsLast = new float[4];
             _last = -1;
             _fpsFactor = 1 / (_fpsLast.Length * FPS_SEGMENT);
-            _logList = new Queue<Log>(LOG_LIMIT+1);
+            _logList = new(LOG_LIMIT+1);
             var canvas = transform.FindChecked<Canvas>("canvas");
             if (_before != null) {
                 canvas.worldCamera = _before.worldCamera;
@@ -143,9 +143,9 @@ namespace Transient.Development {
             _templateSlider.gameObject.SetActive(false);
             _templateWatch = scrollContent.FindChecked<RectTransform>("layout_watch/watch");
             _templateWatch.gameObject.SetActive(false);
-            _shortcutButton = new Dictionary<string, Button>(32);
-            _valueSlider = new Dictionary<string, Slider>(32);
-            _watchList = new List<(string, Text, Func<string>)>(32);
+            _shortcutButton = new(32);
+            _valueSlider = new(32);
+            _watchList = new(32);
             _fps = _entry.transform.FindChecked<Text>("fps");
             _params = _content.FindChecked<InputField>("params");
         }

@@ -1,7 +1,8 @@
 ﻿using UnityEngine;
 using Transient.Pathfinding;
 using NUnit.Framework;
-using Transient.SimpleContainer;
+using Transient.Container;
+using System.Collections.Generic;
 
 namespace Tests {
     class PathfindingTest {

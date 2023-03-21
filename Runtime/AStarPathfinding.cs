@@ -2,7 +2,8 @@
 
 using System;
 using System.Text;
-using Transient.SimpleContainer;
+using System.Collections.Generic;
+using Transient.Container;
 using UnityEngine;
 
 namespace Transient.Pathfinding {
@@ -16,7 +17,7 @@ namespace Transient.Pathfinding {
 
     public interface IGraph {
         IGraphData data { get; }
-        System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_);
+        IEnumerable<(int, float)> EnumerateLink(int index_);
         float HeuristicCost(int a_, int b_);
     }
 }
@@ -121,7 +122,7 @@ namespace Transient.Pathfinding {
             astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
         }
 
-        public System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_) {
+        public IEnumerable<(int, float)> EnumerateLink(int index_) {
             int x = _data.field[index_].x;
             int y = _data.field[index_].y;
             //4 directions
@@ -146,11 +147,10 @@ namespace Transient.Pathfinding {
             _data = data_;
         }
 
-        public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_) {
-            astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
-        }
+        public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_)
+            => astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
 
-        public System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_) {
+        public IEnumerable<(int, float)> EnumerateLink(int index_) {
             int x = _data.field[index_].x;
             int y = _data.field[index_].y;
             //8 directions
@@ -183,11 +183,10 @@ namespace Transient.Pathfinding {
             _data = data_;
         }
 
-        public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_) {
-            astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
-        }
+        public void FindPath(AStarPathfinding astar_, short startX_, short startY_, short goalX_, short goalY_)
+            => astar_.FindPath(this, _data.Coord2Index(startX_, startY_), _data.Coord2Index(goalX_, goalY_));
 
-        public System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_) {
+        public IEnumerable<(int, float)> EnumerateLink(int index_) {
             int x = _data.field[index_].x;
             int y = _data.field[index_].y;
             //6 directions
@@ -274,7 +273,7 @@ namespace Transient.Pathfinding {
             _data = data_;
         }
 
-        public System.Collections.Generic.IEnumerable<(int, float)> EnumerateLink(int index_) {
+        public IEnumerable<(int, float)> EnumerateLink(int index_) {
             foreach (var link in _data.waypoint[index_].link) {
                 yield return (link, 1);//TODO distance
             }
@@ -312,7 +311,7 @@ namespace Transient.Pathfinding {
 
         public AStarPathfinding(int capacity_ = 128) {
             _state = new IntermediateState[capacity_];
-            _open = new List<int>(capacity_ >> 1);
+            _open = new(capacity_ >> 1);
         }
 
         private void Setup(IGraph graph_) {
@@ -502,18 +501,13 @@ namespace Transient.Pathfinding {
 
     public class PathMoveGrid {
         public IGraphData dataRef;
-        public List<int> path;
+        public List<int> path = new(16);
         public int target;
-        public int stop;
+        public int stop = 0;
         public Vector2 pos;
         public Vector2 dir;
         public bool Reachable { get; private set; }
         public bool Reached => target < stop;
-
-        public PathMoveGrid() {
-            path = new List<int>(16);
-            stop = 0;
-        }
 
         public void Reset(IGraphData data_, bool reachable_) {
             dataRef = data_;
@@ -548,9 +542,9 @@ namespace Transient.Pathfinding {
 
     public class PathMoveBezier {
         public IGraphData dataRef;
-        public List<(int index, float distance)> path;
+        public List<(int index, float distance)> path = new(16);
         public int target;
-        public int stop;
+        public int stop = 0;
         public Vector2 pos;
         public Vector2 dir;
         public Vector2 p0, p1, p2;
@@ -560,11 +554,6 @@ namespace Transient.Pathfinding {
         public float segment1;
         public bool Reachable { get; private set; }
         public bool Reached => target < stop;
-
-        public PathMoveBezier() {
-            path = new List<(int, float)>(16);
-            stop = 0;
-        }
 
         public void Reset(IGraphData data_, bool reachable_) {
             dataRef = data_;

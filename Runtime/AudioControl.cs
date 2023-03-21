@@ -1,12 +1,12 @@
 ﻿using UnityEngine;
-using Transient.SimpleContainer;
+using System.Collections.Generic;
 using System;
 using System.Diagnostics;
 using UnityEngine.Audio;
 
 namespace Transient.Audio {
-    public sealed class SimpleAudio {
-        public static SimpleAudio Instance { get; private set; }
+    public sealed class AudioControl {
+        public static AudioControl Instance { get; private set; }
 
         public static float DefaultVolume = 0.8f;
         private AudioMixer _mixer;
@@ -22,9 +22,9 @@ namespace Transient.Audio {
         public AudioListener Listener { get; set; }
         public Func<string, AudioClip> LoadClip = s => Resources.Load<AudioClip>(s);
 
-        private SimpleAudio(GameObject root_, AudioMixer mixer_, AudioListener listener_) {
+        private AudioControl(GameObject root_, AudioMixer mixer_, AudioListener listener_) {
             Log.Assert(root_ is object, "root is null");
-            Performance.RecordProfiler(nameof(SimpleAudio));
+            Performance.RecordProfiler(nameof(AudioControl));
             Asset = root_;
             if (listener_ == null) {
                 var obj = Asset.transform.AddChild("listener");
@@ -34,11 +34,11 @@ namespace Transient.Audio {
                 Listener = listener_;
             }
             Reset(mixer_);
-            Performance.End(nameof(SimpleAudio));
+            Performance.End(nameof(AudioControl));
         }
 
         public static void Init(GameObject root_, AudioMixer mixer_, AudioListener listener_ = null) {
-            Instance = new SimpleAudio(root_, mixer_, listener_);
+            Instance = new AudioControl(root_, mixer_, listener_);
         }
 
         public static void Destroy() {

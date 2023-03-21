@@ -4,11 +4,11 @@
 //
 //
 using UnityEngine;
-using Transient.SimpleContainer;
+using System.Collections.Generic;
 using System;
-using Generic = System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Transient.Container;
 
 namespace Transient.DataAccess {
     [Serializable]
@@ -22,34 +22,26 @@ namespace Transient.DataAccess {
 
     [Serializable]
     public class AssetManifest {
-        public Generic.List<BundleInfo> Info;
+        public List<BundleInfo> Info;
     }
 
     public sealed class AssetBundleMapping {
         public static AssetBundleMapping Default { get; private set; }
 
         private Dictionary<string, string> Alias2Name { get; set; }
-        private Dictionary<string, BundleIdentifier> Asset2Bundle { get; set; }
-        private Dictionary<string, BundleIdentifier> BundlePool { get; set; }
-        private Dictionary<BundleIdentifier, float> ToRelease { get; set; }
-        private List<string> LoadingChain { get; set; }
+        private Dictionary<string, BundleIdentifier> Asset2Bundle { get; set; } = new(512);
+        private Dictionary<string, BundleIdentifier> BundlePool { get; set; } = new(128);
+        private Dictionary<BundleIdentifier, float> ToRelease { get; set; } = new(64);
+        private List<string> LoadingChain { get; set; } = new(8);
         private float ReleaseTimestamp = 0;
         public float ReleaseInterval { get; set; } = 1;
         public int ReleaseDelay { get; set; } = 30;
         public List<string> DataDir { get; private set; }
         public string DataExt { get; private set; }
-        internal StringBuilder Builder { get; private set; }
-
-        public AssetBundleMapping() {
-            Builder = new StringBuilder();
-            LoadingChain = new List<string>(8);
-            Asset2Bundle = new Dictionary<string, BundleIdentifier>(512);
-            BundlePool = new Dictionary<string, BundleIdentifier>(128);
-            ToRelease = new Dictionary<BundleIdentifier, float>(64);
-        }
+        internal StringBuilder Builder { get; private set; } = new();
 
         public static void Init(List<string> path, string extension) {
-            Default = new AssetBundleMapping();
+            Default = new();
             Default.Setup(path, extension);
         }
 
@@ -131,7 +123,7 @@ namespace Transient.DataAccess {
 
         public void InitAssetList(AssetManifest assetManifest,
             bool byName = false, bool byAlias = false, bool byPath = true) {
-            if (byAlias && Alias2Name == null) Alias2Name = new Dictionary<string, string>(512);
+            if (byAlias && Alias2Name == null) Alias2Name = new(512);
             MainLoop.OnUpdate.Remove(this);
             MainLoop.OnUpdate.Add(DelayedRelease, this);
             var skipAsset = !(byName || byAlias || byPath);
@@ -266,7 +258,7 @@ namespace Transient.DataAccess {
             => (T)TakeFrom(bundle, asset, typeof(T));
         public object TakeFrom(string bundle, string asset, Type type) {
             if (!BundlePool.TryGetValue(bundle, out var identifier)) {
-                identifier = new BundleIdentifier() { name = bundle };
+                identifier = new() { name = bundle };
                 BundlePool.Add(bundle, identifier);
             }
             if (!Ready(identifier)) {

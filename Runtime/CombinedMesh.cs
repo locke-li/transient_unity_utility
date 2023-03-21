@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Transient;
 using UnityEngine;
 
 namespace Transient {
@@ -26,10 +25,10 @@ namespace Transient {
         public void Generate(IEnumerable<MeshRenderer> source, Transform target) {
             if (Asset == null) {
                 Asset = target;
-                RendererRef = new List<MeshRenderer>(256);
+                RendererRef = new(256);
                 Filter = Asset.gameObject.AddComponent<MeshFilter>();
                 Renderer = Asset.gameObject.AddComponent<MeshRenderer>();
-                Mesh = new Mesh();
+                Mesh = new();
                 Filter.sharedMesh = Mesh;
             }
             queue = queue ?? new Queue<(IEnumerable<MeshRenderer>, CombinedMesh)>();

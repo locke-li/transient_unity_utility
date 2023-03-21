@@ -2,7 +2,7 @@
 
 using UnityEngine;
 using UnityEngine.UI;
-using Transient.SimpleContainer;
+using Transient.Container;
 using System;
 
 namespace Transient.UI {

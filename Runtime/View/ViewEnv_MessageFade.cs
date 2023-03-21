@@ -1,6 +1,6 @@
 using UnityEngine;
 using Transient.DataAccess;
-using Transient.SimpleContainer;
+using System.Collections.Generic;
 using System;
 
 namespace Transient {
@@ -12,21 +12,17 @@ namespace Transient {
     }
 
     public class MessageFade<M> : IMessageFade where M : struct, IMessageText {
-        public struct MessageText {
+        public class MessageText {
             public M text;
             public float time;
         }
-        private readonly Queue<MessageText> _message;
+        private readonly Queue<MessageText> _message = new(64);
         private Vector3 _startPos;
         private string Asset { get; set; }
         private Color _templateColor;
-        public Func<int, float, float, float> AnimateFade { get; set; }
+        public Func<MessageText, float, float, float> AnimateFade { get; set; }
         public Func<MessageText, bool> RecycleCheck { get; set; }
         public Action<RectTransform> ModifyMessage { get; set; }
-
-        public MessageFade() {
-            _message = new Queue<MessageText>(64, 4);
-        }
 
         public static MessageFade<M> TryCreate(string asset_) {
             var key = "MessageFade.Create";
@@ -81,19 +77,17 @@ namespace Transient {
 
         public MessageFade<M> FadeLinearMove(Vector3 start_, Vector3 end_, Vector3 velocity_, float delay_) {
             _startPos = start_;
-            AnimateFade = (k_, deltaTime_, elementEnd_) => {
-                k_ = _message.RawIndex(k_);
-                ref var data = ref _message.Data[k_];
-                var transform = (RectTransform)data.text.Root;
-                data.time += deltaTime_;
-                if (data.time < delay_) {
+            AnimateFade = (data_, deltaTime_, elementEnd_) => {
+                var transform = (RectTransform)data_.text.Root;
+                data_.time += deltaTime_;
+                if (data_.time < delay_) {
                     return CheckOverlap(transform, elementEnd_);
                 }
                 transform.localPosition += velocity_ * deltaTime_;
                 var p = (transform.localPosition.y - start_.y) / (end_.y - start_.y);
-                var c = data.text.Color;
+                var c = data_.text.Color;
                 c.a = 1.25f - p;
-                data.text.Color = c;
+                data_.text.Color = c;
                 return CheckOverlap(transform, elementEnd_);
             };
             RecycleCheck = m => m.text.Root.localPosition.y >= end_.y;
@@ -102,8 +96,8 @@ namespace Transient {
 
         public void Fade(float deltaTime_) {
             var end = float.MinValue;
-            for (int k = _message.Count - 1; k >= 0; --k) {
-                end = AnimateFade(k, deltaTime_, end);
+            foreach(var m in _message) {
+                end = AnimateFade(m, deltaTime_, end);
             }
             while (_message.Count > 0 && RecycleCheck(_message.Peek())) {
                 var m = _message.Dequeue().text;

@@ -3,8 +3,9 @@
 //
 // author: liyingbo
 //
-using Transient.SimpleContainer;
+using System.Collections.Generic;
 using System;
+using Transient.Container;
 
 namespace Transient {
     public class Timer {
@@ -26,8 +27,8 @@ namespace Transient {
 
         #region type control
 
-        private static List<Timer> _timers = new List<Timer>(32);
-        private static List<Timer> _reusable = new List<Timer>(32, 4);
+        private static List<Timer> _timers = new(32);
+        private static List<Timer> _reusable = new(32);
 
         private static Timer Use(ActionList<float> invoker) {
             var ret = _reusable.Count > 0 ? _reusable.Pop() : new Timer();

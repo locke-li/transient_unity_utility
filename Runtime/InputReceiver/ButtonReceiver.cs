@@ -81,7 +81,7 @@ namespace Transient.UI {
             }
             LastResponseTime = Time.realtimeSinceStartup;
             //Log.Debug("button click");
-            if(!string.IsNullOrEmpty(audioEvent)) SimpleAudio.Instance?.Event(audioEvent);
+            if(!string.IsNullOrEmpty(audioEvent)) AudioControl.Instance?.Event(audioEvent);
             WhenClick(this);
         }
 

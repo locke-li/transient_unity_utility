@@ -1,7 +1,7 @@
 ﻿using UnityEngine.Sprites;
 using UnityEngine;
 using UnityEngine.UI;
-using Transient.SimpleContainer;
+using Transient.Container;
 
 namespace Transient.UI {
     public class ImageMirrored : Graphic {

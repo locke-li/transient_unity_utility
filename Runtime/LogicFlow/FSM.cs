@@ -1,14 +1,14 @@
 ﻿using System;
-using Transient.SimpleContainer;
+using System.Collections.Generic;
+using Transient.Container;
 
-namespace Transient.ControlFlow {
+namespace Transient.LogicFlow {
     public class FSMStack {
-        private readonly List<(FSMGraph, State, object[])> _stacked;
-        private readonly SimpleFSM _active;
+        private readonly List<(FSMGraph, State, object[])> _stacked = new(4);
+        private readonly FSM _active;
 
-        public FSMStack(SimpleFSM fsm_) {
+        public FSMStack(FSM fsm_) {
             _active = fsm_;
-            _stacked = new List<(FSMGraph, State, object[])>(4);
         }
 
         public void Push(FSMGraph graph_, State entry_, State exit_, object[] token_, bool skip_ = false) {
@@ -41,13 +41,13 @@ namespace Transient.ControlFlow {
         }
     }
 
-    public class SimpleFSM {
+    public class FSM {
         public FSMGraph Graph { get; set; }
         public State CurrentState { get; private set; }
         private State ActingState;
         public object[] Token { get; private set; }
         private bool _isDone;
-        public State ErrorState { get; private set; }
+        public State ErrorState { get; private set; } = new(-200, StateTransitMode.Manual);
         public Action<int, int, int> WhenTransit { get; set; }
 #if FSMTimeoutCheck
         private Action<int> WhenTimeout { get; set; }
@@ -60,10 +60,6 @@ namespace Transient.ControlFlow {
         private Dictionary<State, State> StateOverrideRule { get; set; }
 
         public bool IsInState(int id_) => CurrentState.Id == id_;
-
-        public SimpleFSM() {
-            ErrorState = new State(-200, StateTransitMode.Manual);
-        }
 
         public void Init(FSMGraph graph_, params object[] token_) {
             Log.Assert(graph_ != null, "invalid fsm graph");
@@ -200,7 +196,7 @@ namespace Transient.ControlFlow {
     public class State {
         public int Id { get; private set; }
 
-        private readonly List<Transition> _transitions;
+        private readonly List<Transition> _transitions = new(2);
         public StateTransitMode _mode;
         private Func<object, float, bool> _OnTick;
         internal bool ShouldSkipTick => _OnTick == null;
@@ -217,7 +213,6 @@ namespace Transient.ControlFlow {
 
         public State(int id_, StateTransitMode mode_) {
             Id = id_;
-            _transitions = new List<Transition>(2);
             _mode = mode_;
         }
 
@@ -252,7 +247,7 @@ namespace Transient.ControlFlow {
             _tokenOnExit = token_;
         }
 
-        internal void OnEnter(SimpleFSM fsm_, bool isDone_, State TransitionTarget) {
+        internal void OnEnter(FSM fsm_, bool isDone_, State TransitionTarget) {
             const string key = "State.OnEnter";
             Performance.RecordProfiler(key);
             _OnEnter?.Invoke(fsm_.Token[_tokenOnEnter]);
@@ -262,7 +257,7 @@ namespace Transient.ControlFlow {
             Performance.End(key);
         }
 
-        internal void OnTick(SimpleFSM fsm_, float dt_, ref bool isDone_, State TransitionTarget) {
+        internal void OnTick(FSM fsm_, float dt_, ref bool isDone_, State TransitionTarget) {
             const string key = "State.OnTick";
             Performance.RecordProfiler(key);
             if (!isDone_) {
@@ -285,7 +280,7 @@ namespace Transient.ControlFlow {
             Performance.End(key);
         }
 
-        private void CheckTransition(SimpleFSM fsm_, bool isDone_) {
+        private void CheckTransition(FSM fsm_, bool isDone_) {
             foreach (var trans in _transitions) {
                 if (trans.TryTransit(fsm_, isDone_)) {
                     return;
@@ -294,7 +289,7 @@ namespace Transient.ControlFlow {
         }
 
         //give OnExit a change to execute, for dead-end states
-        internal void ExitIfDeadEnd(SimpleFSM fsm_, bool isDone_, State TransitionTarget) {
+        internal void ExitIfDeadEnd(FSM fsm_, bool isDone_, State TransitionTarget) {
             if (TransitionTarget._transitions.Count == 0
              && TransitionTarget._mode != StateTransitMode.Manual
              && fsm_.CurrentState == TransitionTarget
@@ -303,7 +298,7 @@ namespace Transient.ControlFlow {
             }
         }
 
-        internal void OnExit(SimpleFSM fsm_) {
+        internal void OnExit(FSM fsm_) {
             const string key = "State.OnExit";
             Performance.RecordProfiler(key);
             _OnExit?.Invoke(fsm_.Token[_tokenOnExit]);
@@ -325,8 +320,7 @@ namespace Transient.ControlFlow {
 
         private Func<object, bool, bool> _Condition;
 
-        private Transition() {
-        }
+        private Transition() { }
 
         public Transition(State source_, State target_, Func<object, bool, bool> Condition_, int token_) {
             Source = source_;
@@ -339,7 +333,7 @@ namespace Transient.ControlFlow {
             _Condition = Condition_ ?? _DefaultActionResultCondition;
         }
 
-        public bool TryTransit(SimpleFSM fsm_, bool isDone_) {
+        public bool TryTransit(FSM fsm_, bool isDone_) {
             bool ret = _Condition(fsm_.Token[_token], isDone_);
             if (ret) {
                 fsm_.DoTransition(this);

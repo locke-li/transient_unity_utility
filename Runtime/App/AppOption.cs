@@ -4,11 +4,12 @@ using UnityEngine;
 using System;
 using System.IO;
 using System.Text;
-using DataMap = Transient.SimpleContainer.Dictionary<string, string>;
 
 namespace Transient {
+    using DataMap = Dictionary<string, string>;
+
     public class AppOption {
-        public DataMap data = new DataMap(4);
+        public DataMap data = new DataMap();
         public string this[string key] => InfoString(key);
 
         public static (AppOption, string) Create(byte[] content) {
@@ -32,8 +33,8 @@ namespace Transient {
         public byte[] Serialize() {
             var parser = InfoParser.Instance;
             IEnumerable<(string, string)> SerializeEach() {
-                foreach (var p in data) {
-                    yield return p;
+                foreach (var (k, v) in data) {
+                    yield return (k, v);
                 }
             }
             return parser.Serialize(SerializeEach());

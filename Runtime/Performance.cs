@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Transient.SimpleContainer;
+using System.Collections.Generic;
 using UnityEngine.Profiling;
 using UnityEngine;
 
@@ -45,7 +45,7 @@ namespace Transient {
 
         [Conditional("PerformanceRecord")]
         public static void Init() {
-            _record = new Dictionary<string, Session>(4);
+            _record = new(4);
         }
 
         [Conditional("PerformanceRecord")]
@@ -110,7 +110,10 @@ namespace Transient {
             string key_, string mark_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
         ) {
-            ref var s = ref _record.ValueRef(key_);
+            if (_record.TryGetValue(key_, out var s)) {
+                Log.Warning($"invalid performance key {key_}");
+                return;
+            }
             if((s.method & Method.Log) != 0) {
                 Log.Custom(logLevel, $"perf[{key_}/{mark_}]{s.sw.ElapsedMilliseconds}ms|{s.sw.ElapsedTicks}ticks",
                     stack_: "", member_: member_, filePath_: filePath_, lineNumber_: lineNumber_);
@@ -118,6 +121,7 @@ namespace Transient {
             if((s.method & Method.Profiler) != 0) {
                 if(s.markDepth > 0) Profiler.EndSample();
                 else ++s.markDepth;
+                _record[key_] = s;
                 Profiler.BeginSample(mark_);
             }
         }
@@ -127,7 +131,10 @@ namespace Transient {
             string key_, bool keep_ = true, string msg_ = nameof(End),
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
         ) {
-            ref var s = ref _record.ValueRef(key_);
+            if (_record.TryGetValue(key_, out var s)) {
+                Log.Warning($"invalid performance key {key_}");
+                return;
+            }
             if((s.method & Method.Log) != 0) {
                 s.sw.Stop();
                 Log.Custom(logLevel, $"perf[{key_}|{msg_}]{s.sw.ElapsedMilliseconds}ms|{s.sw.ElapsedTicks}ticks",
@@ -138,6 +145,7 @@ namespace Transient {
                     Profiler.EndSample();
                 }
                 s.markDepth = 0;
+                _record[key_] = s;
                 Profiler.EndSample();
                 if(s.method == Method.ProfilerThread) Profiler.EndThreadProfiling();
             }

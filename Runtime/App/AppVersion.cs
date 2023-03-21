@@ -4,9 +4,10 @@ using System;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
-using InfoMap = Transient.SimpleContainer.Dictionary<string, string>;
 
 namespace Transient {
+    using InfoMap = Dictionary<string, string>;
+
     public class AppVersion : IEqualityComparer<AppVersion>, IComparable<AppVersion> {
         public string version;
         public int major;
@@ -17,7 +18,7 @@ namespace Transient {
         public string Env => InfoChecked(nameof(Env));
         public string DataVersion => InfoChecked(nameof(DataVersion));
         public string AssetVersion => InfoChecked(nameof(AssetVersion));
-        public InfoMap info = new InfoMap(4);
+        public InfoMap info = new InfoMap();
 
         public static (AppVersion, string) TryCreate(byte[] content) {
             var (version, reason) = Deserialize(content, null);
@@ -46,8 +47,8 @@ namespace Transient {
             var parser = InfoParser.Instance;
             IEnumerable<(string, string)> SerializeEach() {
                 yield return (nameof(version), version);
-                foreach (var p in info) {
-                    yield return p;
+                foreach (var (k, v) in info) {
+                    yield return (k, v);
                 }
             }
             return parser.Serialize(SerializeEach());
