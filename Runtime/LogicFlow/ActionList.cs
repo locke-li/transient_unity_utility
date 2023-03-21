@@ -129,21 +129,34 @@ namespace Transient {
 }
 
 namespace Transient {
-    public struct BindingAction<T> {
+    public struct BindingAction<T, R> {
         public Action<T, object> Value { get; set; }
-        public object target;
+        public R target;
     }
 
-    public sealed class ActionListWithToken<T> : ActionListAbstract<BindingAction<T>> {
-        public ActionListWithToken(int capacity, string name = null) : base(capacity, name) {
+    public sealed class ActionListBinding<T, R> : ActionListAbstract<BindingAction<T, R>> {
+        public ActionListBinding(int capacity, string name = null) : base(capacity, name) {
 
         }
-        public void Add(Action<T, object> add_, object target_, object token_) {
-            Add(new BindingAction<T>() { Value = add_, target = target_ }, token_ ?? target_);
+        public void Add(Action<T, object> add_, R target_, object token_ = null) {
+            Add(new BindingAction<T, R>() { Value = add_, target = target_ }, token_ ?? target_);
         }
         public void Invoke(T t) {
             foreach (var A in _list)
-                A.Value.Value(t, A.token);
+                A.Value.Value(t, A.Value.target);
+        }
+    }
+
+    public sealed class ActionListBindingFlex<T, R> : ActionListAbstract<BindingAction<T, object>> {
+        public ActionListBindingFlex(int capacity, string name = null) : base(capacity, name) {
+
+        }
+        public void Add(Action<T, object> add_, R target_, object token_) {
+            Add(new BindingAction<T, object>() { Value = add_, target = target_ }, token_ ?? target_);
+        }
+        public void Invoke(T t) {
+            foreach (var A in _list)
+                A.Value.Value(t, (R)A.Value.target);
         }
     }
 }
