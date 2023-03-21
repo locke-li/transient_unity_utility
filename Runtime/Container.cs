@@ -173,7 +173,7 @@ namespace Transient.Container {
     }
 }
 
-namespace Transient.Container {
+namespace Transient {
     public static class Extension {
         public static void OutOfOrderRemove<E>(this IList<E> list, E v) {
             int vi = list.IndexOf(v);
