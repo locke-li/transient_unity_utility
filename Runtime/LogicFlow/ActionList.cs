@@ -139,6 +139,10 @@ namespace Transient {
 
         }
         public void Add(Action<T, object> add_, R target_, object token_ = null) {
+            if (target_ == null) {
+                Log.Warning("invalid binding target");
+                return;
+            }
             Add(new BindingAction<T, R>() { Value = add_, target = target_ }, token_ ?? target_);
         }
         public void Invoke(T t) {
@@ -151,7 +155,11 @@ namespace Transient {
         public ActionListBindingFlex(int capacity, string name = null) : base(capacity, name) {
 
         }
-        public void Add(Action<T, object> add_, R target_, object token_) {
+        public void Add(Action<T, object> add_, R target_, object token_ = null) {
+            if (target_ == null) {
+                Log.Warning("invalid binding target");
+                return;
+            }
             Add(new BindingAction<T, object>() { Value = add_, target = target_ }, token_ ?? target_);
         }
         public void Invoke(T t) {
