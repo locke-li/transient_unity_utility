@@ -6,6 +6,27 @@ using System.Text;
 
 namespace Transient {
     public static class Log {
+        public class ExpectResult {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ExpectResult Warn(
+                string msg_, string stack_ = null, string source_ = null,
+                int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            {
+                LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+                return this;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ExpectResult Error(
+                string msg_, string stack_ = null, string source_ = null,
+                int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            {
+                LogStream.Default.Message(LogStream.error, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+                return this;
+            }
+        }
+        public static ExpectResult ExpectChain { get; } = new();
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Init(int capacity_)
             => LogStream.Default.Cache.Init(capacity_);
@@ -27,26 +48,16 @@ namespace Transient {
             string msg_, string stack_ = null, string source_ = null,
             int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
             => LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool WarnIf(
-            bool condition_, string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null,
-            string stack_ = null, string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
-            => LogStream.Default.MessageIf(condition_, LogStream.warning, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Error(
             string msg_, string stack_ = null, string source_ = null,
             int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
             => LogStream.Default.Message(LogStream.error, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool ErrorIf(
-            bool condition_, string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null,
-            string stack_ = null, string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
-            => LogStream.Default.MessageIf(condition_, LogStream.error, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+        public static ExpectResult Expect(bool condition_)
+            => condition_ ? ExpectChain : null;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Assert(
@@ -64,7 +75,7 @@ namespace Transient {
     }
 
     public sealed class LogStream {
-        public static LogStream Default { get; private set; } = new LogStream();
+        public static LogStream Default { get; } = new();
 
         public const int debug = 0;
         public const int info = 1;
@@ -79,22 +90,8 @@ namespace Transient {
             int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
             Performance.RecordProfiler(nameof(LogStream));
-            Cache.Log(msg_, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), level_, source_, new EntrySite(member_, filePath_, lineNumber_));
+            Cache.Log(msg_, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), level_, source_, new(member_, filePath_, lineNumber_));
             Performance.End(nameof(LogStream));
-        }
-
-        public bool MessageIf(
-            bool condition_, int level_, string msg_,
-            object arg0_, object arg1_, object arg2_, object arg3_,
-            string stack_ = null, string source_ = null, 
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
-            ) {
-            if (!condition_) return condition_;
-            Performance.RecordProfiler(nameof(LogStream));
-            var message = string.Format(msg_, arg0_, arg1_, arg2_, arg3_);
-            Cache.Log(message, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), assert, source_, new EntrySite(member_, filePath_, lineNumber_));
-            Performance.End(nameof(LogStream));
-            return condition_;
         }
 
         public void Assert(
@@ -106,7 +103,7 @@ namespace Transient {
             if (condition_) return;
             Performance.RecordProfiler(nameof(LogStream));
             var message = string.Format(msg_, arg0_, arg1_, arg2_, arg3_);
-            Cache.Log(message, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), assert, source_, new EntrySite(member_, filePath_, lineNumber_));
+            Cache.Log(message, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), assert, source_, new(member_, filePath_, lineNumber_));
             Performance.End(nameof(LogStream));
             throw new Exception($"assert failed: {message}");
         }
