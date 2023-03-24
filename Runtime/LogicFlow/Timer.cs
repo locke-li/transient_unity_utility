@@ -68,7 +68,7 @@ namespace Transient {
 
         public static Timer Execute(Action TimerAction, ActionList<float> invoker = null) {
             if(TimerAction == null) {
-                Log.Warning("executing null action with Timer!");
+                Log.Warn("executing null action with Timer!");
                 return null;
             }
             invoker = invoker ?? MainLoop.OnUpdate;

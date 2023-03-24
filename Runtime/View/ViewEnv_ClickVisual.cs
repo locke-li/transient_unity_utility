@@ -23,7 +23,7 @@ namespace Transient {
                 };
             }
             catch(Exception e) {
-                Log.Warning($"{nameof(ClickVisual)} create failed. {e.Message}");
+                Log.Warn($"{nameof(ClickVisual)} create failed. {e.Message}");
             }
             return null;
         }

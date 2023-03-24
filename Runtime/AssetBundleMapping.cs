@@ -115,7 +115,7 @@ namespace Transient.DataAccess {
                     goto end;
                 }
             }
-            Log.Warning($"failed to load asset list:\n{Builder}");
+            Log.Warn($"failed to load asset list:\n{Builder}");
         end:
             Builder.Length = 0;
             return manifest;
@@ -194,7 +194,7 @@ namespace Transient.DataAccess {
             LoadingChain.Pop();
             var valid = identifier.Reset(raw);
             if (!valid) {
-                Log.Warning($"failed to find bundle {identifier.name}:\n{Builder}");
+                Log.Warn($"failed to find bundle {identifier.name}:\n{Builder}");
             }
             return valid;
         }

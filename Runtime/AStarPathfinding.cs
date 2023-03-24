@@ -473,7 +473,7 @@ namespace Transient.Pathfinding {
                 }
             }
             if (iter == _state.Length) {
-                Log.Warning("iteration overflown");
+                Log.Warn("iteration overflown");
 #if DebugPathfinding
                 Log.Debug(_text.ToString());
 #endif

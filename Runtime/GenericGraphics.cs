@@ -35,7 +35,7 @@ namespace Transient.Graphics {
             //TODO test on device
             var format = texture_[0].graphicsFormat;
             if(!SystemInfo.IsFormatSupported(format, FormatUsage.Sample)) {
-                Log.Warning($"unsupported format {format}");
+                Log.Warn($"unsupported format {format}");
                 atlas_ = new Texture2D(1, 1);
                 return atlas_.PackTextures(texture_, padding_, size_);
             }
@@ -57,7 +57,7 @@ namespace Transient.Graphics {
             if(blockSize == 16) CopyTextureRawData<Block128Bit>(atlas_, texture_, rect, blockWidth, blockHeight);
             else if(blockSize == 8) CopyTextureRawData<UInt64>(atlas_, texture_, rect, blockWidth, blockHeight);
             else if(blockSize == 4) CopyTextureRawData<UInt32>(atlas_, texture_, rect, blockWidth, blockHeight);
-            else Log.Warning($"unsupported block size {blockSize} byte");
+            else Log.Warn($"unsupported block size {blockSize} byte");
             atlas_.Apply(false, true);
             float sizeInv = 1f/size_;
             for(int k = 0;k<rect.Count;++k) {

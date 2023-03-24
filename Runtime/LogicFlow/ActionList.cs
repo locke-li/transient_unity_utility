@@ -21,7 +21,7 @@ namespace Transient {
         private void CheckDuplicate(AT value_) {
             foreach (var v in _list) {
                 if (ReferenceEquals(v.Value, value_)) {
-                    Log.Warning($"trying to add duplicate action to list({_name})!");
+                    Log.Warn($"trying to add duplicate action to list({_name})!");
                     return;
                 }
             }
@@ -140,7 +140,7 @@ namespace Transient {
         }
         public void Add(Action<T, object> add_, R target_, object token_ = null) {
             if (target_ == null) {
-                Log.Warning("invalid binding target");
+                Log.Warn("invalid binding target");
                 return;
             }
             Add(new BindingAction<T, R>() { Value = add_, target = target_ }, token_ ?? target_);
@@ -157,7 +157,7 @@ namespace Transient {
         }
         public void Add(Action<T, object> add_, R target_, object token_ = null) {
             if (target_ == null) {
-                Log.Warning("invalid binding target");
+                Log.Warn("invalid binding target");
                 return;
             }
             Add(new BindingAction<T, object>() { Value = add_, target = target_ }, token_ ?? target_);

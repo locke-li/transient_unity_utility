@@ -6,53 +6,61 @@ using System.Text;
 
 namespace Transient {
     public static class Log {
-        public static void Init(int capacity_) {
-            LogStream.Default.Cache.Init(capacity_);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Init(int capacity_)
+            => LogStream.Default.Cache.Init(capacity_);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Debug(
             string msg_, string stack_ = "", string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
-            ) {
-            LogStream.Default.Message(LogStream.debug, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
-        }
+            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            => LogStream.Default.Message(LogStream.debug, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Info(
             string msg_, string stack_ = "", string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
-            ) {
-            LogStream.Default.Message(LogStream.info, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
-        }
+            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            => LogStream.Default.Message(LogStream.info, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
 
-        public static void Warning(
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Warn(
             string msg_, string stack_ = null, string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
-            ) {
-            LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
-        }
+            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            => LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WarnIf(
+            bool condition_, string msg_,
+            object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null,
+            string stack_ = null, string source_ = null,
+            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            => LogStream.Default.MessageIf(condition_, LogStream.warning, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Error(
             string msg_, string stack_ = null, string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
-            ) {
-            LogStream.Default.Message(LogStream.error, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
-        }
+            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            => LogStream.Default.Message(LogStream.error, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ErrorIf(
+            bool condition_, string msg_,
+            object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null,
+            string stack_ = null, string source_ = null,
+            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            => LogStream.Default.MessageIf(condition_, LogStream.error, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Assert(
             bool condition_, string msg_,
             object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null,
             string stack_ = null, string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
-            ) {
-            LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
-        }
+            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            => LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Custom(
             int level_, string msg_, string stack_ = null, string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
-            ) {
-            LogStream.Default.Message(level_, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
-        }
+            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            => LogStream.Default.Message(level_, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
     }
 
     public sealed class LogStream {
@@ -72,6 +80,19 @@ namespace Transient {
             ) {
             Performance.RecordProfiler(nameof(LogStream));
             Cache.Log(msg_, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), level_, source_, new EntrySite(member_, filePath_, lineNumber_));
+            Performance.End(nameof(LogStream));
+        }
+
+        public void MessageIf(
+            bool condition_, int level_, string msg_,
+            object arg0_, object arg1_, object arg2_, object arg3_,
+            string stack_ = null, string source_ = null, 
+            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
+            ) {
+            if (condition_) return;
+            Performance.RecordProfiler(nameof(LogStream));
+            var message = string.Format(msg_, arg0_, arg1_, arg2_, arg3_);
+            Cache.Log(message, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), assert, source_, new EntrySite(member_, filePath_, lineNumber_));
             Performance.End(nameof(LogStream));
         }
 

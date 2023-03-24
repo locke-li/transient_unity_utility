@@ -30,7 +30,7 @@ namespace Transient {
             var obj = AssetMapping.View.TakeActive(asset_);
             var message = new M();
             if(!message.Init(obj)) {
-                Log.Warning($"{nameof(MessageFade<M>)} create failed.");
+                Log.Warn($"{nameof(MessageFade<M>)} create failed.");
                 AssetMapping.View.Recycle(obj);
                 return null;
             }

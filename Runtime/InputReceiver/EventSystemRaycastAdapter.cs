@@ -20,7 +20,7 @@ namespace Transient.UI {
                 return collider3d;
             }
             adapter_ = new RaycastAdapterEmpty();
-            Log.Warning($"no suitable raycast receiver found on {transform_.name}!");
+            Log.Warn($"no suitable raycast receiver found on {transform_.name}!");
             return null;
         }
     }

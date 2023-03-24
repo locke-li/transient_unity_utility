@@ -147,7 +147,7 @@ namespace Transient.LogicFlow {
 
         public bool DoTransition(Transition trans_) {
             if (CurrentState == null) {
-                Log.Warning("transition is invalid during state exit");
+                Log.Warn("transition is invalid during state exit");
                 return false;
             }
             if (trans_.Source == FSMGraph.AnyState || trans_.Source == CurrentState) {

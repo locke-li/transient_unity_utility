@@ -111,7 +111,7 @@ namespace Transient {
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
         ) {
             if (_record.TryGetValue(key_, out var s)) {
-                Log.Warning($"invalid performance key {key_}");
+                Log.Warn($"invalid performance key {key_}");
                 return;
             }
             if((s.method & Method.Log) != 0) {
@@ -132,7 +132,7 @@ namespace Transient {
             [CallerMemberName]string member_ = "", [CallerFilePath]string filePath_ = "", [CallerLineNumber]int lineNumber_ = 0
         ) {
             if (_record.TryGetValue(key_, out var s)) {
-                Log.Warning($"invalid performance key {key_}");
+                Log.Warn($"invalid performance key {key_}");
                 return;
             }
             if((s.method & Method.Log) != 0) {

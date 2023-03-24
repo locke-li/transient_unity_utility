@@ -74,7 +74,7 @@ namespace Transient {
                 obj.SetActive(false);
             }
             catch (Exception e) {
-                Log.Warning($"{nameof(MessagePopup<M>)} create failed. {e.Message}");
+                Log.Warn($"{nameof(MessagePopup<M>)} create failed. {e.Message}");
                 ret = null;
             }
             Performance.End(key);

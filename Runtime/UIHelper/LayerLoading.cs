@@ -31,7 +31,7 @@ namespace Transient.UI {
         public void Target(float value_) {
             Log.Assert(value_ > start, "invalid progress target {0} < {1}", value_, start);
             if (value_ > 1) {
-                Log.Warning($"progress exceeding 1 {value_}");
+                Log.Warn($"progress exceeding 1 {value_}");
                 value_ = 1;
             }
             start += range;
@@ -42,7 +42,7 @@ namespace Transient.UI {
             value_ = start + range * value_;
 #if DEBUG
             if (value_ < progress.value) {
-                Log.Warning($"progress rolling back {value_} {progress.value}");
+                Log.Warn($"progress rolling back {value_} {progress.value}");
             }
 #endif
             progress.Resize(value_);

@@ -102,7 +102,7 @@ namespace Transient.Audio {
             if (group_ < 0 || group_ >= groupKey.Count) return;
             var key = groupKey[group_];
             if (!_mixer.SetFloat(key, v < 0 ? 0 : (v * 100 - 80))) {
-                Log.Warning($"key {key} not found on mixer");
+                Log.Warn($"key {key} not found on mixer");
             }
         }
 
@@ -110,7 +110,7 @@ namespace Transient.Audio {
             if (group_ < 0 || group_ >= groupKey.Count) return 0;
             var key = groupKey[group_];
             if (!_mixer.GetFloat(key, out var v)) {
-                Log.Warning($"key {key} not found on mixer");
+                Log.Warn($"key {key} not found on mixer");
             }
             return (v + 80) / 100;
         }
@@ -119,7 +119,7 @@ namespace Transient.Audio {
             PlayerPrefs.SetInt(KeyEnabled, Enabled ? 1 : 0);
             foreach(var k in groupKey) {
                 if (!_mixer.GetFloat(k, out var v)) {
-                    Log.Warning($"key {k} not found on mixer");
+                    Log.Warn($"key {k} not found on mixer");
                 }
                 PlayerPrefs.SetFloat(k, v);
             }
@@ -149,7 +149,7 @@ namespace Transient.Audio {
             }
             else if(!failedEvent.Contains(event_)) {
                 failedEvent.Add(event_);
-                Log.Warning($"audio event failed {event_}");
+                Log.Warn($"audio event failed {event_}");
             }
         }
 
@@ -201,7 +201,7 @@ namespace Transient.Audio {
             AudioClip clip = GetClip(name_);
             AudioSource ch = Channel(ch_);
             if (clip == null || ch == null) {
-                Log.Warning($"failed to play {name_}:{clip} {ch_}:{ch}");
+                Log.Warn($"failed to play {name_}:{clip} {ch_}:{ch}");
                 return;
             }
             Play(clip, ch, loop_);
@@ -210,7 +210,7 @@ namespace Transient.Audio {
         public void Play(string name_, AudioSource ch_, bool loop_) {
             AudioClip clip = GetClip(name_);
             if (clip == null || ch_ == null) {
-                Log.Warning($"failed to play {name_}:{clip} {ch_}:{ch_}");
+                Log.Warn($"failed to play {name_}:{clip} {ch_}:{ch_}");
                 return;
             }
             Play(clip, ch_, loop_);
@@ -227,7 +227,7 @@ namespace Transient.Audio {
             AudioClip clip = GetClip(name_);
             AudioSource ch = Channel(ch_);
             if (clip == null || ch == null) {
-                Log.Warning($"failed to sound {name_}:{clip} {ch_}:{ch}");
+                Log.Warn($"failed to sound {name_}:{clip} {ch_}:{ch}");
                 return;
             }
             Sound(clip, ch);
@@ -236,7 +236,7 @@ namespace Transient.Audio {
         public void Sound(string name_, AudioSource ch_) {
             AudioClip clip = GetClip(name_);
             if (clip == null || ch_ == null) {
-                Log.Warning($"failed to sound {name_}:{clip} {ch_}:{ch_}");
+                Log.Warn($"failed to sound {name_}:{clip} {ch_}:{ch_}");
                 return;
             }
             Sound(clip, ch_);
@@ -246,7 +246,7 @@ namespace Transient.Audio {
             AudioClip clip = GetClip(name_);
             AudioSource ch = Channel(ch_);
             if (clip == null || ch == null) {
-                Log.Warning($"failed to sound {name_}:{clip} {ch_}:{ch}");
+                Log.Warn($"failed to sound {name_}:{clip} {ch_}:{ch}");
                 return;
             }
             if ((target_ - Listener.transform.position).sqrMagnitude > max_ * max_) return;

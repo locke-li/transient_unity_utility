@@ -70,7 +70,7 @@ namespace Transient.DataAccess {
         public object TakePersistent(Type type_, string id, bool try_ = false) {
             var obj = (UnityEngine.Object)AssetAdapter.Take(id, type_, try_);
             if (obj == null) {
-                Log.Warning($"failed to take persistent {id}");
+                Log.Warn($"failed to take persistent {id}");
                 return null;
             }
             return UnityEngine.Object.Instantiate(obj);
@@ -81,7 +81,7 @@ namespace Transient.DataAccess {
         public object TakeDirect(Type type_, string id, bool try_ = false) {
             var ret = AssetAdapter.Take(id, type_, try_);
             if (!try_ && ret == null) {
-                Log.Warning($"failed to directly take {id}");
+                Log.Warn($"failed to directly take {id}");
             }
             return ret;
         }
@@ -163,7 +163,7 @@ namespace Transient.DataAccess {
         public bool Recycle(object resObj_) {
             Performance.RecordProfiler(nameof(Recycle));
             if (resObj_ == null) {
-                Log.Warning("trying to recycle null object");
+                Log.Warn("trying to recycle null object");
                 return false;
             }
             var recognized = _activePool.TryGetValue(resObj_, out var resId);
@@ -344,7 +344,7 @@ namespace Transient.DataAccess {
             }
             if (Mapped == null) {
                 InstantiateI = InstantiateEmpty;
-                if (!try_) Log.Warning($"failed to load {id} {type}");
+                if (!try_) Log.Warn($"failed to load {id} {type}");
                 return false;
             }
             return true;
