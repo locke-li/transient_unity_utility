@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using Transient.DataAccess;
 
 namespace Transient.UI {
-    public class Layer {
+    public class LayerAsset {
         public Transform Asset { get; set; }
         private Animation animation;
 
-        public static Layer Create(string path, bool active) {
-            var layer = new Layer();
+        public static LayerAsset Create(string path, bool active) => Create<LayerAsset>(path, active);
+        public static T Create<T>(string path, bool active) where T : LayerAsset, new() {
+            var layer = new T();
             layer.InitAsset(path, active);
             return layer;
         }

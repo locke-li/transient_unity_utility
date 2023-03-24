@@ -2,7 +2,7 @@
 using UnityEngine.UI;
 
 namespace Transient.UI {
-    public class LayerDisableBlock : Layer {
+    public class LayerDisableBlock : LayerAsset {
         private ImageFlex block;
         private ImageFlex busy;
         public ButtonReceiver button;

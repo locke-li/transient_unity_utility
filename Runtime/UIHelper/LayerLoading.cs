@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 
 namespace Transient.UI {
-    public class LayerLoading : Layer {
+    public class LayerLoading : LayerAsset {
         private ProgressRect progress;
         private float start;
         private float range;
