@@ -7,11 +7,12 @@ namespace Transient.UI {
         public Transform Asset { get; set; }
         private Animation animation;
 
-        public static LayerAsset Create(string path, bool active) => Create<LayerAsset>(path, active);
-        public static T Create<T>(string path, bool active) where T : LayerAsset, new() {
-            var layer = new T();
-            layer.InitAsset(path, active);
-            return layer;
+        public static LayerAsset Create(string path, bool active) => Create(new LayerAsset(), path, active);
+        public static T Create<T>(string path, bool active) where T : LayerAsset, new()
+            => (T)Create(new T(), path, active);
+        public static LayerAsset Create(LayerAsset layer_, string path, bool active) {
+            layer_.InitAsset(path, active);
+            return layer_;
         }
 
         public virtual bool Activate() {
