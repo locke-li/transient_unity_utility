@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using System;
 
 namespace Transient.UI {
-    public class ImageState : MonoBehaviour {
+    public class ImageState : MonoBehaviour, IOptionState {
         [Serializable]
         public struct State {
             public bool enabled;
@@ -34,6 +34,7 @@ namespace Transient.UI {
 
         #endif
 
+        void IOptionState.Select(int i_) => Setup(i_);
         public void Setup(int i_) {
             var s = state[i_];
             image.enabled = s.enabled;

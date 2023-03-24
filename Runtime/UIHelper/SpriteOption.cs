@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 namespace Transient.UI {
-    public class SpriteOption : MonoBehaviour {
+    public class SpriteOption : MonoBehaviour, IOptionState {
         public Sprite[] option;
         public Image target;
         public bool nativeSize;
