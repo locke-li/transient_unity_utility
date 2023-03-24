@@ -28,7 +28,7 @@ namespace Transient {
             int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
             => LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarnIf(
+        public static bool WarnIf(
             bool condition_, string msg_,
             object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null,
             string stack_ = null, string source_ = null,
@@ -41,7 +41,7 @@ namespace Transient {
             int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
             => LogStream.Default.Message(LogStream.error, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ErrorIf(
+        public static bool ErrorIf(
             bool condition_, string msg_,
             object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null,
             string stack_ = null, string source_ = null,
@@ -83,17 +83,18 @@ namespace Transient {
             Performance.End(nameof(LogStream));
         }
 
-        public void MessageIf(
+        public bool MessageIf(
             bool condition_, int level_, string msg_,
             object arg0_, object arg1_, object arg2_, object arg3_,
             string stack_ = null, string source_ = null, 
             int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
-            if (condition_) return;
+            if (!condition_) return condition_;
             Performance.RecordProfiler(nameof(LogStream));
             var message = string.Format(msg_, arg0_, arg1_, arg2_, arg3_);
             Cache.Log(message, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), assert, source_, new EntrySite(member_, filePath_, lineNumber_));
             Performance.End(nameof(LogStream));
+            return condition_;
         }
 
         public void Assert(
