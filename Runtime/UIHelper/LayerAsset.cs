@@ -31,7 +31,7 @@ namespace Transient.UI {
             }
         }
 
-        public virtual void Close() {
+        public virtual void Deactivate() {
             if (Asset == null) return;
             Asset.gameObject.SetActive(false);
         }
