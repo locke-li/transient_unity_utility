@@ -84,14 +84,21 @@ namespace Transient {
         public const int assert = 4;
         public const int custom = 5;
         public LogCache Cache { get; set; } = new LogCache();
+        private int depth = 0;
 
         public void Message(
             int level_, string msg_, string stack_ = "", string source_ = null, 
             int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
             ) {
+            if (depth > 8) {
+                UnityEngine.Debug.LogError("log depth limit reached");
+                return;
+            }
+            ++depth;
             Performance.RecordProfiler(nameof(LogStream));
             Cache.Log(msg_, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), level_, source_, new(member_, filePath_, lineNumber_));
             Performance.End(nameof(LogStream));
+            --depth;
         }
 
         public void Assert(
