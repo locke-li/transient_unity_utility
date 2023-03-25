@@ -57,7 +57,7 @@ namespace Transient {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ExpectResult Expect(bool condition_)
-            => condition_ ? ExpectChain : null;
+            => condition_ ? null : ExpectChain;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Assert(
