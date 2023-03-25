@@ -47,8 +47,11 @@ namespace Transient.UI {
             AnimationState state;
             if (animation == null || (state = animation[name_]) == null) return 0;
             animation.Play(name_);
-            //TODO when timeScale == 0
-            return state.length / Time.timeScale;
+            return state.length;
+        }
+
+        public bool AnimationExist(string name_) {
+            return animation != null && animation[name_] != null;
         }
 
         public void AnimateStep(string name_, float percent_) {
