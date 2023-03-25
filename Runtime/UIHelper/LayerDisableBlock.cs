@@ -17,6 +17,8 @@ namespace Transient.UI {
             Clear();
         }
 
+        public void Block(int value_ = -1)
+            => Block(value_, Color.clear);
         public void Block(int value_, Color color_) {
             stack += value_;
             if (value_ > 0) {
