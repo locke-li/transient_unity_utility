@@ -123,6 +123,7 @@ namespace Transient.Development {
             if (_before != null) {
                 canvas.worldCamera = _before.worldCamera;
                 canvas.sortingOrder = _before.sortingOrder + 1000;
+                CopyScalerSetting(_before, canvas);
             }
             _content = canvas.FindChecked("content").gameObject;
             _content.SetActive(false);
@@ -148,6 +149,17 @@ namespace Transient.Development {
             _watchList = new(32);
             _fps = _entry.transform.FindChecked<Text>("fps");
             _params = _content.FindChecked<InputField>("params");
+        }
+
+        public void CopyScalerSetting(Canvas from, Canvas to) {
+            var refScaler = _before.GetComponent<CanvasScaler>();
+            if (refScaler == null) return;
+            var scaler = to.GetChecked<CanvasScaler>();
+            scaler.referencePixelsPerUnit = refScaler.referencePixelsPerUnit;
+            scaler.referenceResolution = refScaler.referenceResolution;
+            scaler.matchWidthOrHeight = refScaler.matchWidthOrHeight;
+            scaler.screenMatchMode = refScaler.screenMatchMode;
+            scaler.uiScaleMode = refScaler.uiScaleMode;
         }
 
         private void InitLogs() {
