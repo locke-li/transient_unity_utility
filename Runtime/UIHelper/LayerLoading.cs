@@ -29,7 +29,7 @@ namespace Transient.UI {
         }
 
         public void Target(float value_) {
-            Log.Assert(value_ > start, "invalid progress target {0} < {1}", value_, start);
+            Log.Assert(value_ > start)?.Message($"invalid progress target {value_} < {start}");
             if (value_ > 1) {
                 Log.Warn($"progress exceeding 1 {value_}");
                 value_ = 1;

@@ -23,7 +23,7 @@ namespace Transient.Audio {
         public Func<string, AudioClip> LoadClip = s => Resources.Load<AudioClip>(s);
 
         private AudioControl(GameObject root_, AudioMixer mixer_, AudioListener listener_) {
-            Log.Assert(root_ is object, "root is null");
+            Log.Assert(root_ != null)?.Message("root is null");
             Performance.RecordProfiler(nameof(AudioControl));
             Asset = root_;
             if (listener_ == null) {

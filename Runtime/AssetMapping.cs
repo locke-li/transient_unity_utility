@@ -190,7 +190,7 @@ namespace Transient.DataAccess {
             }
             else {
                 _recyclePool.TryGetValue(resId, out recyclables);
-                Log.Assert(recyclables != null, "empty entry in recycle pool");
+                Log.Assert(recyclables != null)?.Message("empty entry in recycle pool");
                 recyclables.Push(resObj_);
             }
         end:

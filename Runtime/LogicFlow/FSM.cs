@@ -62,7 +62,7 @@ namespace Transient.LogicFlow {
         public bool IsInState(int id_) => CurrentState.Id == id_;
 
         public void Init(FSMGraph graph_, params object[] token_) {
-            Log.Assert(graph_ != null, "invalid fsm graph");
+            Log.Assert(graph_ != null)?.Message("invalid fsm graph");
             transitDepth = 0;
             Graph = graph_;
             Token = token_ ?? Token ?? DefaultToken;
@@ -220,28 +220,28 @@ namespace Transient.LogicFlow {
 
         public void WhenTick(Func<object, float, bool> OnTick_, int token_ = 0) {
 #if ProhibitEmptyFSMCallbackAssign
-            Log.Assert(OnTick_ != null, "empty on tick callback, {0}", Id);
+            Log.Assert(OnTick_ != null)?.Message($"empty on tick callback, {Id}");
 #endif
             _OnTick = OnTick_;
             _tokenOnTick = token_;
         }
         public void WhenTickDone(Action<object> OnTickDone_, int token_ = 0) {
 #if ProhibitEmptyFSMCallbackAssign
-            Log.Assert(OnTickDone_ != null, "empty on tick done callback, {0}", Id);
+            Log.Assert(OnTickDone_ != null)?.Message($"empty on tick done callback, {Id}");
 #endif
             _OnTickDone = OnTickDone_;
             _tokenOnTickDone = token_;
         }
         public void WhenEnter(Action<object> OnEnter_, int token_ = 0) {
 #if ProhibitEmptyFSMCallbackAssign
-            Log.Assert(OnEnter_ != null, "empty on enter callback, {0}", Id);
+            Log.Assert(OnEnter_ != null)?.Message($"empty on enter callback, {Id}");
 #endif
             _OnEnter = OnEnter_;
             _tokenOnEnter = token_;
         }
         public void WhenExit(Action<object> OnExit_, int token_ = 0) {
 #if ProhibitEmptyFSMCallbackAssign
-            Log.Assert(OnExit_ != null, "empty on exit callback, {0}", Id);
+            Log.Assert(OnExit_ != null)?.Message($"empty on exit callback, {Id}");
 #endif
             _OnExit = OnExit_;
             _tokenOnExit = token_;
@@ -261,7 +261,7 @@ namespace Transient.LogicFlow {
             const string key = "State.OnTick";
             Performance.RecordProfiler(key);
             if (!isDone_) {
-                Log.Assert(_OnTick != null, "{0} invalid OnTick", this);
+                Log.Assert(_OnTick != null)?.Message($"{this} invalid OnTick");
                 isDone_ = _OnTick(fsm_.Token[_tokenOnTick], dt_);
                 if (isDone_) {
                     _OnTickDone?.Invoke(fsm_.Token[_tokenOnTickDone]);

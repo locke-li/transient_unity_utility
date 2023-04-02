@@ -6,27 +6,6 @@ using System.Text;
 
 namespace Transient {
     public static class Log {
-        public class ExpectResult {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ExpectResult Warn(
-                string msg_, string stack_ = null, string source_ = null,
-                int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
-            {
-                LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
-                return this;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ExpectResult Error(
-                string msg_, string stack_ = null, string source_ = null,
-                int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
-            {
-                LogStream.Default.Message(LogStream.error, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
-                return this;
-            }
-        }
-        public static ExpectResult ExpectChain { get; } = new();
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Init(int capacity_)
             => LogStream.Default.Cache.Init(capacity_);
@@ -56,16 +35,12 @@ namespace Transient {
             => LogStream.Default.Message(LogStream.error, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ExpectResult Expect(bool condition_)
-            => condition_ ? null : ExpectChain;
+        public static LogStream.ExpectResult Expect(bool condition_)
+            => LogStream.Default.Expect(condition_);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Assert(
-            bool condition_, string msg_,
-            object arg0_ = null, object arg1_ = null, object arg2_ = null, object arg3_ = null,
-            string stack_ = null, string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
-            => LogStream.Default.Assert(condition_, msg_, arg0_, arg1_, arg2_, arg3_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+        public static LogStream.AssertResult Assert(bool condition_)
+            => LogStream.Default.Assert(condition_);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Custom(
@@ -76,6 +51,8 @@ namespace Transient {
 
     public sealed class LogStream {
         public static LogStream Default { get; } = new();
+        public static ExpectResult ExpectChain { get; } = new();
+        public static AssertResult AssertChain { get; } = new();
 
         public const int debug = 0;
         public const int info = 1;
@@ -101,19 +78,38 @@ namespace Transient {
             --depth;
         }
 
-        public void Assert(
-            bool condition_, string msg_,
-            object arg0_, object arg1_, object arg2_, object arg3_,
-            string stack_ = null, string source_ = null,
-            int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0
-            ) {
-            if (condition_) return;
-            Performance.RecordProfiler(nameof(LogStream));
-            var message = string.Format(msg_, arg0_, arg1_, arg2_, arg3_);
-            Cache.Log(message, stack_ ?? new StackTrace(stackDepth_ + 1).ToString(), assert, source_, new(member_, filePath_, lineNumber_));
-            Performance.End(nameof(LogStream));
-            throw new Exception($"assert failed: {message}");
+        public class ExpectResult {
+            public ExpectResult Warn(
+                string msg_, string stack_ = null, string source_ = null,
+                int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            {
+                LogStream.Default.Message(LogStream.warning, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+                return this;
+            }
+
+            public ExpectResult Error(
+                string msg_, string stack_ = null, string source_ = null,
+                int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            {
+                LogStream.Default.Message(LogStream.error, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+                return this;
+            }
         }
+        public ExpectResult Expect(bool condition_)
+            => condition_ ? null : ExpectChain;
+
+        public class AssertResult {
+            internal LogStream log;
+            public void Message(
+                string msg_, string stack_ = null, string source_ = null,
+                int stackDepth_ = 0, [CallerMemberName] string member_ = "", [CallerFilePath] string filePath_ = "", [CallerLineNumber] int lineNumber_ = 0)
+            {
+                LogStream.Default.Message(LogStream.error, msg_, stack_, source_, stackDepth_ + 1, member_, filePath_, lineNumber_);
+                throw new Exception($"assert failed: {msg_}");
+            }
+        }
+        public AssertResult Assert(bool condition_)
+            => condition_ ? null : AssertChain;
     }
 
     public struct LogEntry {

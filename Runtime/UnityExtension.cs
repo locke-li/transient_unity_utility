@@ -16,11 +16,11 @@ namespace UnityEngine {
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
             var go = GameObject.Find(path_);
-            Log.Assert(go != null, "GameObject {0} not found!",
-                arg0_:path_, member_:member_, filePath_:file_, lineNumber_:line_);
+            Log.Assert(go != null)?.Message($"GameObject {path_} not found!",
+                stackDepth_:1, member_:member_, filePath_:file_, lineNumber_:line_);
             var ret = go.GetComponent(type_);
-            Log.Assert(ret != null, "Component {0} not found on {1}",
-                arg0_:type_, arg1_:path_, member_: member_, filePath_: file_, lineNumber_: line_);
+            Log.Assert(ret != null)?.Message($"Component {type_} not found on {path_}",
+                stackDepth_:1, member_: member_, filePath_: file_, lineNumber_: line_);
             return ret;
         }
 
@@ -40,27 +40,25 @@ namespace UnityEngine {
         public static T GameObjectTryFind<T>(string path_) where T : Component
             => (T)GameObjectTryFind(path_, typeof(T));
 
-        private static string LogNotFound => "Path: <{0}> on {1} not found!";
-
         public static Transform FindChecked(this Component comp_, string path_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
-            Log.Assert(comp_ != null, "{0} called on null object",
-                arg0_:nameof(FindChecked), member_: member_, filePath_: file_, lineNumber_: line_);
+            Log.Assert(comp_ != null)?.Message($"{nameof(FindChecked)} called on null object",
+                stackDepth_:1, member_: member_, filePath_: file_, lineNumber_: line_);
             var ret = comp_.transform.Find(path_);
-            Log.Assert(ret != null, LogNotFound,
-                arg0_:path_, arg1_:comp_.name, member_: member_, filePath_: file_, lineNumber_: line_);
+            Log.Assert(ret != null)?.Message($"path {path_} on {comp_.name} not found",
+                stackDepth_:1, member_: member_, filePath_: file_, lineNumber_: line_);
             return ret;
         }
 
-        public static Transform FindChecked(this GameObject gameObject_, string path_,
+        public static Transform FindChecked(this GameObject obj_, string path_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
-            Log.Assert(gameObject_ != null, "{0} called on null object",
-                arg0_:nameof(FindChecked), member_: member_, filePath_: file_, lineNumber_: line_);
-            var ret = gameObject_.transform.Find(path_);
-            Log.Assert(ret != null, LogNotFound,
-                arg0_:path_, arg1_:gameObject_.name, member_:member_, filePath_:file_, lineNumber_:line_);
+            Log.Assert(obj_ != null)?.Message($"{nameof(FindChecked)} called on null object",
+                stackDepth_:1, member_: member_, filePath_: file_, lineNumber_: line_);
+            var ret = obj_.transform.Find(path_);
+            Log.Assert(ret != null)?.Message($"path {path_} on {obj_.name} not found",
+                stackDepth_:1, member_:member_, filePath_:file_, lineNumber_:line_);
             return ret;
         }
 
@@ -68,8 +66,8 @@ namespace UnityEngine {
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
             var t = FindChecked(comp_, path_);
-            Log.Assert(t != null, LogNotFound,
-                arg0_:path_, arg1_:comp_.name, member_:member_, filePath_:file_, lineNumber_:line_);
+            Log.Assert(t != null)?.Message($"path {path_} on {comp_.name} not found",
+                stackDepth_:1, member_:member_, filePath_:file_, lineNumber_:line_);
             return GetChecked(t, type_, member_, file_, line_);
         }
 
@@ -87,8 +85,8 @@ namespace UnityEngine {
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
             var t = FindChecked(obj_, path_);
-            Log.Assert(t != null, LogNotFound,
-                arg0_:path_, arg1_:obj_.name, member_:member_, filePath_:file_, lineNumber_:line_);
+            Log.Assert(t != null)?.Message($"path {path_} on {obj_.name} not found",
+                stackDepth_:1, member_:member_, filePath_:file_, lineNumber_:line_);
             return GetChecked(t, type_, member_, file_, line_);
         }
 
@@ -105,11 +103,11 @@ namespace UnityEngine {
         public static Component AddChecked(this Component comp_, Type type_, string path_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
-            Log.Assert(comp_ != null, "{0} called on null object",
-                arg0_:nameof(AddChecked), member_:member_, filePath_:file_, lineNumber_:line_);
+            Log.Assert(comp_ != null)?.Message($"{nameof(AddChecked)} called on null object",
+                stackDepth_:1, member_:member_, filePath_:file_, lineNumber_:line_);
             var t = path_ == null ? comp_.transform : FindChecked(comp_, path_);
-            Log.Assert(t != null, LogNotFound,
-                arg0_:path_, arg1_: comp_.name, member_:member_, filePath_:file_, lineNumber_:line_);
+            Log.Assert(t != null)?.Message($"path {path_} on {comp_.name} not found",
+                stackDepth_:1, member_:member_, filePath_:file_, lineNumber_:line_);
             var ret = t.GetComponent(type_);
             return ret ?? t.gameObject.AddComponent(type_);
         }
@@ -129,8 +127,8 @@ namespace UnityEngine {
         public static Component GetChecked(this Component comp_, Type type_,
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             )  {
-            Log.Assert(comp_ != null, "{0} called on null object",
-                arg0_:nameof(GetChecked), member_:member_, filePath_:file_, lineNumber_:line_);
+            Log.Assert(comp_ != null)?.Message($"{nameof(GetChecked)} called on null object",
+                stackDepth_:1, member_:member_, filePath_:file_, lineNumber_:line_);
             var ret = comp_.GetComponent(type_);
             if(ret == null) {
                 Log.Warn($"Expected component of type {type_} not found on {comp_.name}!",
@@ -143,8 +141,8 @@ namespace UnityEngine {
         public static Component GetChecked(this GameObject obj_, Type type_,
             [CallerMemberName] string member_ = "", [CallerFilePath] string file_ = "", [CallerLineNumber] int line_ = 0
             ) {
-            Log.Assert(obj_ != null, "{0} called on null object",
-                arg0_: nameof(GetChecked), member_: member_, filePath_: file_, lineNumber_: line_);
+            Log.Assert(obj_ != null)?.Message($"{nameof(GetChecked)} called on null object",
+                stackDepth_:1, member_: member_, filePath_: file_, lineNumber_: line_);
             var ret = obj_.GetComponent(type_);
             if (ret == null) {
                 Log.Warn($"Expected component of type {type_} not found on {obj_.name}!",
@@ -169,8 +167,8 @@ namespace UnityEngine {
         public static Transform AddChild(this Transform transform_, string name_, Transform child_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
-            Log.Assert(transform_ != null, "{0} called on null object",
-                arg0_:nameof(AddChild), member_: member_, filePath_: file_, lineNumber_: line_);
+            Log.Assert(transform_ != null)?.Message($"{nameof(AddChild)} called on null object",
+                stackDepth_:1, member_: member_, filePath_: file_, lineNumber_: line_);
             if (child_ == null) {
                 child_ = new GameObject(name_).transform;
             }
@@ -187,8 +185,8 @@ namespace UnityEngine {
         public static RectTransform AddChildRect(this Transform transform_, string name_, RectTransform child_ = null,
             [CallerMemberName]string member_ = "", [CallerFilePath]string file_ = "", [CallerLineNumber]int line_ = 0
             ) {
-            Log.Assert(transform_ != null, "{0} called on null object",
-                arg0_:nameof(AddChildRect), member_: member_, filePath_: file_, lineNumber_: line_);
+            Log.Assert(transform_ != null)?.Message($"{nameof(AddChildRect)} called on null object",
+                stackDepth_:1, member_: member_, filePath_: file_, lineNumber_: line_);
             if (child_ == null) {
                 child_ = new GameObject(name_).AddComponent<RectTransform>();
             }
